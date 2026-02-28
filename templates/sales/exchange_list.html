@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Item Exchanges{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #1f43b4;
+        --primary-dark: #1a3891;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.total { border-color: #1f43b4; }
+    .stat-card.pending { border-color: #f59e0b; }
+    .stat-card.completed { border-color: #10b981; }
+    .stat-card.cancelled { border-color: #ef4444; }
+    
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        opacity: 0.15;
+        float: right;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1e293b;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0.25rem 0 0 0;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .exchange-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .exchange-table table {
+        margin-bottom: 0 !important;
+        background-color: white !important;
+    }
+    
+    .exchange-table thead {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%) !important;
+    }
+    
+    .exchange-table thead tr {
+        background: transparent !important;
+    }
+    
+    .exchange-table thead th {
+        color: white !important;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        border: none !important;
+        background-color: transparent !important;
+    }
+    
+    .exchange-table tbody tr {
+        transition: all 0.3s;
+        border-bottom: 1px solid #f1f5f9;
+        background-color: white !important;
+    }
+    
+    .exchange-table tbody tr:hover {
+        background: #f8fafc !important;
+        transform: translateX(3px);
+    }
+    
+    .exchange-table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: inline-block;
+    }
+    
+    .status-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .status-completed {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .reason-badge {
+        padding: 0.3rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        background-color: #e9ecef;
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .fab-button {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.4);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 6px 30px rgba(31, 67, 180, 0.6);
+        color: white;
+    }
+    
+    .mobile-exchange-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .mobile-exchange-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        transform: scaleY(0);
+        transition: transform 0.3s;
+    }
+    
+    .mobile-exchange-card:hover {
+        transform: translateX(3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        border-color: #e2e8f0;
+    }
+    
+    .mobile-exchange-card:hover::before {
+        transform: scaleY(1);
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.25rem 0;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .quick-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.25rem;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+        }
+        
+        .exchange-table {
+            display: none;
+        }
+        
+        .mobile-cards-container {
+            display: block !important;
+        }
+        
+        .fab-button {
+            display: flex;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .mobile-cards-container {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-exchange-alt"></i> Item Exchanges</h1>
+                <a href="{% url 'sales:create_exchange' %}" class="btn btn-light d-none d-md-inline-block">
+                    <i class="fas fa-plus"></i> New Exchange
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="quick-stats">
+        <div class="stat-card total">
+            <i class="fas fa-exchange-alt stat-icon"></i>
+            <div class="stat-value">{{ stats.total_exchanges|default:0 }}</div>
+            <div class="stat-label">Total Exchanges</div>
+        </div>
+        <div class="stat-card pending">
+            <i class="fas fa-clock stat-icon"></i>
+            <div class="stat-value">{{ stats.pending|default:0 }}</div>
+            <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card completed">
+            <i class="fas fa-check-circle stat-icon"></i>
+            <div class="stat-value">{{ stats.completed|default:0 }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card cancelled">
+            <i class="fas fa-ban stat-icon"></i>
+            <div class="stat-value">{{ stats.cancelled|default:0 }}</div>
+            <div class="stat-label">Cancelled</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if request.GET.status == 'unsettled' %}selected{% endif %}>Pending</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            {% if not request.user.is_sales_rep %}
+            <div class="col-md-3">
+                <label class="form-label">Shop</label>
+                <select name="shop" class="form-select">
+                    <option value="">All Shops</option>
+                    {% for shop in shops %}
+                        <option value="{{ shop.id }}" {% if request.GET.shop|add:"0" == shop.id %}selected{% endif %}>
+                            {{ shop.shop_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" name="from_date" class="form-control" value="{{ request.GET.from_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" name="to_date" class="form-control" value="{{ request.GET.to_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'sales:exchange_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Exchanges Table (Desktop) -->
+    <div class="exchange-table">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Exchange No.</th>
+                    <th>Date</th>
+                    <th>Shop</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Items</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exchange in exchanges %}
+                <tr>
+                    <td><strong>{{ exchange.exchange_number }}</strong></td>
+                    <td>{{ exchange.exchange_date|date:"Y-m-d H:i" }}</td>
+                    <td>{{ exchange.shop.shop_name }}</td>
+                    <td>
+                        <span class="reason-badge">
+                            {{ exchange.get_exchange_reason_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ exchange.exchange_status }}">
+                            {% if exchange.exchange_status == 'unsettled' %}
+                                <i class="fas fa-clock"></i> Pending
+                            {% elif exchange.exchange_status == 'completed' %}
+                                <i class="fas fa-check-circle"></i> Completed
+                            {% elif exchange.exchange_status == 'cancelled' %}
+                                <i class="fas fa-ban"></i> Cancelled
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>{{ exchange.items.count }} item(s)</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{% url 'sales:exchange_detail' exchange.pk %}" class="btn btn-sm btn-info" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'sales:exchange_print' exchange.pk %}" class="btn btn-sm btn-warning" title="Print Receipt">
+                                <i class="fas fa-print"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+                        </div>
+                        <h3>No Exchanges Found</h3>
+                        <p>No item exchanges match your current filters</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-container" style="display: none;">
+        {% for exchange in exchanges %}
+        <div class="mobile-exchange-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div style="font-weight: 700; font-size: 1rem;">{{ exchange.exchange_number }}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">
+                        <i class="fas fa-clock"></i> {{ exchange.exchange_date|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+                <span class="status-badge status-{{ exchange.exchange_status }}">
+                    {{ exchange.get_exchange_status_display }}
+                </span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; font-size: 0.9rem;">
+                <div>
+                    <span style="color: #64748b; font-size: 0.75rem;"><i class="fas fa-store"></i> Shop</span>
+                    <div style="font-weight: 600;">{{ exchange.shop.shop_name }}</div>
+                </div>
+                <div>
+                    <span style="color: #64748b; font-size: 0.75rem;"><i class="fas fa-tag"></i> Reason</span>
+                    <div style="font-weight: 600;">{{ exchange.get_exchange_reason_display }}</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <a href="{% url 'sales:exchange_detail' exchange.pk %}" class="btn btn-info btn-sm flex-fill">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                <a href="{% url 'sales:exchange_print' exchange.pk %}" class="btn btn-warning btn-sm flex-fill">
+                    <i class="fas fa-print"></i> Print
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 3rem 1.5rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <i class="fas fa-inbox" style="font-size: 4rem; color: #cbd5e0; margin-bottom: 1rem;"></i>
+            <h3>No Exchanges Found</h3>
+            <p style="color: #64748b;">No item exchanges match your current filters</p>
+            <a href="{% url 'sales:create_exchange' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create First Exchange
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Floating Action Button (Mobile) -->
+    <a href="{% url 'sales:create_exchange' %}" class="fab-button">
+        <i class="fas fa-plus"></i>
+    </a>
+</div>
+{% endblock %}

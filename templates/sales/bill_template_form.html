@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; padding: 20px;">
+    <h3 class="mb-4"><i class="fas fa-edit me-2"></i>{{ page_title }}</h3>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Basic Information</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Template Name *</label>
+                    <input type="text" name="name" class="form-control" value="{{ template.name|default:'' }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Paper Size *</label>
+                    <select name="paper_size" class="form-select" required>
+                        <option value="thermal_48mm" {% if template.paper_size == 'thermal_48mm' %}selected{% endif %}>Thermal 48mm</option>
+                        <option value="thermal_58mm" {% if template.paper_size == 'thermal_58mm' %}selected{% endif %}>Thermal 58mm</option>
+                        <option value="thermal_80mm" {% if template.paper_size == 'thermal_80mm' %}selected{% endif %}>Thermal 80mm</option>
+                        <option value="a4" {% if template.paper_size == 'a4' %}selected{% endif %}>A4</option>
+                        <option value="a5" {% if template.paper_size == 'a5' %}selected{% endif %}>A5</option>
+                        <option value="letter" {% if template.paper_size == 'letter' %}selected{% endif %}>Letter</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch">
+                    <input type="checkbox" name="is_default" class="form-check-input" id="is_default" {% if template.is_default %}checked{% endif %}>
+                    <label class="form-check-label" for="is_default">Set as default for this paper size</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Company Information</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Company Name</label>
+                    <input type="text" name="company_name" class="form-control" value="{{ template.company_name|default:'Zergo Distributors' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Address</label>
+                    <textarea name="company_address" class="form-control" rows="2">{{ template.company_address|default:'' }}</textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="company_phone" class="form-control" value="{{ template.company_phone|default:'' }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="company_email" class="form-control" value="{{ template.company_email|default:'' }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Website</label>
+                        <input type="text" name="company_website" class="form-control" value="{{ template.company_website|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Display Options</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_company_logo" class="form-check-input" {% if template.show_company_logo %}checked{% endif %}>
+                            <label class="form-check-label">Show Company Logo</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_barcode" class="form-check-input" {% if template.show_barcode %}checked{% endif %}>
+                            <label class="form-check-label">Show Barcode</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_qr_code" class="form-check-input" {% if template.show_qr_code %}checked{% endif %}>
+                            <label class="form-check-label">Show QR Code</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_tax_breakdown" class="form-check-input" {% if template.show_tax_breakdown or not template %}checked{% endif %}>
+                            <label class="form-check-label">Show Tax Breakdown</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_discount_details" class="form-check-input" {% if template.show_discount_details or not template %}checked{% endif %}>
+                            <label class="form-check-label">Show Discount Details</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_payment_method" class="form-check-input" {% if template.show_payment_method or not template %}checked{% endif %}>
+                            <label class="form-check-label">Show Payment Method</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_sales_rep" class="form-check-input" {% if template.show_sales_rep or not template %}checked{% endif %}>
+                            <label class="form-check-label">Show Sales Rep</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="show_shop_location" class="form-check-input" {% if template.show_shop_location or not template %}checked{% endif %}>
+                            <label class="form-check-label">Show Shop Location</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Header & Footer</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Header Text</label>
+                    <textarea name="header_text" class="form-control" rows="2">{{ template.header_text|default:'' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Footer Text</label>
+                    <textarea name="footer_text" class="form-control" rows="2">{{ template.footer_text|default:'Thank you for your business!' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Font Sizes (pt)</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Header</label>
+                        <input type="number" name="font_size_header" class="form-control" value="{{ template.font_size_header|default:14 }}" min="8" max="24">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Body</label>
+                        <input type="number" name="font_size_body" class="form-control" value="{{ template.font_size_body|default:10 }}" min="6" max="16">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Footer</label>
+                        <input type="number" name="font_size_footer" class="form-control" value="{{ template.font_size_footer|default:8 }}" min="6" max="14">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save me-2"></i>Save Template
+            </button>
+            <a href="{% url 'sales:printer_settings' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

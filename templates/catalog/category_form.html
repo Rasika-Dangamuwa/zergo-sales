@@ -1,0 +1,32 @@
+{% extends "tenants/base_platform.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Category - Catalog{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'catalog:category_list' %}" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="mb-0">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Category</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="dist-table p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{% if form.instance.pk %}Update{% else %}Create{% endif %} Category
+                        </button>
+                        <a href="{% url 'catalog:category_list' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Edit {{ purchase.grn_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .product-table thead {
+        background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+        color: white;
+    }
+    
+    .product-table thead th {
+        padding: 12px 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: none;
+        text-align: center;
+    }
+    
+    .product-table thead th:first-child,
+    .product-table thead th:last-child {
+        text-align: left !important;
+    }
+    
+    .product-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .product-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .product-table tbody td {
+        padding: 10px 8px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    .product-table tbody td:nth-child(2),
+    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(4),
+    .product-table tbody td:nth-child(5),
+    .product-table tbody td:nth-child(6),
+    .product-table tbody td:nth-child(8) {
+        text-align: center;
+    }
+    
+    .product-table thead th:nth-child(7),
+    .product-table thead th:nth-child(9),
+    .product-table thead th:nth-child(10) {
+        text-align: right;
+    }
+    
+    .product-table tbody td:nth-child(7),
+    .product-table tbody td:nth-child(9),
+    .product-table tbody td:nth-child(10) {
+        padding: 0 !important;
+    }
+    
+    .product-table tbody td:nth-child(7) span,
+    .product-table tbody td:nth-child(9) span,
+    .product-table tbody td:nth-child(10) span {
+        display: block;
+        padding: 10px 8px;
+        text-align: right;
+    }
+    
+    .qty-input {
+        width: 70px;
+        padding: 5px 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    
+    .qty-input:focus {
+        border-color: #8e44ad;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1);
+    }
+    
+    .qty-input.has-qty {
+        border-color: #8e44ad;
+        background: #f5f0ff;
+        font-weight: 700;
+    }
+    
+    .price-input {
+        width: 90px;
+        padding: 5px 6px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 0.9rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    
+    .section-title {
+        color: #8e44ad;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #8e44ad;
+    }
+    
+    .summary-box {
+        position: sticky;
+        top: 20px;
+        background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(142, 68, 173, 0.3);
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.95rem;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding-top: 15px;
+        margin-top: 10px;
+        border-top: 2px solid rgba(255,255,255,0.3);
+    }
+    
+    .category-header {
+        background: #f8f9fa !important;
+        font-weight: 600;
+    }
+    
+    .badge {
+        padding: 6px 12px;
+        font-weight: 500;
+    }
+    
+    .btn-submit {
+        background: white;
+        color: #8e44ad;
+        font-weight: 600;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .btn-submit:hover {
+        background: #f8f9fa;
+        color: #6c2c91;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .product-name {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .pack-size {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .edit-badge {
+        display: inline-block;
+        background: #fff3cd;
+        color: #856404;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                <i class="fas fa-edit me-2" style="color: #8e44ad;"></i>
+                Edit GRN
+                <span class="edit-badge">{{ purchase.grn_number }}</span>
+            </h2>
+            <p class="text-muted mb-0">Modify products and quantities for this draft GRN</p>
+        </div>
+        <a href="{% url 'products:purchase_detail' purchase.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Detail
+        </a>
+    </div>
+
+    <form method="post" id="grnForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- GRN Header -->
+                <div class="form-section">
+                    <h5 class="section-title">GRN Information</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Purchase Order (Optional)</label>
+                            <select name="purchase_order" id="poSelect" class="form-select" onchange="loadPODetails()">
+                                <option value="">No PO (Direct Purchase)</option>
+                                {% for po in purchase_orders %}
+                                <option value="{{ po.id }}" 
+                                        data-company="{{ po.company.id }}"
+                                        {% if purchase.purchase_order_id == po.id %}selected{% endif %}>
+                                    {{ po.po_number }} - {{ po.company.company_name }} - Rs.{{ po.total|floatformat:2 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Link this GRN to a purchase order</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Company <span class="text-danger">*</span></label>
+                            <select name="company" id="companySelect" class="form-select" required>
+                                <option value="">Select Company</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}" 
+                                        {% if purchase.company_id == company.id %}selected{% endif %}>
+                                    {{ company.company_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Invoice Date</label>
+                            <input type="date" name="invoice_date" class="form-control"
+                                   value="{{ purchase.invoice_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supplier Invoice Number</label>
+                            <input type="text" name="supplier_invoice_number" class="form-control" 
+                                   placeholder="Supplier's invoice number"
+                                   value="{{ purchase.supplier_invoice_number|default:'' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Any special notes or remarks">{{ purchase.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Products Table -->
+                <div class="form-section">
+                    <h5 class="section-title">Products</h5>
+                    <div class="table-responsive">
+                        <table class="table product-table" style="table-layout: fixed;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18%">Description</th>
+                                    <th style="width: 7%">Cases</th>
+                                    <th style="width: 7%">Loose</th>
+                                    <th style="width: 8%">Qty</th>
+                                    <th style="width: 6%">FOC</th>
+                                    <th style="width: 10%">Unit Price</th>
+                                    <th style="width: 12%">Val. Be. Disc</th>
+                                    <th style="width: 8%">Disc %</th>
+                                    <th style="width: 11%">Disc Amt</th>
+                                    <th style="width: 11%">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% regroup products by size as size_list %}
+                                {% for size_group in size_list %}
+                                    {% regroup size_group.list by marked_price as price_list %}
+                                    {% for price_group in price_list %}
+                                        <tr class="table-secondary category-header" data-category="{{ size_group.grouper }}-{{ price_group.grouper }}" data-foc-buy="{{ price_group.list.0.company_foc_buy }}" data-foc-free="{{ price_group.list.0.company_foc_free }}">
+                                            <td colspan="10" class="fw-bold" style="text-align: left;">
+                                                <i class="fas fa-tag me-2"></i>
+                                                {{ size_group.grouper }} - Rs. {{ price_group.grouper }}
+                                                <span style="float: right;">
+                                                    <span class="badge bg-info me-2 category-cases" id="cat_cases_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 cases</span>
+                                                    <span class="badge bg-info me-2 category-loose" id="cat_loose_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 loose</span>
+                                                    <span class="badge bg-primary me-2 category-total-bottles" id="cat_total_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 bottles</span>
+                                                    <span class="badge bg-success category-expected-foc" id="cat_foc_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 FOC expected</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% for product in price_group.list %}
+                                        <tr class="product-row" data-product-id="{{ product.id }}" data-pack-size="{{ product.bottles_per_pack }}" data-foc-buy="{{ product.company_foc_buy }}" data-foc-free="{{ product.company_foc_free }}" data-category="{{ size_group.grouper }}-{{ price_group.grouper }}" data-size="{{ size_group.grouper }}" data-price="{{ price_group.grouper|floatformat:0 }}">
+                                            <!-- Description -->
+                                            <td>
+                                                <div class="product-name">{{ product.size }} {{ product.product_name }}</div>
+                                                <div class="pack-size text-muted" style="font-size: 0.75rem;">{{ product.bottles_per_pack }} btl/case</div>
+                                            </td>
+                                            <!-- Cases -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="packs_{{ product.id }}" 
+                                                       class="qty-input packs-input" 
+                                                       min="0" 
+                                                       value="0"
+                                                       onchange="calculateTotal({{ product.id }})">
+                                            </td>
+                                            <!-- Loose -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="loose_{{ product.id }}" 
+                                                       class="qty-input loose-input" 
+                                                       min="0" 
+                                                       value="0"
+                                                       onchange="calculateTotal({{ product.id }})">
+                                            </td>
+                                            <!-- Qty (calculated) -->
+                                            <td>
+                                                <span class="badge bg-secondary" id="qty_{{ product.id }}">0</span>
+                                            </td>
+                                            <!-- FOC -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="foc_{{ product.id }}" 
+                                                       class="qty-input" 
+                                                       min="0" 
+                                                       value="0"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Unit Price -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="price_{{ product.id }}" 
+                                                       class="price-input" 
+                                                       step="0.01" 
+                                                       value="{{ product.shop_price|floatformat:2 }}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Val. Be. Disc (calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="val_before_disc_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                            <!-- Disc % -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="discount_{{ product.id }}" 
+                                                       class="qty-input" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       max="100" 
+                                                       value="{{ product.company_discount_percentage|floatformat:2 }}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Disc Amount (calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="disc_amt_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                            <!-- Value (Line Total calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="line_total_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3">
+                <!-- Summary -->
+                <div class="summary-box">
+                    <h5 class="mb-3"><i class="fas fa-edit me-2"></i>Edit Summary</h5>
+                    <div class="summary-item">
+                        <span>Total Cases:</span>
+                        <span id="totalCases">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Loose:</span>
+                        <span id="totalLoose">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Subtotal:</span>
+                        <span>Rs. <span id="subtotal">0.00</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Discount:</span>
+                        <span>Rs. <span id="totalDiscount">0.00</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Grand Total:</span>
+                        <span>Rs. <span id="grandTotal">0.00</span></span>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-save me-2"></i>Update GRN
+                        </button>
+                        <a href="{% url 'products:purchase_detail' purchase.pk %}" class="btn btn-outline-light">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Existing items data from server
+const existingItems = JSON.parse('{{ existing_items_json|escapejs }}');
+
+// Format number with thousand separators
+function formatCurrency(amount) {
+    return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+// Pre-fill form with existing item data
+function prefillExistingItems() {
+    for (const [productId, data] of Object.entries(existingItems)) {
+        const packsInput = document.querySelector(`input[name="packs_${productId}"]`);
+        const looseInput = document.querySelector(`input[name="loose_${productId}"]`);
+        const focInput = document.querySelector(`input[name="foc_${productId}"]`);
+        const priceInput = document.querySelector(`input[name="price_${productId}"]`);
+        const discountInput = document.querySelector(`input[name="discount_${productId}"]`);
+
+        if (packsInput) { packsInput.value = data.packs; packsInput.classList.add('has-qty'); }
+        if (looseInput) { looseInput.value = data.loose; if (data.loose > 0) looseInput.classList.add('has-qty'); }
+        if (focInput) focInput.value = data.foc;
+        if (priceInput) priceInput.value = data.price.toFixed(2);
+        if (discountInput) discountInput.value = data.discount.toFixed(2);
+
+        // Trigger calculation for this product
+        calculateTotal(parseInt(productId));
+    }
+}
+
+// Calculate totals for a specific product
+function calculateTotal(productId) {
+    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+    if (!row) return;
+    
+    const packSize = parseInt(row.dataset.packSize) || 1;
+    const packs = parseInt(row.querySelector(`input[name="packs_${productId}"]`).value) || 0;
+    const loose = parseInt(row.querySelector(`input[name="loose_${productId}"]`).value) || 0;
+    const unitPrice = parseFloat(row.querySelector(`input[name="price_${productId}"]`).value) || 0;
+    const discountPercent = parseFloat(row.querySelector(`input[name="discount_${productId}"]`).value) || 0;
+    
+    const qty = (packs * packSize) + loose;
+    const valBeforeDisc = qty * unitPrice;
+    const discAmt = (valBeforeDisc * discountPercent) / 100;
+    const lineTotal = valBeforeDisc - discAmt;
+    
+    document.getElementById(`qty_${productId}`).textContent = qty;
+    document.getElementById(`val_before_disc_${productId}`).textContent = `Rs. ${formatCurrency(valBeforeDisc)}`;
+    document.getElementById(`disc_amt_${productId}`).textContent = `Rs. ${formatCurrency(discAmt)}`;
+    document.getElementById(`line_total_${productId}`).textContent = `Rs. ${formatCurrency(lineTotal)}`;
+    
+    updateSummary();
+}
+
+// Update summary totals
+function updateSummary() {
+    let totalCases = 0;
+    let totalLoose = 0;
+    let subtotal = 0;
+    let totalDiscount = 0;
+    
+    document.querySelectorAll('.product-row').forEach(row => {
+        const productId = row.dataset.productId;
+        const packSize = parseInt(row.dataset.packSize) || 1;
+        
+        const packs = parseInt(row.querySelector(`input[name="packs_${productId}"]`).value) || 0;
+        const loose = parseInt(row.querySelector(`input[name="loose_${productId}"]`).value) || 0;
+        const unitPrice = parseFloat(row.querySelector(`input[name="price_${productId}"]`).value) || 0;
+        const discountPercent = parseFloat(row.querySelector(`input[name="discount_${productId}"]`).value) || 0;
+        
+        const qty = (packs * packSize) + loose;
+        const valBeforeDisc = qty * unitPrice;
+        const discAmt = (valBeforeDisc * discountPercent) / 100;
+        
+        totalCases += packs;
+        totalLoose += loose;
+        subtotal += valBeforeDisc;
+        totalDiscount += discAmt;
+    });
+    
+    const grandTotal = subtotal - totalDiscount;
+    
+    document.getElementById('totalCases').textContent = totalCases;
+    document.getElementById('totalLoose').textContent = totalLoose;
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('totalDiscount').textContent = formatCurrency(totalDiscount);
+    document.getElementById('grandTotal').textContent = formatCurrency(grandTotal);
+}
+
+// Load PO details and auto-fill company
+function loadPODetails() {
+    const poSelect = document.getElementById('poSelect');
+    const selectedOption = poSelect.options[poSelect.selectedIndex];
+    const companySelect = document.getElementById('companySelect');
+    
+    if (selectedOption.value) {
+        const companyId = selectedOption.getAttribute('data-company');
+        if (companyId) {
+            companySelect.value = companyId;
+        }
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    prefillExistingItems();
+});
+</script>
+{% endblock %}

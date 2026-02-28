@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ shop.shop_name }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #2563eb;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #2563eb;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #ef4444;
+    }
+    
+    @media (max-width: 768px) {
+        .form-section {
+            padding: 1rem;
+        }
+        
+        .sticky-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .btn-save {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <div class="d-flex align-items-center mb-3 mb-md-4">
+        <a href="{% url 'shops:detail' shop.pk %}" class="btn btn-link text-primary p-0 me-3">
+            <i class="fas fa-arrow-left fa-lg"></i>
+        </a>
+        <div>
+            <h2 class="fw-bold mb-0">Edit Shop</h2>
+            <p class="text-muted mb-0 small">{{ shop.shop_name }}</p>
+        </div>
+    </div>
+    
+    <form method="post" id="editShopForm">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-info-circle me-2"></i>Basic Information
+            </div>
+            
+            <div class="mb-3">
+                <label for="shop_name" class="form-label required">Shop Name</label>
+                <input type="text" class="form-control" id="shop_name" name="shop_name" 
+                       value="{{ shop.shop_name }}" required>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="owner_name" class="form-label required">Owner Name</label>
+                    <input type="text" class="form-control" id="owner_name" name="owner_name" 
+                           value="{{ shop.owner_name }}" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="shop_type" class="form-label required">Shop Type</label>
+                    <select class="form-select" id="shop_type" name="shop_type" required>
+                        <option value="retail" {% if shop.shop_type == 'retail' %}selected{% endif %}>Retail Shop</option>
+                        <option value="wholesale" {% if shop.shop_type == 'wholesale' %}selected{% endif %}>Wholesale</option>
+                        <option value="supermarket" {% if shop.shop_type == 'supermarket' %}selected{% endif %}>Supermarket</option>
+                        <option value="grocery" {% if shop.shop_type == 'grocery' %}selected{% endif %}>Grocery Store</option>
+                        <option value="restaurant" {% if shop.shop_type == 'restaurant' %}selected{% endif %}>Restaurant/Hotel</option>
+                        <option value="other" {% if shop.shop_type == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-phone me-2"></i>Contact Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="phone_number" class="form-label required">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                           value="{{ shop.phone_number }}" required pattern="[0-9]{10}">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="alternate_phone" class="form-label">Alternate Phone</label>
+                    <input type="tel" class="form-control" id="alternate_phone" name="alternate_phone"
+                           value="{{ shop.alternate_phone|default:'' }}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       value="{{ shop.email|default:'' }}">
+            </div>
+        </div>
+        
+        <!-- Address -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-map-marker-alt me-2"></i>Address
+            </div>
+            
+            <div class="mb-3">
+                <label for="address_line1" class="form-label required">Address Line 1</label>
+                <input type="text" class="form-control" id="address_line1" name="address_line1" 
+                       value="{{ shop.address_line1 }}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="address_line2" class="form-label">Address Line 2</label>
+                <input type="text" class="form-control" id="address_line2" name="address_line2"
+                       value="{{ shop.address_line2|default:'' }}">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="city" class="form-label required">City</label>
+                    <input type="text" class="form-control" id="city" name="city" 
+                           value="{{ shop.city }}" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="district" class="form-label required">District</label>
+                    <select class="form-select" id="district" name="district" required>
+                        <option value="Colombo" {% if shop.district == 'Colombo' %}selected{% endif %}>Colombo</option>
+                        <option value="Gampaha" {% if shop.district == 'Gampaha' %}selected{% endif %}>Gampaha</option>
+                        <option value="Kalutara" {% if shop.district == 'Kalutara' %}selected{% endif %}>Kalutara</option>
+                        <option value="Kandy" {% if shop.district == 'Kandy' %}selected{% endif %}>Kandy</option>
+                        <option value="Matale" {% if shop.district == 'Matale' %}selected{% endif %}>Matale</option>
+                        <option value="Nuwara Eliya" {% if shop.district == 'Nuwara Eliya' %}selected{% endif %}>Nuwara Eliya</option>
+                        <option value="Galle" {% if shop.district == 'Galle' %}selected{% endif %}>Galle</option>
+                        <option value="Matara" {% if shop.district == 'Matara' %}selected{% endif %}>Matara</option>
+                        <option value="Hambantota" {% if shop.district == 'Hambantota' %}selected{% endif %}>Hambantota</option>
+                        <!-- Add other districts as needed -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="postal_code" class="form-label">Postal Code</label>
+                <input type="text" class="form-control" id="postal_code" name="postal_code"
+                       value="{{ shop.postal_code|default:'' }}">
+            </div>
+        </div>
+        
+        <!-- Location -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-location-crosshairs me-2"></i>GPS Location
+            </div>
+            
+            {% if shop.latitude and shop.longitude %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Current location: {{ shop.latitude }}, {{ shop.longitude }}
+            </div>
+            {% endif %}
+            
+            <button type="button" class="btn btn-primary w-100 mb-3" id="getLocationBtn">
+                <i class="fas fa-crosshairs me-2"></i>Update Location
+            </button>
+            
+            <input type="hidden" id="latitude" name="latitude" value="{{ shop.latitude|default:'' }}">
+            <input type="hidden" id="longitude" name="longitude" value="{{ shop.longitude|default:'' }}">
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="sticky-footer d-md-none">
+            <button type="submit" class="btn btn-primary btn-save">
+                <i class="fas fa-save me-2"></i>Update Shop
+            </button>
+        </div>
+        
+        <div class="d-none d-md-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+                <i class="fas fa-save me-2"></i>Update Shop
+            </button>
+            <a href="{% url 'shops:detail' shop.pk %}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Get current location
+document.getElementById('getLocationBtn').addEventListener('click', function() {
+    const btn = this;
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Getting location...';
+    
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
+                
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Location Updated: ' + lat.toFixed(6) + ', ' + lon.toFixed(6);
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                }, 2000);
+            },
+            function(error) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                alert('Error getting location: ' + error.message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        alert('Geolocation is not supported by your browser');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Monthly Plans{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(109, 40, 217, 0.3);
+    }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
+
+    .plan-card {
+        background: white;
+        border-radius: 14px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid #7c3aed;
+    }
+    .plan-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    .plan-month { font-size: 1.4rem; font-weight: 700; color: #1e293b; }
+    .plan-year { font-size: 0.9rem; color: #64748b; }
+    .plan-area { font-size: 0.85rem; color: #6d28d9; font-weight: 600; }
+
+    .target-chip {
+        display: flex;
+        align-items: center;
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        color: #475569;
+    }
+    .target-chip strong { color: #1e293b; min-width: 70px; }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #94a3b8;
+    }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+
+    .filter-bar {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 1.25rem;
+    }
+
+    /* Mobile */
+    @media (max-width: 576px) {
+        .page-header { padding: 1rem 0; margin-bottom: 1rem; border-radius: 0 0 14px 14px; }
+        .page-header h1 { font-size: 1.3rem; }
+        .plan-card { padding: 1rem; border-radius: 12px; }
+        .plan-month { font-size: 1.2rem; }
+        .target-chip { padding: 3px 8px; font-size: 0.72rem; }
+        .filter-bar { padding: 0.75rem; }
+        .filter-bar select { width: 100% !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-calendar-alt me-2"></i>Monthly Plans</h1>
+                {% if view_user != request.user %}
+                    <small class="opacity-75">Viewing plans for {{ view_user.get_full_name|default:view_user.username }}</small>
+                {% endif %}
+            </div>
+            <a href="{% url 'sales:monthly_plan_create' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-plus me-1"></i> New Plan
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filter by user (office/admin) -->
+    {% if all_users %}
+    <div class="filter-bar">
+        <form method="get" class="row align-items-end g-2">
+            <div class="col-auto">
+                <label class="form-label small fw-semibold mb-1">View Plans For</label>
+                <select name="user" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- My Plans --</option>
+                    {% for u in all_users %}
+                        <option value="{{ u.pk }}" {% if u.pk == view_user.pk and view_user != request.user %}selected{% endif %}>
+                            {{ u.get_full_name|default:u.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Plans Grid -->
+    {% if plans %}
+    <div class="row g-3">
+        {% for plan in plans %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'sales:monthly_plan_detail' pk=plan.pk %}" class="text-decoration-none">
+                <div class="plan-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="plan-month">{{ plan.get_month_display }}</div>
+                            <div class="plan-year">{{ plan.year }}</div>
+                        </div>
+                        {% if plan.area %}
+                            <span class="plan-area"><i class="fas fa-map-marker-alt me-1"></i>{{ plan.area }}</span>
+                        {% endif %}
+                    </div>
+                    {% with totals=plan.get_total_targets %}
+                    <div class="d-flex flex-column gap-2 mt-3">
+                        <span class="target-chip"><strong>R/D</strong> {{ totals.rd|intcomma }}</span>
+                        <span class="target-chip"><strong>P/C</strong> {{ totals.pc|intcomma }}</span>
+                        <span class="target-chip"><strong>N/O</strong> {{ totals.no|intcomma }}</span>
+                        <span class="target-chip"><strong>Purchase</strong> {{ totals.purchase|intcomma }}</span>
+                    </div>
+                    {% endwith %}
+                    <div class="mt-2 text-end">
+                        <small class="text-muted">{{ plan.user.get_full_name|default:plan.user.username }}</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <h5>No Monthly Plans Yet</h5>
+        <p class="mb-3">Create your first monthly plan to start setting targets and tracking achievements.</p>
+        <a href="{% url 'sales:monthly_plan_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Create Plan
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

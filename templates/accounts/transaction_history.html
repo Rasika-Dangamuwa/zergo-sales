@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Transaction History{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Transaction History</h2>
+            <p class="text-muted mb-0">
+                {% if selected_user %}
+                Transactions for {{ selected_user.get_full_name }}
+                {% else %}
+                All money account transactions
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <!-- User Filter (admin only) -->
+                {% if request.user.is_admin or request.user.is_office_staff %}
+                <div class="col-md-3">
+                    <label for="user_id" class="form-label">User</label>
+                    <select name="user_id" id="user_id" class="form-select">
+                        <option value="">All Users</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                            {{ user.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- Transaction Type Filter -->
+                <div class="col-md-3">
+                    <label for="transaction_type" class="form-label">Transaction Type</label>
+                    <select name="transaction_type" id="transaction_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="credit" {% if request.GET.transaction_type == 'credit' %}selected{% endif %}>Credit</option>
+                        <option value="debit" {% if request.GET.transaction_type == 'debit' %}selected{% endif %}>Debit</option>
+                        <option value="commission_payment" {% if request.GET.transaction_type == 'commission_payment' %}selected{% endif %}>Commission Payment</option>
+                        <option value="bonus" {% if request.GET.transaction_type == 'bonus' %}selected{% endif %}>Bonus</option>
+                        <option value="payment" {% if request.GET.transaction_type == 'payment' %}selected{% endif %}>Payment</option>
+                        <option value="advance_given" {% if request.GET.transaction_type == 'advance_given' %}selected{% endif %}>Advance Given</option>
+                        <option value="adjustment_credit" {% if request.GET.transaction_type == 'adjustment_credit' %}selected{% endif %}>Adjustment Credit</option>
+                        <option value="adjustment_debit" {% if request.GET.transaction_type == 'adjustment_debit' %}selected{% endif %}>Adjustment Debit</option>
+                    </select>
+                </div>
+
+                <!-- Date From -->
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label">From Date</label>
+                    <input type="date" name="date_from" id="date_from" 
+                           class="form-control" 
+                           value="{{ request.GET.date_from }}">
+                </div>
+
+                <!-- Date To -->
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label">To Date</label>
+                    <input type="date" name="date_to" id="date_to" 
+                           class="form-control" 
+                           value="{{ request.GET.date_to }}">
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bi bi-filter me-2"></i>Filter
+                    </button>
+                    <a href="{% url 'accounts:transaction_history' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    {% if transactions %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-1 small">Total Transactions</p>
+                    <h4 class="mb-0">{{ transactions|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-1 small">Total Credits</p>
+                    <h4 class="mb-0 text-success">Rs. {{ total_credits|floatformat:2 }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-1 small">Total Debits</p>
+                    <h4 class="mb-0 text-danger">Rs. {{ total_debits|floatformat:2 }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-1 small">Net Amount</p>
+                    <h4 class="mb-0 {% if total_credits >= total_debits %}text-success{% else %}text-danger{% endif %}">
+                        Rs. {{ net_amount|floatformat:2 }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Transactions Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">Transactions</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Transaction #</th>
+                            {% if not selected_user %}
+                            <th>User</th>
+                            {% endif %}
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-end">Credit</th>
+                            <th class="text-end">Debit</th>
+                            <th>Payment Method</th>
+                            <th>Created By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.transaction_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="font-monospace small">{{ transaction.transaction_number }}</span>
+                            </td>
+                            {% if not selected_user %}
+                            <td>{{ transaction.account.user.get_full_name }}</td>
+                            {% endif %}
+                            <td>
+                                {% if transaction.transaction_type == 'credit' %}
+                                <span class="badge bg-success">Credit</span>
+                                {% elif transaction.transaction_type == 'debit' %}
+                                <span class="badge bg-danger">Debit</span>
+                                {% elif transaction.transaction_type == 'commission_payment' %}
+                                <span class="badge bg-info">Commission</span>
+                                {% elif transaction.transaction_type == 'bonus' %}
+                                <span class="badge bg-warning">Bonus</span>
+                                {% elif transaction.transaction_type == 'payment' %}
+                                <span class="badge bg-primary">Payment</span>
+                                {% elif transaction.transaction_type == 'advance_given' %}
+                                <span class="badge bg-danger">Advance Given</span>
+                                {% elif transaction.transaction_type == 'adjustment_credit' %}
+                                <span class="badge bg-secondary">Adj. Credit</span>
+                                {% elif transaction.transaction_type == 'adjustment_debit' %}
+                                <span class="badge bg-secondary">Adj. Debit</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 200px;" title="{{ transaction.description }}">
+                                    {{ transaction.description }}
+                                </div>
+                                {% if transaction.notes %}
+                                <small class="text-muted d-block">{{ transaction.notes|truncatewords:10 }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if transaction.transaction_type in 'credit,commission_payment,bonus,adjustment_credit' %}
+                                <span class="text-success fw-semibold">Rs. {{ transaction.amount|floatformat:2 }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if transaction.transaction_type in 'debit,payment,advance_given,adjustment_debit' %}
+                                <span class="text-danger fw-semibold">Rs. {{ transaction.amount|floatformat:2 }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if transaction.payment_method %}
+                                <span class="badge bg-light text-dark">{{ transaction.get_payment_method_display }}</span>
+                                {% if transaction.advance_request %}
+                                <small class="d-block text-muted">{{ transaction.advance_request.request_number }}</small>
+                                {% elif transaction.reference_number %}
+                                <small class="d-block text-muted">{{ transaction.reference_number }}</small>
+                                {% elif transaction.commission_reference %}
+                                <small class="d-block text-muted">{{ transaction.commission_reference }}</small>
+                                {% endif %}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ transaction.created_by.get_full_name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if selected_user %}8{% else %}9{% endif %}" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No transactions found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,673 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="{{ brand_primary|default:'#4F46E5' }}">
+    <meta name="apple-mobile-web-app-title" content="{{ navbar_title|default:'Zergo Sales' }}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    {% if brand_favicon_url %}<link rel="icon" href="{{ brand_favicon_url }}" type="image/png">{% endif %}
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+    
+    <title>{% block title %}{{ business_name|default:'Zergo Distributors' }}{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --primary-color: {{ brand_primary|default:'#2563eb' }};
+            --secondary-color: {{ brand_secondary|default:'#64748b' }};
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+        
+        /* Fullscreen mode for mobile */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+            position: fixed;
+            overscroll-behavior: none;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        /* Navbar - Clean Fixed Height Approach (Desktop) */
+        @media (min-width: 769px) {
+            .navbar {
+                {{ navbar_bg|default:'background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);'|safe }}
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 0.5rem 1rem;
+                height: 56px;
+            }
+            
+            .navbar .container-fluid {
+                display: flex;
+                align-items: center;
+                height: 100%;
+                padding: 0;
+            }
+            
+            .navbar-brand {
+                color: white !important;
+                font-size: 1.25rem;
+                font-weight: 700 !important;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                letter-spacing: 1px;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .navbar-brand i {
+                color: white !important;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                font-size: 1.5rem;
+            }
+            
+            .navbar-brand:hover {
+                color: #f0f9ff !important;
+            }
+            
+            .navbar .dropdown-toggle {
+                color: white !important;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                padding: 0.375rem 0.75rem;
+                height: 38px;
+            }
+            
+            .navbar .dropdown-toggle:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                border-radius: 0.25rem;
+            }
+            
+            .navbar .dropdown-menu {
+                margin-top: 0.5rem;
+            }
+        }
+        
+        /* Mobile and Desktop Common Navbar Styles */
+        .navbar {
+            {{ navbar_bg|default:'background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);'|safe }}
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #ffffff;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+        }
+        
+        .sidebar .nav-link {
+            color: #64748b;
+            padding: 12px 20px;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: #f1f5f9;
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: #eff6ff;
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+            font-weight: 600;
+        }
+        {% if sidebar_active_style == 'fill' %}
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color) !important;
+            color: #fff !important;
+            border-left-color: transparent !important;
+            border-radius: 6px;
+            margin: 0 8px;
+        }
+        .sidebar .nav-link:hover { border-radius: 6px; margin: 0 8px; }
+        {% elif sidebar_active_style == 'pill' %}
+        .sidebar .nav-link.active {
+            background-color: #eff6ff !important;
+            color: var(--primary-color) !important;
+            border-left-color: transparent !important;
+            border-radius: 20px;
+            margin: 2px 10px;
+        }
+        .sidebar .nav-link:hover { border-radius: 20px; margin: 2px 10px; }
+        {% endif %}
+        
+        .card {
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card {
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .stat-card .icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            /* Fullscreen mode for mobile */
+            html, body {
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            body {
+                overflow-y: auto;
+            }
+            
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: -100%;
+                width: 85%;
+                max-width: 320px;
+                height: calc(100vh - 56px);
+                z-index: 1000;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                box-shadow: 4px 0 15px rgba(0,0,0,0.15);
+            }
+            
+            .sidebar .position-sticky {
+                position: static !important;
+            }
+            
+            .sidebar.show {
+                left: 0;
+            }
+            
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 56px;
+                left: 0;
+                width: 100%;
+                height: calc(100vh - 56px);
+                background: rgba(0,0,0,0.6);
+                backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+                z-index: 999;
+            }
+            
+            .sidebar-overlay.show {
+                display: block;
+            }
+            
+            main {
+                margin: 0 !important;
+                padding: 1rem !important;
+            }
+            
+            .stat-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .stat-card h3 {
+                font-size: 1.5rem;
+            }
+            
+            .stat-card .icon {
+                font-size: 2rem;
+            }
+            
+            main .btn,
+            .container-fluid:not(.navbar .container-fluid) .btn,
+            .card .btn {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+            
+            .table {
+                font-size: 0.85rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+        
+        .table {
+            background-color: white;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            font-weight: 500;
+        }
+    </style>
+    
+    <!-- Mobile Common Styles - MUST load after inline styles to override properly -->
+    <link rel="stylesheet" href="{% static 'css/mobile-common.css' %}?v=20260109-2042">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            {% if user.is_authenticated %}
+            <button class="btn btn-link text-white d-md-none me-2 p-0" id="sidebarToggle" type="button">
+                <i class="fas fa-align-justify fa-lg"></i>
+            </button>
+            {% endif %}
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard:home' %}">
+                {% if navbar_brand_type == 'logo' and brand_logo_url %}
+                <img src="{{ brand_logo_url }}" alt="{{ navbar_title }}" style="max-height: 34px; max-width: 40px; object-fit: contain;">
+                {% else %}
+                <i class="{{ navbar_icon|default:'fas fa-store' }}"></i>
+                {% endif %}
+                <span>{{ navbar_title|default:'ZERGO' }}</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                                <i class="fas fa-user me-2"></i>Profile
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            {% if user.is_authenticated %}
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-md-block sidebar p-0" id="sidebar">
+                <div class="position-sticky pt-3 pb-5">
+                    <ul class="nav flex-column">
+
+                        <!-- ══════ MAIN ══════ -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% if user.is_sales_rep %}{% url 'dashboard:sales_rep' %}{% else %}{% url 'dashboard:home' %}{% endif %}">
+                                <i class="fas fa-home me-2"></i>Dashboard
+                            </a>
+                        </li>
+
+                        <!-- ══════ SHOPS ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">SHOPS</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'shops:list' %}">
+                                <i class="fas fa-shop me-2"></i>My Shops
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'shops:map' %}">
+                                <i class="fas fa-map-marked-alt me-2"></i>Shop Map
+                            </a>
+                        </li>
+
+                        <!-- ══════ SALES ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">SALES</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:create' %}">
+                                <i class="fas fa-plus-circle me-2"></i>New Bill
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:list' %}">
+                                <i class="fas fa-file-invoice me-2"></i>Bills
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:settlement_list' %}">
+                                <i class="fas fa-money-bill-wave me-2"></i>Payments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:return_list' %}">
+                                <i class="fas fa-undo me-2"></i>Returns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:exchange_list' %}">
+                                <i class="fas fa-exchange-alt me-2"></i>Exchanges
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:eod_date_list' %}">
+                                <i class="fas fa-calendar-check me-2"></i>EOD Reports
+                            </a>
+                        </li>
+
+                        <!-- ══════ MY ACCOUNT ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">MY ACCOUNT</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:money_account_dashboard' %}">
+                                <i class="fas fa-wallet me-2"></i>Money Account
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:commission_dashboard' %}">
+                                <i class="fas fa-coins me-2"></i>Commission
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:monthly_plan_list' %}">
+                                <i class="fas fa-calendar-alt me-2"></i>Monthly Plan
+                            </a>
+                        </li>
+
+                        {% if not user.is_sales_rep %}
+
+                        <!-- ══════ PRODUCTS & INVENTORY ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">INVENTORY</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:list' %}">
+                                <i class="fas fa-box me-2"></i>Products
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:stock_count' %}">
+                                <i class="fas fa-clipboard-check me-2"></i>Stock Count
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:stock_count_history' %}">
+                                <i class="fas fa-history me-2"></i>Stock Count History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:product_status_adjustment' %}">
+                                <i class="fas fa-sliders-h me-2"></i>Status Adjustment
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:product_status_history' %}">
+                                <i class="fas fa-list me-2"></i>Status History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:stock_alert' %}">
+                                <i class="fas fa-bell me-2"></i>Stock Alerts
+                            </a>
+                        </li>
+
+                        <!-- ══════ PURCHASING ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">PURCHASING</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:po_list' %}">
+                                <i class="fas fa-file-invoice me-2"></i>Purchase Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:purchase_list' %}">
+                                <i class="fas fa-truck me-2"></i>Purchases (GRN)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:purchase_return_list' %}">
+                                <i class="fas fa-truck-loading me-2"></i>Purchase Returns
+                            </a>
+                        </li>
+
+                        <!-- ══════ REPORTS ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">REPORTS</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:sales_report' %}">
+                                <i class="fas fa-chart-line me-2"></i>Sales Report
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:payment_report' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Payment Report
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:foc_dashboard' %}">
+                                <i class="fas fa-gift me-2"></i>FOC Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:profit_loss_report' %}">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>Profit & Loss
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:distributor_eod_report' %}">
+                                <i class="fas fa-clipboard-check me-2"></i>Distributor EOD
+                            </a>
+                        </li>
+
+                        <!-- ══════ FINANCE ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">FINANCE</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:all_money_accounts' %}">
+                                <i class="fas fa-money-check-alt me-2"></i>All Money Accounts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:advance_requests_list' %}">
+                                <i class="fas fa-hand-holding-usd me-2"></i>Advance Requests
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:commission_dashboard' %}">
+                                <i class="fas fa-coins me-2"></i>Commissions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'expenses:expense_dashboard' %}">
+                                <i class="fas fa-wallet me-2"></i>Expenses
+                            </a>
+                        </li>
+
+                        <!-- ══════ SETTINGS ══════ -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">SETTINGS</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:user_list' %}">
+                                <i class="fas fa-users-cog me-2"></i>User Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'business:settings' %}">
+                                <i class="fas fa-building me-2"></i>Business Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sales:printer_settings' %}">
+                                <i class="fas fa-print me-2"></i>Printer Settings
+                            </a>
+                        </li>
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/">
+                                <i class="fas fa-shield-alt me-2"></i>Admin Panel
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if user.is_superuser or user.is_platform_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/platform/">
+                                <i class="fas fa-layer-group me-2"></i>Platform Admin
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% endif %}
+                    </ul>
+                </div>
+            </nav>
+            {% endif %}
+
+            <!-- Main Content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                {% if messages %}
+                <div class="mt-3">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <script>
+        // Mobile Sidebar Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            function closeSidebar() {
+                sidebar.classList.remove('show');
+                sidebarOverlay.classList.remove('show');
+            }
+            
+            if (sidebarToggle && sidebar && sidebarOverlay) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    sidebarOverlay.classList.toggle('show');
+                });
+                
+                sidebarOverlay.addEventListener('click', function() {
+                    closeSidebar();
+                });
+                
+                // Close sidebar when clicking a link on mobile
+                const sidebarLinks = sidebar.querySelectorAll('.nav-link');
+                sidebarLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth < 768) {
+                            closeSidebar();
+                        }
+                    });
+                });
+                
+                // Close sidebar when profile dropdown is opened
+                const userDropdown = document.getElementById('userDropdown');
+                if (userDropdown) {
+                    userDropdown.addEventListener('click', function() {
+                        if (window.innerWidth < 768 && sidebar.classList.contains('show')) {
+                            closeSidebar();
+                        }
+                    });
+                }
+            }
+            
+        });
+        
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{% static 'service-worker.js' %}")
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

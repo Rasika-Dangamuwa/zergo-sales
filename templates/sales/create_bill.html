@@ -1,0 +1,1419 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Bill - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-blue: #2563eb;
+    --primary-dark: #1e40af;
+    --success-green: #10b981;
+    --warning-orange: #f59e0b;
+    --danger-red: #ef4444;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--gray-50);
+}
+
+.container-fluid {
+    padding-bottom: 100px;
+}
+
+/* Shop Selection */
+.search-sticky {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    border: 2px solid var(--primary-blue);
+}
+
+.form-select {
+    font-size: 16px;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-300);
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.form-select:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+#shopBalanceInfo {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid var(--warning-orange);
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.shop-balance-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid var(--primary-blue);
+    border-radius: 12px;
+    padding: 0;
+    margin-top: 20px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.balance-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+
+.balance-header h6 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+}
+
+.balance-item:last-child {
+    border-bottom: none;
+}
+
+/* Size-Price Category Headers */
+.size-category-header {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 16px 0 10px 0;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.size-category-header h5 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.size-category-header i {
+    font-size: 1.3rem;
+}
+
+/* Category Total Display */
+.category-total-bar {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid var(--primary-blue);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.category-total-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.category-total-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.category-total-item i {
+    color: var(--primary-blue);
+}
+
+.category-total-number {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+
+.btn-add-foc {
+    background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+}
+
+.btn-add-foc:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-add-foc i {
+    font-size: 16px;
+}
+
+/* FOC Manager Modal */
+.foc-manager {
+    background: white;
+    border: 3px solid var(--success-green);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+    display: none;
+}
+
+.foc-manager.active {
+    display: block;
+}
+
+.foc-manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.foc-manager-header h6 {
+    margin: 0;
+    color: var(--success-green);
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-close-foc {
+    background: transparent;
+    border: none;
+    color: var(--gray-600);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.foc-entry {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.foc-entry label {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 0;
+    font-size: 14px;
+}
+
+.foc-entry input, .foc-entry select {
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 2px solid var(--gray-300);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.foc-entry input:focus, .foc-entry select:focus {
+    border-color: var(--success-green);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    outline: none;
+}
+
+.btn-add-foc-item {
+    background: var(--success-green);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-add-foc-item:hover {
+    background: #059669;
+    transform: translateY(-2px);
+}
+
+.foc-items-list {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid var(--gray-200);
+}
+
+.foc-item-tag {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border: 2px solid var(--success-green);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.btn-remove-foc {
+    background: var(--danger-red);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-remove-foc:hover {
+    background: #dc2626;
+}
+
+/* Product Items */
+.product-item {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.product-item:hover {
+    border-color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.product-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.product-name {
+    font-weight: 700;
+    color: var(--gray-800);
+    font-size: 1.05rem;
+    flex: 1;
+}
+
+.stock-badge {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: var(--primary-blue);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--primary-blue);
+}
+
+.product-controls {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.price-lock-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-price-lock {
+    background: var(--gray-200);
+    border: 2px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-price-lock:hover {
+    background: var(--gray-300);
+}
+
+.btn-price-lock i {
+    color: var(--gray-700);
+    font-size: 18px;
+}
+
+.input-field {
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 2px solid var(--gray-300);
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 44px;
+}
+
+.input-field:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.input-field.locked {
+    background-color: var(--gray-100);
+}
+
+.qty-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.input-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.item-total-display {
+    font-weight: 700;
+    color: var(--success-green);
+    font-size: 1.1rem;
+    text-align: right;
+}
+
+/* Summary Card */
+.summary-card {
+    background: white;
+    border: 3px solid var(--primary-blue);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.2);
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.summary-header h5 {
+    margin: 0;
+    color: var(--primary-blue);
+    font-weight: 700;
+}
+
+.item-count-badge {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+#summaryItems {
+    margin-bottom: 15px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+    border-radius: 10px;
+    margin-top: 15px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary-blue);
+}
+
+#submitBtn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+#submitBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+#submitBtn:disabled {
+    background: var(--gray-300);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#draftBtn {
+    width: 100%;
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+}
+
+#draftBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(243, 156, 18, 0.4);
+}
+
+#draftBtn:disabled {
+    background: var(--gray-300);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 10px !important;
+    }
+    
+    h2 {
+        font-size: 1.3rem !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .search-sticky {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .size-category-header {
+        padding: 10px 14px;
+        margin: 12px 0 8px 0;
+    }
+    
+    .size-category-header h5 {
+        font-size: 1rem;
+    }
+    
+    .product-item {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .product-header {
+        margin-bottom: 10px;
+    }
+    
+    .product-name {
+        font-size: 14px;
+    }
+    
+    .stock-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+    
+    .product-controls {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .price-lock-group {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px;
+    }
+    
+    .input-field {
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+    }
+    
+    .qty-input-group {
+        width: 100%;
+    }
+    
+    .foc-entry {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .foc-entry label {
+        margin-top: 8px;
+        font-size: 14px;
+    }
+    
+    .foc-entry input,
+    .foc-entry select {
+        font-size: 16px !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .foc-manager {
+        padding: 14px;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    .category-total-bar {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+        padding: 10px 14px;
+    }
+    
+    .category-total-number {
+        font-size: 1.2rem;
+    }
+    
+    .btn-add-foc {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px;
+        font-size: 15px;
+    }
+    
+    .btn-add-foc-item {
+        width: 100%;
+        min-height: 44px;
+        font-size: 15px;
+    }
+    
+    .summary-card {
+        margin-top: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 10px 15px;">
+    <h2 style="color: var(--gray-800); font-weight: 700; font-size: 1.25rem; margin-bottom: 10px;">
+        <i class="fas fa-file-invoice-dollar me-2"></i>Create Bill
+    </h2>
+    
+    <form method="post" id="billForm">
+        {% csrf_token %}
+        <input type="hidden" name="submission_token" value="{{ submission_token }}">
+        <input type="hidden" name="items" id="itemsData">
+        
+        <div class="row">
+            <!-- Products Column -->
+            <div class="col-lg-8">
+                <!-- Shop Selection & Search - Sticky -->
+                <div class="search-sticky">
+                    <select name="shop_id" id="shopSelect" class="form-select">
+                        <option value="">-- Select Shop --</option>
+                        <option value="unregistered">🧾 Unregistered Customer</option>
+                        {% for shop in shops %}
+                        <option value="{{ shop.id }}" 
+                                data-balance="{{ shop.current_balance }}" 
+                                data-credit-limit="{{ shop.credit_limit|default:0 }}"
+                                data-tier1-total="{{ shop.tier1_total_debt }}"
+                                data-tier2-pending="{{ shop.tier2_pending }}"
+                                data-tier3-cash-due="{{ shop.tier3_cash_due }}"
+                                data-tier4-cleared="{{ shop.tier4_total_cleared }}"
+                                {% if preselected_shop_id and shop.id|stringformat:"s" == preselected_shop_id %}selected{% endif %}>
+                            {{ shop.shop_name }} - {{ shop.owner_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <!-- Customer Name Input (for unregistered customers) -->
+                    <div id="customerNameGroup" style="display: none; margin-top: 10px;">
+                        <input type="text" 
+                               name="customer_name" 
+                               id="customerNameInput" 
+                               class="form-control" 
+                               placeholder="Enter customer name"
+                               maxlength="255"
+                               style="font-size: 16px; padding: 14px 16px; border: 2px solid var(--gray-300); border-radius: 10px;">
+                    </div>
+                </div>
+                
+                <!-- Shop Balance Info (After Shop Selection) -->
+                <div id="shopBalanceInfo" class="shop-balance-card" style="display: none;">
+                    <div class="balance-header">
+                        <h6><i class="fas fa-wallet me-2"></i>Shop Balance Information</h6>
+                    </div>
+                    
+                    <!-- Tier 1: Total Debt -->
+                    <div class="balance-item">
+                        <span style="font-weight: 600;">Total Debt:</span>
+                        <span id="tier1TotalDebt" style="font-weight: 700; color: var(--danger-red);">Rs. 0.00</span>
+                    </div>
+                    
+                    <!-- Tier 2: Pending Verification -->
+                    <div class="balance-item">
+                        <span style="font-weight: 600;">Pending Verification:</span>
+                        <span id="tier2Pending" style="font-weight: 700; color: var(--warning-yellow);">Rs. 0.00</span>
+                    </div>
+                    
+                    <!-- Tier 3: Cash Due Now (Highlighted) -->
+                    <div class="balance-item" style="background-color: rgba(0, 120, 215, 0.1); padding: 8px; border-radius: 6px; margin: 4px 0;">
+                        <span style="font-weight: 700; color: var(--primary-blue);">Cash Due Now:</span>
+                        <span id="tier3CashDue" style="font-weight: 900; color: var(--danger-red); font-size: 1.1em;">Rs. 0.00</span>
+                    </div>
+                    
+                    <!-- Available Credit -->
+                    <div id="availableCreditRow" class="balance-item" style="border-top: 1px solid var(--gray-300); padding-top: 8px; margin-top: 8px; display: none;">
+                        <span style="font-weight: 600;">Available Credit:</span>
+                        <span id="availableCredit" style="font-weight: 700; color: var(--success-green);">Rs. 0.00</span>
+                    </div>
+                </div>
+                
+                <!-- Products by Size-Price Category -->
+                {% for category, products in products_by_category.items %}
+                <div class="size-category" data-category="{{ category|slugify }}">
+                    <div class="size-category-header">
+                        <h5>
+                            <i class="fas fa-bottle-water"></i>
+                            {{ category }}
+                        </h5>
+                    </div>
+                    
+                    <!-- Products in this category -->
+                    {% for product in products %}
+                    <div class="product-item" 
+                         data-id="{{ product.id }}" 
+                         data-name="{{ product.product_name }}"
+                         data-category="{{ category|slugify }}"
+                         data-category-display="{{ category }}"
+                         {% if product.quantity_in_stock <= 0 %}style="opacity: 0.5; pointer-events: none;"{% endif %}>
+                        <div class="product-header">
+                            <div class="product-name">{{ product.product_name }}</div>
+                            <span class="stock-badge" style="{% if product.quantity_in_stock <= 0 %}background: #dc3545; color: white;{% endif %}">Stock: {{ product.quantity_in_stock }}</span>
+                        </div>
+                        
+                        <div class="product-controls">
+                            <!-- Price with Lock -->
+                            <div class="price-lock-group">
+                                <button type="button" class="btn-price-lock" onclick="togglePriceLock({{ product.id }})">
+                                    <i class="fas fa-lock" id="lock_{{ product.id }}"></i>
+                                </button>
+                                <div class="qty-input-group">
+                                    <label class="input-label">Price</label>
+                                    <input type="number" 
+                                           class="input-field locked" 
+                                           id="price_{{ product.id }}"
+                                           value="{{ product.final_price|floatformat:2 }}" 
+                                           step="0.01" 
+                                           readonly>
+                                </div>
+                            </div>
+                            
+                            <!-- Quantity -->
+                            <div class="qty-input-group">
+                                <label class="input-label">Quantity</label>
+                                <input type="number" 
+                                       class="input-field" 
+                                       id="qty_{{ product.id }}"
+                                       data-product-id="{{ product.id }}"
+                                       data-product-name="{{ product.product_name }}"
+                                       data-stock="{{ product.quantity_in_stock }}"
+                                       data-tax="{{ product.category.tax_percentage|default:0 }}"
+                                       data-category="{{ category|slugify }}"
+                                       data-category-display="{{ category }}"
+                                       data-bottles-per-pack="{{ product.bottles_per_pack }}"
+                                       min="0" 
+                                       max="{% if product.quantity_in_stock > 0 %}{{ product.quantity_in_stock }}{% else %}0{% endif %}" 
+                                       value="0"
+                                       {% if product.quantity_in_stock <= 0 %}disabled title="Out of stock"{% endif %}
+                                       onchange="validateQuantityWithFOC({{ product.id }}); updateCategoryTotal('{{ category|slugify }}'); calculateTotal();">
+                            </div>
+                            
+                            <!-- Item Total -->
+                            <div class="item-total-display" id="itemTotal_{{ product.id }}"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Category Total Bar (After Products) -->
+                    <div class="category-total-bar">
+                        <div class="category-total-info">
+                            <div class="category-total-item">
+                                <i class="fas fa-box"></i>
+                                <span>Total:</span>
+                                <span class="category-total-number" id="categoryTotal_{{ category|slugify }}">0</span>
+                                <span>bottles</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-add-foc" onclick="toggleFOCManager('{{ category|slugify }}')">
+                            <i class="fas fa-gift"></i>
+                            Add FOC
+                        </button>
+                    </div>
+                    
+                    <!-- FOC Manager (Appears below when opened) -->
+                    <div class="foc-manager" id="focManager_{{ category|slugify }}">
+                        <div class="foc-manager-header">
+                            <h6>
+                                <i class="fas fa-gift"></i>
+                                Manage FOC for {{ category }}
+                            </h6>
+                            <button type="button" class="btn-close-foc" onclick="toggleFOCManager('{{ category|slugify }}')">
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div class="foc-entry">
+                            <label>FOC Qty:</label>
+                            <input type="number" id="focQty_{{ category|slugify }}" min="0" value="0">
+                        </div>
+                        
+                        <div class="foc-entry">
+                            <label>Flavor:</label>
+                            <select id="focFlavor_{{ category|slugify }}">
+                                <option value="">-- Select Flavor --</option>
+                                {% for product in products %}
+                                {% if product.quantity_in_stock > 0 %}
+                                <option value="{{ product.id }}" data-stock="{{ product.quantity_in_stock }}">
+                                    {{ product.product_name }} (Stock: {{ product.quantity_in_stock }})
+                                </option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <button type="button" class="btn-add-foc-item" onclick="addFOCItem('{{ category|slugify }}')">
+                            <i class="fas fa-plus-circle"></i> Add FOC Item
+                        </button>
+                        
+                        <div class="foc-items-list" id="focList_{{ category|slugify }}">
+                            <!-- FOC items will appear here -->
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Summary Column -->
+            <div class="col-lg-4">
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <h5>Bill Summary</h5>
+                        <span class="item-count-badge" id="itemCount">0</span>
+                    </div>
+                    
+                    <div id="summaryItems">
+                        <p class="text-muted text-center small">No items selected</p>
+                    </div>
+                    
+                    
+                    <span id="subtotal" style="display:none;">Rs. 0.00</span>
+                    <input type="hidden" id="billDiscount" name="discount_percentage" value="0">
+                    
+                    <div class="summary-total">
+                        <span>TOTAL:</span>
+                        <span id="total">Rs. 0.00</span>
+                    </div>
+                    
+                    <input type="hidden" name="save_as_draft" id="saveAsDraftField" value="false">
+                    
+                    <button type="button" id="submitBtn" onclick="submitBill(false)" disabled>
+                        <i class="fas fa-check-circle me-2"></i>Create Bill
+                    </button>
+                    
+                    <button type="button" id="draftBtn" onclick="submitBill(true)" disabled>
+                        <i class="fas fa-file-alt me-2"></i>Save as Draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Store FOC items by category
+const focItemsByCategory = {};
+
+// Initialize FOC storage
+{% for category in products_by_category.keys %}
+focItemsByCategory['{{ category|slugify }}'] = [];
+{% endfor %}
+
+// Toggle FOC Manager
+function toggleFOCManager(category) {
+    const manager = document.getElementById('focManager_' + category);
+    manager.classList.toggle('active');
+}
+
+// Add FOC Item
+function addFOCItem(category) {
+    const qtyInput = document.getElementById('focQty_' + category);
+    const flavorSelect = document.getElementById('focFlavor_' + category);
+    
+    const qty = parseInt(qtyInput.value) || 0;
+    const productId = flavorSelect.value;
+    const productName = flavorSelect.options[flavorSelect.selectedIndex].text;
+    const stock = parseInt(flavorSelect.options[flavorSelect.selectedIndex].dataset.stock) || 0;
+    
+    if (!productId) {
+        alert('Please select a flavor');
+        return;
+    }
+    
+    if (qty <= 0) {
+        alert('Please enter a valid FOC quantity');
+        return;
+    }
+    
+    // Check current sales quantity for this product
+    const salesQtyInput = document.getElementById('qty_' + productId);
+    const currentSalesQty = parseInt(salesQtyInput ? salesQtyInput.value : 0) || 0;
+    
+    // Check existing FOC for this product
+    let existingFOCQty = 0;
+    for (const cat in focItemsByCategory) {
+        focItemsByCategory[cat].forEach(item => {
+            if (item.productId === productId) {
+                existingFOCQty += item.qty;
+            }
+        });
+    }
+    
+    // Total required = current sales + existing FOC + new FOC
+    const totalRequired = currentSalesQty + existingFOCQty + qty;
+    
+    if (totalRequired > stock) {
+        alert(`Insufficient stock!\nAvailable: ${stock}\nAlready in bill: ${currentSalesQty} (Sales) + ${existingFOCQty} (FOC)\nTrying to add: ${qty} FOC\nShortage: ${totalRequired - stock}`);
+        return;
+    }
+    
+    // Add to storage
+    const focItem = {
+        productId: productId,
+        productName: productName,
+        qty: qty,
+        category: category
+    };
+    
+    focItemsByCategory[category].push(focItem);
+    
+    // Display FOC item
+    const focList = document.getElementById('focList_' + category);
+    const focTag = document.createElement('div');
+    focTag.className = 'foc-item-tag';
+    focTag.innerHTML = `
+        <span><strong>${qty}</strong> × ${productName}</span>
+        <button type="button" class="btn-remove-foc" onclick="removeFOCItem('${category}', ${focItemsByCategory[category].length - 1})">
+            <i class="fas fa-times"></i> Remove
+        </button>
+    `;
+    focList.appendChild(focTag);
+    
+    // Reset inputs
+    qtyInput.value = 0;
+    flavorSelect.value = '';
+    
+    // Update category total and calculations
+    updateCategoryTotal(category);
+    calculateTotal();
+}
+
+// Validate sales quantity against existing FOC
+function validateQuantityWithFOC(productId) {
+    const qtyInput = document.getElementById('qty_' + productId);
+    const qty = parseInt(qtyInput.value) || 0;
+    const stock = parseInt(qtyInput.dataset.stock);
+    
+    if (qty < 0) {
+        qtyInput.value = 0;
+        return;
+    }
+    
+    // Check existing FOC for this product across all categories
+    let existingFOCQty = 0;
+    for (const category in focItemsByCategory) {
+        focItemsByCategory[category].forEach(item => {
+            if (item.productId === productId.toString()) {
+                existingFOCQty += item.qty;
+            }
+        });
+    }
+    
+    // Total required = sales qty + existing FOC
+    const totalRequired = qty + existingFOCQty;
+    
+    if (totalRequired > stock) {
+        alert(`Insufficient stock!\nAvailable: ${stock}\nAlready in FOC: ${existingFOCQty}\nTrying to add: ${qty} for sales\nMaximum allowed: ${stock - existingFOCQty}`);
+        qtyInput.value = stock - existingFOCQty;
+        return;
+    }
+}
+
+// Remove FOC Item
+function removeFOCItem(category, index) {
+    focItemsByCategory[category].splice(index, 1);
+    
+    // Rebuild FOC list display
+    const focList = document.getElementById('focList_' + category);
+    focList.innerHTML = '';
+    
+    focItemsByCategory[category].forEach((item, idx) => {
+        const focTag = document.createElement('div');
+        focTag.className = 'foc-item-tag';
+        focTag.innerHTML = `
+            <span><strong>${item.qty}</strong> × ${item.productName}</span>
+            <button type="button" class="btn-remove-foc" onclick="removeFOCItem('${category}', ${idx})">
+                <i class="fas fa-times"></i> Remove
+            </button>
+        `;
+        focList.appendChild(focTag);
+    });
+    
+    // Update category total after removing FOC
+    updateCategoryTotal(category);
+    calculateTotal();
+}
+
+// Update Category Total
+function updateCategoryTotal(category) {
+    const categoryDiv = document.querySelector(`.size-category[data-category="${category}"]`);
+    if (!categoryDiv) return;
+    
+    const qtyInputs = categoryDiv.querySelectorAll('input[data-category="' + category + '"]');
+    let total = 0;
+    
+    // Add sales quantities
+    qtyInputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    
+    // Add FOC quantities for this category
+    if (focItemsByCategory[category]) {
+        focItemsByCategory[category].forEach(item => {
+            total += item.qty;
+        });
+    }
+    
+    const totalEl = document.getElementById('categoryTotal_' + category);
+    if (totalEl) {
+        totalEl.textContent = total;
+    }
+}
+
+// Toggle Price Lock
+function togglePriceLock(productId) {
+    const priceInput = document.getElementById('price_' + productId);
+    const lockIcon = document.getElementById('lock_' + productId);
+    
+    if (priceInput.readOnly) {
+        priceInput.readOnly = false;
+        priceInput.classList.remove('locked');
+        lockIcon.classList.remove('fa-lock');
+        lockIcon.classList.add('fa-lock-open');
+        priceInput.focus();
+    } else {
+        const value = parseFloat(priceInput.value) || 0;
+        priceInput.value = value.toFixed(2);
+        priceInput.readOnly = true;
+        priceInput.classList.add('locked');
+        lockIcon.classList.remove('fa-lock-open');
+        lockIcon.classList.add('fa-lock');
+        calculateTotal();
+    }
+}
+
+// Shop selection with balance info
+document.getElementById('shopSelect').addEventListener('change', async function() {
+    const shopId = this.value;
+    const option = this.options[this.selectedIndex];
+    const balance = parseFloat(option.dataset.balance) || 0;
+    const creditLimit = parseFloat(option.dataset.creditLimit) || 0;
+    const tier1Total = parseFloat(option.dataset.tier1Total) || 0;
+    const tier2Pending = parseFloat(option.dataset.tier2Pending) || 0;
+    const tier3CashDue = parseFloat(option.dataset.tier3CashDue) || 0;
+    const tier4Cleared = parseFloat(option.dataset.tier4Cleared) || 0;
+    
+    // Handle unregistered customer option
+    if (shopId === 'unregistered') {
+        // Show customer name input
+        document.getElementById('customerNameGroup').style.display = 'block';
+        document.getElementById('shopBalanceInfo').style.display = 'none';
+        document.getElementById('customerNameInput').required = true;
+        document.getElementById('customerNameInput').focus();
+    } else if (shopId) {
+        // Regular shop selected
+        document.getElementById('customerNameGroup').style.display = 'none';
+        document.getElementById('customerNameInput').required = false;
+        document.getElementById('customerNameInput').value = '';
+        
+        document.getElementById('shopBalanceInfo').style.display = 'block';
+        
+        // Update balance display
+        document.getElementById('tier1TotalDebt').textContent = 'Rs. ' + Math.abs(tier1Total).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('tier2Pending').textContent = 'Rs. ' + Math.abs(tier2Pending).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('tier3CashDue').textContent = 'Rs. ' + Math.abs(tier3CashDue).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Available Credit (only show if shop has a credit limit)
+        const availableCreditRow = document.getElementById('availableCreditRow');
+        if (creditLimit > 0) {
+            const availableCredit = creditLimit - tier1Total;
+            availableCreditRow.style.display = '';
+            const acEl = document.getElementById('availableCredit');
+            acEl.textContent = 'Rs. ' + Math.abs(availableCredit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            acEl.style.color = availableCredit <= 0 ? 'var(--danger-red)' : 'var(--success-green)';
+        } else {
+            availableCreditRow.style.display = 'none';
+        }
+    } else {
+        // No selection
+        document.getElementById('customerNameGroup').style.display = 'none';
+        document.getElementById('customerNameInput').required = false;
+        document.getElementById('customerNameInput').value = '';
+        document.getElementById('shopBalanceInfo').style.display = 'none';
+    }
+});
+
+// Trigger shop selection if preselected
+{% if preselected_shop_id %}
+setTimeout(() => {
+    document.getElementById('shopSelect').dispatchEvent(new Event('change'));
+}, 100);
+{% endif %}
+
+function calculateTotal() {
+    let itemCount = 0;
+    let subtotal = 0;
+    let totalTax = 0;
+    const items = [];
+    
+    // Group items by category
+    const itemsByCategory = {};
+    
+    // Loop through all products and group by category
+    document.querySelectorAll('[id^="qty_"]').forEach(qtyInput => {
+        const productId = qtyInput.dataset.productId;
+        const qty = parseInt(qtyInput.value) || 0;
+        const price = parseFloat(document.getElementById('price_' + productId).value) || 0;
+        const stock = parseFloat(qtyInput.dataset.stock);
+        const tax = parseFloat(qtyInput.dataset.tax) || 0;
+        const category = qtyInput.dataset.category;
+        const categoryDisplay = qtyInput.dataset.categoryDisplay;
+        const bottlesPerPack = parseInt(qtyInput.dataset.bottlesPerPack) || 24;
+        
+        // Validate stock
+        if (qty > stock) {
+            qtyInput.value = 0;
+            const productName = qtyInput.dataset.productName || 'Unknown product';
+            alert(`Insufficient stock for ${productName}!\nRequested: ${qty}\nAvailable: ${stock}`);
+            return;
+        }
+        
+        if (qty > 0) {
+            itemCount++;
+            const lineTotal = price * qty;
+            subtotal += lineTotal;
+            totalTax += lineTotal * (tax / 100);
+            
+            // Show inline item total
+            const itemTotalEl = document.getElementById('itemTotal_' + productId);
+            if (itemTotalEl) {
+                itemTotalEl.textContent = 'Rs. ' + lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            
+            items.push({
+                product_id: productId,
+                quantity: qty,
+                foc_quantity: 0,
+                unit_price: price.toFixed(2),
+                discount_percentage: 0
+            });
+            
+            // Add to category group
+            if (!itemsByCategory[category]) {
+                itemsByCategory[category] = { regular: [], foc: [], bottlesPerPack: bottlesPerPack, displayName: categoryDisplay };
+            }
+            
+            itemsByCategory[category].regular.push({
+                name: qtyInput.dataset.productName,
+                qty: qty,
+                price: price,
+                lineTotal: lineTotal
+            });
+        } else {
+            const itemTotalEl = document.getElementById('itemTotal_' + productId);
+            if (itemTotalEl) {
+                itemTotalEl.textContent = '';
+            }
+        }
+    });
+    
+    // Add FOC items to category groups
+    for (const category in focItemsByCategory) {
+        focItemsByCategory[category].forEach(focItem => {
+            itemCount++;
+            
+            if (!itemsByCategory[category]) {
+                // Get bottles per pack and display name from first product in this category
+                const firstProduct = document.querySelector(`[data-category="${category}"]`);
+                const bottlesPerPack = firstProduct ? parseInt(firstProduct.dataset.bottlesPerPack) || 24 : 24;
+                const categoryDisplay = firstProduct ? firstProduct.dataset.categoryDisplay || category : category;
+                itemsByCategory[category] = { regular: [], foc: [], bottlesPerPack: bottlesPerPack, displayName: categoryDisplay };
+            }
+            
+            itemsByCategory[category].foc.push({
+                name: focItem.productName,
+                qty: focItem.qty
+            });
+            
+            items.push({
+                product_id: focItem.productId,
+                quantity: 0,
+                foc_quantity: focItem.qty,
+                unit_price: 0,
+                discount_percentage: 0
+            });
+        });
+    }
+    
+    // Build summary HTML: each category's items followed by its FOC and category total
+    let summaryHtml = '';
+    for (const category in itemsByCategory) {
+        const categoryItems = itemsByCategory[category];
+        const bottlesPerPack = categoryItems.bottlesPerPack;
+        
+        // Calculate category totals
+        let categoryTotalBottles = 0;
+        let categoryFOCBottles = 0;
+        let categoryTotalValue = 0;
+        
+        // Add regular items for this category
+        categoryItems.regular.forEach(item => {
+            categoryTotalBottles += item.qty;
+            categoryTotalValue += item.lineTotal;
+            summaryHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="fw-bold text-dark">${item.name}</div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted small">Qty: <strong class="text-primary">${item.qty}</strong></span>
+                        <span class="fw-bold text-success">Rs. ${item.lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="text-muted small">${item.qty} × Rs. ${item.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                </div>
+            `;
+        });
+        
+        // Add FOC items for this category (immediately after regular items)
+        categoryItems.foc.forEach(item => {
+            categoryFOCBottles += item.qty;
+            summaryHtml += `
+                <div class="border-bottom pb-2 mb-2" style="background: #f0fdf4; padding: 8px; border-radius: 6px;">
+                    <div class="fw-bold text-success">
+                        <i class="fas fa-gift me-1"></i>${item.name}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted small">FOC: <strong class="text-success">${item.qty}</strong></span>
+                        <span class="fw-bold text-success">Rs. 0.00</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Add category total with pack/loose breakdown
+        if (categoryTotalBottles > 0 || categoryFOCBottles > 0) {
+            const totalBottles = categoryTotalBottles + categoryFOCBottles;
+            const packs = Math.floor(totalBottles / bottlesPerPack);
+            const loose = totalBottles % bottlesPerPack;
+            
+            summaryHtml += `
+                <div class="mb-3 p-3" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 10px; border: 2px solid #2563eb;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold" style="color: #1e40af; font-size: 1rem;">
+                            ${categoryItems.displayName}
+                        </div>
+                        <div class="fw-bold" style="color: #059669; font-size: 1.1rem;">
+                            Rs. ${categoryTotalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #1e3a8a; background: rgba(255,255,255,0.5); padding: 8px; border-radius: 6px;">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Sales:</strong> ${categoryTotalBottles} bottles</span>
+                            <span>${Math.floor(categoryTotalBottles / bottlesPerPack)} packs + ${categoryTotalBottles % bottlesPerPack} loose</span>
+                        </div>
+                        ${categoryFOCBottles > 0 ? `
+                        <div class="d-flex justify-content-between mb-1" style="color: #059669;">
+                            <span><strong>FOC:</strong> ${categoryFOCBottles} bottles</span>
+                            <span>${Math.floor(categoryFOCBottles / bottlesPerPack)} packs + ${categoryFOCBottles % bottlesPerPack} loose</span>
+                        </div>
+                        ` : ''}
+                        <div class="d-flex justify-content-between pt-1" style="border-top: 1px solid #93c5fd; font-weight: 700; color: #1e40af;">
+                            <span>Total: ${totalBottles} bottles</span>
+                            <span>${packs} packs + ${loose} loose</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Update summary
+    document.getElementById('itemCount').textContent = itemCount;
+    
+    if (itemCount === 0) {
+        document.getElementById('summaryItems').innerHTML = '<p class="text-muted text-center small">No items selected</p>';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('draftBtn').disabled = true;
+    } else {
+        document.getElementById('summaryItems').innerHTML = summaryHtml;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('draftBtn').disabled = false;
+    }
+    
+    // Calculate total
+    const total = subtotal;
+    
+    document.getElementById('subtotal').textContent = 'Rs. ' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('total').textContent = 'Rs. ' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    // Store items for submission
+    document.getElementById('itemsData').value = JSON.stringify(items);
+    
+    // Enable/disable both buttons based on item count
+    document.getElementById('submitBtn').disabled = itemCount === 0;
+    document.getElementById('draftBtn').disabled = itemCount === 0;
+}
+
+// Prevent duplicate submissions
+let isSubmitting = false;
+
+function submitBill(isDraft) {
+    // Block re-entry if already submitting
+    if (isSubmitting) return;
+
+    const shopId = document.getElementById('shopSelect').value;
+    const customerName = document.getElementById('customerNameInput').value.trim();
+    
+    // Validate: Either shop OR customer name must be provided
+    if (!shopId) {
+        alert('Please select a shop or choose "Unregistered Customer"');
+        return;
+    }
+    
+    if (shopId === 'unregistered' && !customerName) {
+        alert('Please enter customer name for unregistered customer');
+        document.getElementById('customerNameInput').focus();
+        return;
+    }
+    
+    const items = JSON.parse(document.getElementById('itemsData').value || '[]');
+    if (items.length === 0) {
+        alert('Please select at least one item');
+        return;
+    }
+    
+    // Lock submission
+    isSubmitting = true;
+
+    // Disable both buttons and show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    const draftBtn = document.getElementById('draftBtn');
+    submitBtn.disabled = true;
+    draftBtn.disabled = true;
+
+    if (isDraft) {
+        draftBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    } else {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+    }
+    
+    // If unregistered customer, clear shop_id value before submission
+    if (shopId === 'unregistered') {
+        document.getElementById('shopSelect').value = '';
+    }
+    
+    // Set the draft flag
+    document.getElementById('saveAsDraftField').value = isDraft ? 'true' : 'false';
+    
+    // Submit the form
+    document.getElementById('billForm').submit();
+}
+
+// Form submission event (backup)
+document.getElementById('billForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+});
+
+// Trigger initial display if shop pre-selected
+if (document.getElementById('shopSelect').value) {
+    document.getElementById('shopSelect').dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "tenants/base_platform.html" %}
+{% load humanize %}
+
+{% block title %}{{ distributor.name }} - Zergo Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Back + Title -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'tenants:distributor_list' %}" class="text-muted text-decoration-none mb-1 d-inline-block" style="font-size: 0.85rem;">
+                <i class="fas fa-arrow-left me-1"></i> All Distributors
+            </a>
+            <h4 class="fw-bold mb-0" style="color: #1E293B;">{{ distributor.name }}</h4>
+            <span class="text-muted">{{ distributor.code }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'tenants:distributor_edit' pk=distributor.pk %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Edit
+            </a>
+            {% if distributor.schema_name != 'public' %}
+            <form method="post" action="{% url 'tenants:distributor_toggle' pk=distributor.pk %}">
+                {% csrf_token %}
+                {% if distributor.is_active %}
+                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Deactivate this distributor?')">
+                        <i class="fas fa-power-off me-1"></i> Deactivate
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-outline-success">
+                        <i class="fas fa-power-off me-1"></i> Activate
+                    </button>
+                {% endif %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card text-center">
+                <div class="stat-value">{{ summary.user_count }}</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card text-center">
+                <div class="stat-value">{{ summary.shop_count|intcomma }}</div>
+                <div class="stat-label">Active Shops</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card text-center">
+                <div class="stat-value">{{ summary.total_sales|floatformat:0|intcomma }}</div>
+                <div class="stat-label">Total Sales</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card text-center">
+                <div class="stat-value text-danger">{{ summary.total_outstanding|floatformat:0|intcomma }}</div>
+                <div class="stat-label">Outstanding</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Business Info -->
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <h6 class="fw-bold mb-3"><i class="fas fa-info-circle me-1 text-primary"></i> Business Info</h6>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted" style="width: 140px;">Owner</td><td class="fw-semibold">{{ distributor.owner_name|default:"-" }}</td></tr>
+                    <tr><td class="text-muted">Email</td><td>{{ distributor.email|default:"-" }}</td></tr>
+                    <tr><td class="text-muted">Phone</td><td>{{ distributor.phone|default:"-" }}</td></tr>
+                    <tr><td class="text-muted">Address</td><td>{{ distributor.address|default:"-" }}</td></tr>
+                    <tr><td class="text-muted">Business Reg.</td><td>{{ distributor.business_registration|default:"-" }}</td></tr>
+                    <tr><td class="text-muted">Tax ID</td><td>{{ distributor.tax_id|default:"-" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Subscription & Domains -->
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <h6 class="fw-bold mb-3"><i class="fas fa-cog me-1 text-primary"></i> Subscription & Access</h6>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 140px;">Plan</td>
+                        <td><span class="badge bg-primary">{{ distributor.get_plan_display }}</span></td>
+                    </tr>
+                    <tr><td class="text-muted">Plan Expires</td><td>{{ distributor.plan_expires|default:"No expiry" }}</td></tr>
+                    <tr><td class="text-muted">Max Users</td><td>{{ distributor.max_users }}</td></tr>
+                    <tr><td class="text-muted">Max Shops</td><td>{{ distributor.max_shops }}</td></tr>
+                    <tr><td class="text-muted">Schema</td><td><code>{{ distributor.schema_name }}</code></td></tr>
+                    <tr><td class="text-muted">Created</td><td>{{ distributor.created_on|date:"M d, Y" }}</td></tr>
+                </table>
+                
+                <h6 class="fw-bold mt-3 mb-2">Domains</h6>
+                {% for domain in domains %}
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="fas fa-globe text-muted"></i>
+                        <code>{{ domain.domain }}</code>
+                        {% if domain.is_primary %}<span class="badge bg-success-subtle text-success">Primary</span>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Users -->
+        <div class="col-12">
+            <div class="dist-table">
+                <div class="p-3 border-bottom">
+                    <h6 class="fw-bold mb-0"><i class="fas fa-users me-1 text-primary"></i> Users ({{ users.count }})</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="px-3">Name</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Employee ID</th>
+                                <th class="text-center">Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td class="px-3 fw-semibold">{{ user.get_full_name|default:user.username }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if user.user_type == 'admin' %}bg-danger
+                                        {% elif user.user_type == 'office' %}bg-info
+                                        {% else %}bg-primary{% endif %}">
+                                        {{ user.get_user_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ user.employee_id|default:"-" }}</td>
+                                <td class="text-center">
+                                    {% if user.is_active %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No users assigned</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

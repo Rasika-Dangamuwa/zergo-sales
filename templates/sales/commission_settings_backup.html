@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Commission Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .settings-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: #f9fafb;
+        border-left: 4px solid;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-box.primary {
+        border-left-color: #667eea;
+    }
+    
+    .stat-box.success {
+        border-left-color: #10b981;
+    }
+    
+    .stat-box.warning {
+        border-left-color: #f59e0b;
+    }
+    
+    .stat-box h6 {
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-box h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .info-box {
+        background: #e0e7ff;
+        border-left: 4px solid #4338ca;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-cog"></i> Commission Settings</h2>
+            <p class="text-muted">Configure commission rates and calculation rules</p>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:sales_rep' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'sales:commission_dashboard' %}">Commissions</a></li>
+                    <li class="breadcrumb-item active">Settings</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'sales:commission_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Real-time Statistics -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-box primary">
+                <h6>Current Rate</h6>
+                <h3>{{ current_rate_obj.rate|default:default_commission_rate }}%</h3>
+                <small class="text-muted">
+                    {% if current_rate_obj %}
+                        Since {{ current_rate_obj.effective_from|date:"d M Y" }}
+                    {% else %}
+                        Default rate
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box success">
+                <h6>This Month Commission</h6>
+                <h3>{{ month_total_commission|floatformat:2|default:"0.00" }}</h3>
+                <small class="text-muted">Real-time total</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box primary">
+                <h6>Payments Collected</h6>
+                <h3>{{ month_payments|floatformat:2|default:"0.00" }}</h3>
+                <small class="text-muted">This month</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box warning">
+                <h6>Returns Processed</h6>
+                <h3>{{ month_returns|floatformat:2|default:"0.00" }}</h3>
+                <small class="text-muted">This month</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Commission Rate Settings -->
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-percentage"></i> Default Commission Rate
+                </div>
+                <div class="card-body">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> This is the default commission rate applied when creating new commission records. 
+                        Individual records can have custom rates.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Default Commission Rate (%)</label>
+                            <input type="number" step="0.01" min="0" max="100" 
+                                   name="default_commission_rate" 
+                                   class="form-control form-control-lg" 
+                                   value="{{ default_commission_rate }}"
+                                   required>
+                            <small class="form-text text-muted">
+                                Commission percentage applied to (Collected Payments - Returns)
+                            </small>
+                        </div>
+                        
+                        {% if last_updated %}
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <i class="fas fa-info-circle"></i>
+                                Last updated: {{ last_updated|date:"d M Y, h:i A" }}
+                                {% if updated_by %} by {{ updated_by.get_full_name|default:updated_by.username }}{% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-save"></i> Save Default Rate
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculation Rules -->
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-calculator"></i> Calculation Rules
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Current Commission Formula:</h6>
+                    <div class="alert alert-light border">
+                        <code style="font-size: 1rem;">
+                            Commission = (Collected Payments - Returns) × Rate%
+                        </code>
+                    </div>
+                    
+                    <h6 class="fw-bold mt-4 mb-3">Rules Applied:</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Commission based on <strong>bill creator</strong> (sales_rep field)
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Only <strong>completed payments</strong> count towards commission
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Returns <strong>reduce</strong> commission for the month
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Any user who makes sales earns commission
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Monthly calculation period
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Generate Commission Records -->
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-file-invoice-dollar"></i> Generate Commission Records
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Generate or update commission records for all users who made sales in a specific month.
+                    </p>
+                    
+                    <form method="post" action="{% url 'sales:generate_commission_records' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Month</label>
+                            <input type="month" name="month" class="form-control" 
+                                   value="{{ current_month }}" required>
+                            <small class="form-text text-muted">
+                                This will create/update commission records for all users with sales in this month
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-sync"></i> Generate Commission Records
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Status Management -->
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-money-check-alt"></i> Payment Status
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Commission Payment Workflow:</h6>
+                    
+                    <div class="timeline">
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">1</span>
+                            </div>
+                            <div>
+                                <strong>Monthly Calculation</strong>
+                                <p class="text-muted mb-0 small">Commission calculated based on completed payments and returns</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-warning rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">2</span>
+                            </div>
+                            <div>
+                                <strong>Pending Status</strong>
+                                <p class="text-muted mb-0 small">Commission awaiting payment approval</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-success rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">3</span>
+                            </div>
+                            <div>
+                                <strong>Paid Status</strong>
+                                <p class="text-muted mb-0 small">Commission payment completed and recorded</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-lightbulb"></i>
+                        <strong>Tip:</strong> Use the commission dashboard to mark individual commissions as paid
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Settings (Future Phase) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-star"></i> Advanced Features (Coming Soon)
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <i class="fas fa-user-cog fa-3x text-muted mb-3"></i>
+                                <h6>Custom User Rates</h6>
+                                <p class="text-muted small">Set different commission rates for specific users</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                                <h6>Product Category Rates</h6>
+                                <p class="text-muted small">Different commission rates for product categories</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                <h6>Tiered Commission</h6>
+                                <p class="text-muted small">Bonus rates for hitting sales targets</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

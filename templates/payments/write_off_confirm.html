@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Write Off Bad Debt - {{ bill.bill_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .write-off-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    
+    .write-off-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px 15px 0 0;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
+    }
+    
+    .write-off-header h2 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.8rem;
+    }
+    
+    .write-off-header .subtitle {
+        margin-top: 0.5rem;
+        opacity: 0.95;
+        font-size: 1rem;
+    }
+    
+    .write-off-card {
+        background: white;
+        border-radius: 0 0 15px 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .warning-banner {
+        background: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 1.5rem;
+        margin: 0;
+    }
+    
+    .warning-banner h5 {
+        color: #856404;
+        margin: 0 0 1rem 0;
+        font-weight: 600;
+    }
+    
+    .warning-banner ul {
+        margin: 0;
+        padding-left: 1.5rem;
+        color: #856404;
+    }
+    
+    .warning-banner li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-section {
+        padding: 2rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .section-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .info-value.amount {
+        font-size: 1.5rem;
+        color: #dc3545;
+    }
+    
+    .info-value.danger {
+        color: #dc3545;
+    }
+    
+    .info-value.success {
+        color: #28a745;
+    }
+    
+    .badge-age {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .badge-age.critical {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .badge-age.warning {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .badge-age.normal {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .payment-history-table {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .payment-history-table th {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        font-weight: 600;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .payment-history-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .form-section {
+        padding: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+        color: #2c3e50;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: #dc3545;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        padding: 2rem;
+        background: #f8f9fa;
+        border-top: 2px solid #dee2e6;
+    }
+    
+    .btn {
+        flex: 1;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+    
+    @media (max-width: 768px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="write-off-container">
+    <div class="write-off-header">
+        <h2><i class="fas fa-exclamation-triangle me-2"></i>Write Off Bad Debt</h2>
+        <div class="subtitle">Uncollectable Debt Removal</div>
+    </div>
+    
+    <div class="write-off-card">
+        <!-- Warning Banner -->
+        <div class="warning-banner">
+            <h5><i class="fas fa-shield-alt me-2"></i>Critical Action - Please Review Carefully</h5>
+            <ul>
+                <li><strong>This action is PERMANENT and CANNOT be undone</strong></li>
+                <li>Bill will be marked as fully settled (write-off counts as payment)</li>
+                <li>Shop balance will be reduced by the write-off amount</li>
+                <li>Full audit trail will be maintained in system records</li>
+                <li>This should only be used for genuinely uncollectable debts</li>
+            </ul>
+        </div>
+        
+        <!-- Bill Information -->
+        <div class="info-section">
+            <div class="section-title">
+                <i class="fas fa-file-invoice"></i> Bill Information
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Bill Number</span>
+                    <span class="info-value">{{ bill.bill_number }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Bill Date</span>
+                    <span class="info-value">{{ bill.bill_date|date:"d M Y" }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Customer</span>
+                    <span class="info-value">
+                        {% if bill.shop %}
+                            {{ bill.shop.shop_name }}
+                        {% else %}
+                            {{ bill.customer_name|default:"Unregistered Customer" }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                {% if bill.shop %}
+                <div class="info-item">
+                    <span class="info-label">Owner</span>
+                    <span class="info-value">{{ bill.shop.owner_name }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="info-item">
+                    <span class="info-label">Days Overdue</span>
+                    <span class="info-value">
+                        <span class="badge-age {% if days_overdue > 180 %}critical{% elif days_overdue > 90 %}warning{% else %}normal{% endif %}">
+                            {{ days_overdue }} days
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Sales Rep</span>
+                    <span class="info-value">{{ bill.sales_rep.get_full_name|default:bill.sales_rep.username }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Financial Summary -->
+        <div class="info-section">
+            <div class="section-title">
+                <i class="fas fa-calculator"></i> Financial Summary
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Original Amount</span>
+                    <span class="info-value">Rs. {{ bill.total_amount|floatformat:2|intcomma }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Paid to Date {% if amount_mismatch %}<span style="color: #dc3545;" title="Recalculated from settlements">*</span>{% endif %}</span>
+                    <span class="info-value success">
+                        {% if amount_mismatch %}
+                            <span style="text-decoration: line-through; opacity: 0.6;">Rs. {{ bill.paid_amount|floatformat:2|intcomma }}</span>
+                            <strong style="color: #28a745;">Rs. {{ actual_paid_amount|floatformat:2|intcomma }}</strong>
+                        {% else %}
+                            Rs. {{ bill.paid_amount|floatformat:2|intcomma }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Outstanding Balance {% if amount_mismatch %}<span style="color: #dc3545;" title="Recalculated">*</span>{% endif %}</span>
+                    <span class="info-value amount">
+                        {% if amount_mismatch %}
+                            <span style="text-decoration: line-through; opacity: 0.6;">Rs. {{ bill.balance_amount|floatformat:2|intcomma }}</span>
+                            <strong style="color: #dc3545;">Rs. {{ actual_balance_amount|floatformat:2|intcomma }}</strong>
+                        {% else %}
+                            Rs. {{ bill.balance_amount|floatformat:2|intcomma }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Payment Status</span>
+                    <span class="info-value {% if bill.settlement_status == 'unsettled' %}danger{% endif %}">
+                        {{ bill.get_settlement_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            {% if amount_mismatch %}
+            <div class="alert alert-warning" style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+                <i class="fas fa-exclamation-triangle" style="color: #856404;"></i>
+                <strong>Amount Recalculated:</strong> The bill's paid and balance amounts have been recalculated from actual completed settlements. The write-off will use the <strong>corrected balance of Rs. {{ actual_balance_amount|floatformat:2|intcomma }}</strong>.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Payment History -->
+        {% if payments %}
+        <div class="info-section">
+            <div class="section-title">
+                <i class="fas fa-history"></i> Payment History
+            </div>
+            
+            <table class="payment-history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Payment No.</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for settlement in payments %}
+                    <tr>
+                        <td>{{ settlement.payment_date|date:"d M Y" }}</td>
+                        <td>{{ settlement.payment_number }}</td>
+                        <td>{{ settlement.get_payment_method_display }}</td>
+                        <td>Rs. {{ settlement.amount|floatformat:2|intcomma }}</td>
+                        <td><span class="badge bg-success">{{ settlement.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <!-- Write-Off Form -->
+        <form method="post" action="{% url 'sales:write_off_execute' bill_pk=bill.pk %}" id="writeOffForm">
+            {% csrf_token %}
+            
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-edit"></i> Write-Off Details
+                </div>
+                
+                <div class="form-group">
+                    <label for="reason">Reason for Write-Off <span class="text-danger">*</span></label>
+                    <select name="reason" id="reason" class="form-select" required>
+                        <option value="">-- Select Reason --</option>
+                        <option value="shop_closed">Shop Permanently Closed</option>
+                        <option value="owner_deceased">Shop Owner Deceased</option>
+                        <option value="bankruptcy">Bankruptcy/Insolvency</option>
+                        <option value="legal_failed">Legal Collection Failed</option>
+                        <option value="aged_debt">Aged Debt (180+ days)</option>
+                        <option value="fraud">Fraud/Dispute</option>
+                        <option value="other">Other Reason</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="detailed_notes">Detailed Explanation <span class="text-danger">*</span></label>
+                    <textarea name="detailed_notes" id="detailed_notes" class="form-control" rows="6" required 
+                              placeholder="Provide a detailed explanation for this write-off. Include:&#10;- Why the debt is uncollectable&#10;- Collection attempts made&#10;- Current status of shop&#10;- Any supporting documentation&#10;&#10;This information is required for audit purposes."></textarea>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-danger" onclick="return confirmWriteOff()">
+                    <i class="fas fa-check me-2"></i>Confirm Write-Off (Rs. {{ bill.balance_amount|floatformat:2|intcomma }})
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmWriteOff() {
+    const reason = document.getElementById('reason').value;
+    const notes = document.getElementById('detailed_notes').value.trim();
+    
+    if (!reason) {
+        alert('Please select a reason for the write-off.');
+        return false;
+    }
+    
+    if (!notes || notes.length < 20) {
+        alert('Please provide a detailed explanation (minimum 20 characters) for the write-off.');
+        return false;
+    }
+    
+    const amount = '{{ bill.balance_amount|floatformat:2|intcomma }}';
+    const billNumber = '{{ bill.bill_number }}';
+    
+    return confirm(
+        `⚠️ FINAL CONFIRMATION ⚠️\n\n` +
+        `You are about to write off bad debt:\n\n` +
+        `Bill Number: ${billNumber}\n` +
+        `Amount: Rs. ${amount}\n\n` +
+        `This action is PERMANENT and will:\n` +
+        `✓ Mark bill as fully settled\n` +
+        `✓ Reduce shop balance by Rs. ${amount}\n` +
+        `✓ Create audit trail record\n\n` +
+        `Are you absolutely sure you want to proceed?`
+    );
+}
+</script>
+{% endblock %}
+
+
+

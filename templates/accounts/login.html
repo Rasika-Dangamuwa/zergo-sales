@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="col-md-5">
+            <div class="card shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        {% if login_brand_type == 'logo' and brand_logo_url %}
+                        <img src="{{ brand_logo_url }}" alt="{{ business_name }}" style="max-height: 80px; max-width: 260px; object-fit: contain;" class="mb-3">
+                        {% else %}
+                        <i class="{{ navbar_icon }} mb-2" style="font-size: 3rem; color: {{ brand_primary }};"></i>
+                        {% endif %}
+                        <h2 class="mt-2 fw-bold" style="color: #2d3748;">{{ business_name }}</h2>
+                        <p class="text-muted">{{ login_subtitle }}</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            Invalid username or password. Please try again.
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: {{ brand_primary }}; color: #fff; border-color: {{ brand_primary }};"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" required autofocus
+                                       style="border-color: #dee2e6;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: {{ brand_primary }}; color: #fff; border-color: {{ brand_primary }};"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" required
+                                       style="border-color: #dee2e6;">
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-lg fw-semibold"
+                                    style="{{ navbar_bg }} color: #fff; border: none; border-radius: 10px;">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if business_phone or business.website %}
+                    <div class="text-center mt-4 pt-3" style="border-top: 1px solid #eee;">
+                        <small class="text-muted">
+                            {% if business_phone %}<i class="fas fa-phone me-1"></i>{{ business_phone }}{% endif %}
+                            {% if business_phone and business.website %} &bull; {% endif %}
+                            {% if business.website %}<i class="fas fa-globe me-1"></i>{{ business.website }}{% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <small style="color: rgba(255,255,255,0.7);">&copy; {{ business_name }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        {{ login_bg|safe }}
+    }
+    
+    .navbar, .sidebar {
+        display: none !important;
+    }
+    
+    main {
+        margin-left: 0 !important;
+    }
+    
+    .form-control:focus {
+        border-color: {{ brand_primary }};
+        box-shadow: 0 0 0 .2rem {{ brand_primary }}33;
+    }
+</style>
+{% endblock %}

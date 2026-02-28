@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Purchase (GRN) - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-item {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-remove-item {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+    }
+    
+    .summary-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-plus-circle"></i> Create New GRN</h2>
+            <p class="text-muted mb-0">Goods Received Note</p>
+        </div>
+        <a href="{% url 'products:purchase_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <form method="post" id="purchaseForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Basic Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">GRN Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Purchase Order (Optional)</label>
+                                <select name="purchase_order" id="poSelect" class="form-select" onchange="loadPODetails()">
+                                    <option value="">No PO (Direct Purchase)</option>
+                                    {% for po in purchase_orders %}
+                                    <option value="{{ po.id }}" 
+                                            data-company="{{ po.company.id }}"
+                                            {% if selected_po and selected_po.id == po.id %}selected{% endif %}>
+                                        {{ po.po_number }} - {{ po.company.company_name }} - Rs.{{ po.total|floatformat:2 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Select a PO to auto-fill company and link this GRN</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Company <span class="text-danger">*</span></label>
+                                <select name="company" id="companySelect" class="form-select" required>
+                                    <option value="">Select Company</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.id }}" 
+                                            {% if selected_po and selected_po.company.id == company.id %}selected{% endif %}>
+                                        {{ company.company_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Invoice Date</label>
+                                <input type="date" name="invoice_date" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Supplier Invoice Number</label>
+                                <input type="text" name="supplier_invoice_number" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Notes</label>
+                                <textarea name="notes" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Products</h5>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="addItem()">
+                            <i class="fas fa-plus"></i> Add Product
+                        </button>
+                    </div>
+                    <div class="card-body" id="itemsContainer">
+                        <!-- Items will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="summary-box">
+                    <h5 class="mb-3">Summary</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Items:</span>
+                        <strong id="totalItems">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Bottles:</span>
+                        <strong id="totalBottles">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total FOC:</span>
+                        <strong id="totalFOC">0</strong>
+                    </div>
+                    <hr style="border-color: rgba(255,255,255,0.3);">
+                    <div class="d-flex justify-content-between">
+                        <span style="font-size: 1.2rem;">Grand Total:</span>
+                        <strong style="font-size: 1.5rem;">Rs. <span id="grandTotal">0.00</span></strong>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-light w-100 mt-4">
+                        <i class="fas fa-save"></i> Create GRN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let itemIndex = 0;
+
+function addItem() {
+    const container = document.getElementById('itemsContainer');
+    const item = document.createElement('div');
+    item.className = 'product-item';
+    item.id = `item-${itemIndex}`;
+    item.innerHTML = `
+        <div class="row">
+            <div class="col-md-12 mb-2">
+                <label class="form-label">Product</label>
+                <select name="product[]" class="form-select" required onchange="updateCalculations()">
+                    <option value="">Select Product</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" data-price="{{ product.company_price }}">
+                        {{ product.product_name }} - {{ product.size }} ({{ product.company.company_name }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">Packs</label>
+                <input type="number" name="packs[]" class="form-control" min="0" value="0" 
+                       onchange="calculateQuantity(this); updateCalculations()">
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">Loose</label>
+                <input type="number" name="loose[]" class="form-control" min="0" value="0" 
+                       onchange="calculateQuantity(this); updateCalculations()">
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">Bottles/Pack</label>
+                <input type="number" name="bottles_per_pack[]" class="form-control" min="1" value="1" 
+                       onchange="calculateQuantity(this); updateCalculations()">
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">FOC Qty</label>
+                <input type="number" name="foc_quantity[]" class="form-control" min="0" value="0" 
+                       onchange="updateCalculations()">
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">Unit Price</label>
+                <input type="number" name="unit_price[]" class="form-control" min="0" step="0.01" required 
+                       onchange="updateCalculations()">
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">Discount %</label>
+                <input type="number" name="discount_percentage[]" class="form-control" min="0" max="100" 
+                       step="0.01" value="0" onchange="updateCalculations()">
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">Batch No.</label>
+                <input type="text" name="batch_number[]" class="form-control">
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">Expiry Date</label>
+                <input type="date" name="expiry_date[]" class="form-control">
+            </div>
+            <div class="col-md-3 mb-2 d-flex align-items-end">
+                <button type="button" class="btn-remove-item w-100" onclick="removeItem('item-${itemIndex}')">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(item);
+    itemIndex++;
+    updateCalculations();
+}
+
+function removeItem(itemId) {
+    document.getElementById(itemId).remove();
+    updateCalculations();
+}
+
+function calculateQuantity(element) {
+    const row = element.closest('.row');
+    const packs = parseInt(row.querySelector('input[name="packs[]"]').value) || 0;
+    const loose = parseInt(row.querySelector('input[name="loose[]"]').value) || 0;
+    const bottlesPerPack = parseInt(row.querySelector('input[name="bottles_per_pack[]"]').value) || 1;
+    // Quantity is auto-calculated on backend as (packs × bottles_per_pack) + loose
+}
+
+function updateCalculations() {
+    const items = document.querySelectorAll('.product-item');
+    let totalItems = 0;
+    let totalBottles = 0;
+    let totalFOC = 0;
+    let grandTotal = 0;
+    
+    items.forEach(item => {
+        const packs = parseInt(item.querySelector('input[name="packs[]"]').value) || 0;
+        const loose = parseInt(item.querySelector('input[name="loose[]"]').value) || 0;
+        const bottlesPerPack = parseInt(item.querySelector('input[name="bottles_per_pack[]"]').value) || 1;
+        const foc = parseInt(item.querySelector('input[name="foc_quantity[]"]').value) || 0;
+        const unitPrice = parseFloat(item.querySelector('input[name="unit_price[]"]').value) || 0;
+        const discount = parseFloat(item.querySelector('input[name="discount_percentage[]"]').value) || 0;
+        
+        const quantity = (packs * bottlesPerPack) + loose;
+        const valueBeforeDiscount = quantity * unitPrice;
+        const discountAmount = (valueBeforeDiscount * discount) / 100;
+        const lineTotal = valueBeforeDiscount - discountAmount;
+        
+        if (quantity > 0) {
+            totalItems++;
+            totalBottles += quantity;
+            totalFOC += foc;
+            grandTotal += lineTotal;
+        }
+    });
+    
+    document.getElementById('totalItems').textContent = totalItems;
+    document.getElementById('totalBottles').textContent = totalBottles;
+    document.getElementById('totalFOC').textContent = totalFOC;
+    document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+}
+
+// Load PO details and auto-fill company
+function loadPODetails() {
+    const poSelect = document.getElementById('poSelect');
+    const selectedOption = poSelect.options[poSelect.selectedIndex];
+    const companySelect = document.getElementById('companySelect');
+    
+    if (selectedOption.value) {
+        // Auto-fill company from PO
+        const companyId = selectedOption.getAttribute('data-company');
+        if (companyId) {
+            companySelect.value = companyId;
+        }
+    } else {
+        // Reset company if "No PO" selected
+        companySelect.value = '';
+    }
+}
+
+// Add first item on load
+document.addEventListener('DOMContentLoaded', function() {
+    addItem();
+});
+</script>
+{% endblock %}

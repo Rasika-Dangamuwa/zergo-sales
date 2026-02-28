@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Flavor Balance - Zergo Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="fas fa-wine-bottle me-2"></i>Flavor Balance Report
+            </h2>
+            <p class="text-muted">Current Month Balance (Last Month End + Received - Billed)</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'products:monthly_stock_count' %}" class="btn btn-success">
+                <i class="fas fa-clipboard-check me-2"></i>Month End Stock Count
+            </a>
+            <a href="{% url 'products:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-box me-2"></i>Products
+            </a>
+        </div>
+    </div>
+
+    {% if companies %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Filter by Company</label>
+                            <select name="company" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Companies</option>
+                                {% for comp in companies %}
+                                <option value="{{ comp.id }}" {% if selected_company and selected_company.id == comp.id %}selected{% endif %}>
+                                    {{ comp.company_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if balances %}
+    <div class="row">
+        <div class="col-12">
+            {% for balance in balances %}
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {{ balance.sku.company.company_name }} - {{ balance.sku.size }} - Rs. {{ balance.sku.marked_price }}
+                        <span class="badge bg-light text-dark float-end">SKU: {{ balance.sku.sku_code }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 20%;">Flavor</th>
+                                    <th style="width: 15%;" class="text-center">Opening Balance</th>
+                                    <th style="width: 15%;" class="text-center">Received</th>
+                                    <th style="width: 15%;" class="text-center">Billed</th>
+                                    <th style="width: 15%;" class="text-center">Current Balance</th>
+                                    <th style="width: 20%;" class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for flavor in balance.flavors %}
+                                <tr>
+                                    <td><strong>{{ flavor.flavor }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ flavor.opening_balance }}</span>
+                                        {% if not flavor.has_opening_count %}
+                                        <br><small class="text-warning">No opening count</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-info">{{ flavor.received }}</span></td>
+                                    <td class="text-center"><span class="badge bg-warning">{{ flavor.sold }}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{% if flavor.balance < 0 %}danger{% elif flavor.is_low %}warning{% else %}success{% endif %} fs-6">
+                                            {{ flavor.balance }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if flavor.balance < 0 %}
+                                        <span class="badge bg-danger">Negative Stock</span>
+                                        {% elif flavor.is_low %}
+                                        <span class="badge bg-warning">Low Stock</span>
+                                        {% else %}
+                                        <span class="badge bg-success">OK</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>Total</th>
+                                    <th class="text-center"><strong>{{ balance.total_opening }}</strong></th>
+                                    <th class="text-center"><strong>{{ balance.total_received }}</strong></th>
+                                    <th class="text-center"><strong>{{ balance.total_sold }}</strong></th>
+                                    <th class="text-center"><strong>{{ balance.calculated_stock }}</strong></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No flavor balance data available. Please add products with flavors and record purchase orders and sales.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

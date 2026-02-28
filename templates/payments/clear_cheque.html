@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Clear Cheque - {{ settlement.payment_number }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .clear-cheque-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 5px solid #28a745;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .amount-highlight {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+        text-align: center;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-radius: 12px;
+        margin: 1.5rem 0;
+    }
+    
+    .alert-warning-custom {
+        background: linear-gradient(135deg, #fff3cd 0%, #fff9e6 100%);
+        border-left: 5px solid #ffc107;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-clear {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        padding: 14px 32px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .btn-clear:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .info-label {
+            margin-bottom: 4px;
+            font-size: 0.85em;
+        }
+        
+        .amount-highlight {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="clear-cheque-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-check-double me-2"></i>Clear Cheque Payment</h1>
+            <p class="mb-0 opacity-75">Verify and clear cheque {{ settlement.reference_number }}</p>
+        </div>
+        
+        <!-- Warning Alert -->
+        <div class="alert-warning-custom">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Important</h5>
+            <p class="mb-0">
+                <strong>By clearing this cheque, you confirm that:</strong>
+                <ul class="mt-2 mb-0">
+                    <li>The cheque has been deposited and successfully cleared by the bank</li>
+                    <li>The funds have been received in the company account</li>
+                    <li>The bill payment status will be updated automatically</li>
+                </ul>
+            </p>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Payment Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-receipt me-1"></i>Payment Number</span>
+                <span class="info-value"><strong>{{ settlement.payment_number }}</strong></span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-calendar me-1"></i>Payment Date</span>
+                <span class="info-value">{{ settlement.payment_date|date:"F d, Y - h:i A" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-store me-1"></i>Shop</span>
+                <span class="info-value">{{ settlement.shop.shop_name }}</span>
+            </div>
+            
+            {% if settlement.bill %}
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-file-invoice me-1"></i>Bill Number</span>
+                <span class="info-value">
+                    <a href="{% url 'sales:detail' settlement.bill.pk %}">{{ settlement.bill.bill_number }}</a>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Cheque Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-money-check me-2"></i>Cheque Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-hashtag me-1"></i>Cheque Number</span>
+                <span class="info-value"><strong>{{ settlement.reference_number }}</strong></span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-calendar-check me-1"></i>Cheque Date</span>
+                <span class="info-value">{{ settlement.cheque_date|date:"F d, Y" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-university me-1"></i>Bank Name</span>
+                <span class="info-value">{{ settlement.bank_name }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-user me-1"></i>Received By</span>
+                <span class="info-value">{{ settlement.received_by.get_full_name }}</span>
+            </div>
+        </div>
+        
+        <!-- Amount Display -->
+        <div class="amount-highlight">
+            <i class="fas fa-rupee-sign me-2"></i>Rs. {{ settlement.amount|floatformat:2|intcomma }}
+        </div>
+        
+        <!-- Clear Cheque Form -->
+        <div class="form-card">
+            <h5 class="mb-4"><i class="fas fa-check-circle me-2"></i>Confirm Clearance</h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="cleared_date" class="form-label">
+                        <i class="fas fa-calendar-day me-1"></i>Clearance Date (Optional)
+                    </label>
+                    <input type="date" 
+                           class="form-control form-control-lg" 
+                           id="cleared_date" 
+                           name="cleared_date"
+                           max="{{ today|date:'Y-m-d' }}"
+                           value="{{ today|date:'Y-m-d' }}">
+                    <small class="text-muted">Date when the cheque was cleared by the bank</small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>What will happen:</h6>
+                    <ul class="mb-0">
+                        <li>Payment status: <strong>Pending → Completed</strong></li>
+                        {% if settlement.bill %}
+                        <li>Bill paid amount: <strong>Rs. {{ settlement.bill.paid_amount|floatformat:2|intcomma }} → Rs. {{ new_paid_amount|floatformat:2|intcomma }}</strong></li>
+                        <li>Bill balance: <strong>Rs. {{ settlement.bill.balance_amount|floatformat:2|intcomma }} → Rs. {{ new_balance|floatformat:2|intcomma }}</strong></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-clear btn-lg" onclick="return confirm('Are you sure you want to clear this cheque? This action will update the bill payment status.')">
+                        <i class="fas fa-check-double me-2"></i>Clear Cheque
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

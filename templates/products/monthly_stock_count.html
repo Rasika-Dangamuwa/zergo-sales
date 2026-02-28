@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Month End Stock Count - Zergo Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="fas fa-clipboard-check me-2"></i>Month End Stock Count
+            </h2>
+            <p class="text-muted">Enter physical stock count for {{ count_date|date:"F Y" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'products:flavor_balance' %}" class="btn btn-primary">
+                <i class="fas fa-chart-line me-2"></i>View Balance Report
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Select Month</label>
+                            <input type="month" name="month" class="form-control" value="{{ count_month }}" onchange="this.form.submit()">
+                        </div>
+                        {% if companies %}
+                        <div class="col-md-4">
+                            <label class="form-label">Filter by Company</label>
+                            <select name="company" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Companies</option>
+                                {% for comp in companies %}
+                                <option value="{{ comp.id }}" {% if selected_company and selected_company.id == comp.id %}selected{% endif %}>
+                                    {{ comp.company_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if sku_data %}
+    <div class="row">
+        <div class="col-12">
+            <form method="post">
+                {% csrf_token %}
+                
+                {% for sku in sku_data %}
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            {{ sku.sku_name }}
+                            <span class="badge bg-light text-dark float-end">SKU Stock: <span class="sku-total-{{ sku.sku.id }}">{{ sku.sku_stock }}</span></span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 30%;">Flavor</th>
+                                        <th style="width: 15%;" class="text-center">Calculated Balance</th>
+                                        <th style="width: 15%;" class="text-center">Physical Count</th>
+                                        <th style="width: 15%;" class="text-center">Variance</th>
+                                        <th style="width: 25%;" class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in sku.flavors %}
+                                    <tr>
+                                        <td><strong>{{ product.flavor }}</strong></td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">{{ product.calculated_balance }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="number" 
+                                                   name="count_{{ product.product_id }}" 
+                                                   class="form-control text-center physical-count" 
+                                                   value="{{ product.physical_count }}"
+                                                   min="0"
+                                                   data-sku-id="{{ sku.sku.id }}"
+                                                   data-calculated="{{ product.calculated_balance }}"
+                                                   onchange="calculateVariance(this); validateSKUTotal({{ sku.sku.id }}, {{ sku.sku_stock }})">
+                                        </td>
+                                        <td class="text-center variance-cell">
+                                            {% if product.physical_count %}
+                                                {% with variance=product.physical_count|add:"-"|add:product.calculated_balance %}
+                                                <span class="badge bg-{% if variance == 0 %}success{% elif variance > 0 %}warning{% else %}danger{% endif %}">
+                                                    {{ variance }}
+                                                </span>
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center status-cell">
+                                            {% if product.physical_count %}
+                                                {% with variance=product.physical_count|add:"-"|add:product.calculated_balance %}
+                                                {% if variance == 0 %}
+                                                    <span class="badge bg-success">Match</span>
+                                                {% elif variance > 0 %}
+                                                    <span class="badge bg-warning">Overage</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Shortage</span>
+                                                {% endif %}
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th>Total for this SKU</th>
+                                        <th></th>
+                                        <th class="text-center">
+                                            <strong class="flavor-total-{{ sku.sku.id }}">0</strong>
+                                        </th>
+                                        <th colspan="2" class="text-center">
+                                            <span class="validation-message-{{ sku.sku.id }}"></span>
+                                        </th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="text-end mb-4">
+                    <button type="submit" class="btn btn-success btn-lg" id="saveButton">
+                        <i class="fas fa-save me-2"></i>Save Stock Count
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No products found for stock count. Please add products first.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function calculateVariance(input) {
+    const row = input.closest('tr');
+    const calculated = parseInt(input.dataset.calculated);
+    const physical = parseInt(input.value) || 0;
+    const variance = physical - calculated;
+    
+    const varianceCell = row.querySelector('.variance-cell');
+    const statusCell = row.querySelector('.status-cell');
+    
+    // Update variance
+    let badgeClass = 'bg-secondary';
+    if (variance === 0) badgeClass = 'bg-success';
+    else if (variance > 0) badgeClass = 'bg-warning';
+    else badgeClass = 'bg-danger';
+    
+    varianceCell.innerHTML = `<span class="badge ${badgeClass}">${variance}</span>`;
+    
+    // Update status
+    let statusBadge = 'bg-secondary';
+    let statusText = 'Pending';
+    if (input.value) {
+        if (variance === 0) {
+            statusBadge = 'bg-success';
+            statusText = 'Match';
+        } else if (variance > 0) {
+            statusBadge = 'bg-warning';
+            statusText = 'Overage';
+        } else {
+            statusBadge = 'bg-danger';
+            statusText = 'Shortage';
+        }
+    }
+    statusCell.innerHTML = `<span class="badge ${statusBadge}">${statusText}</span>`;
+}
+
+function validateSKUTotal(skuId, skuStock) {
+    // Calculate total of all flavor counts for this SKU
+    const inputs = document.querySelectorAll(`input[data-sku-id="${skuId}"]`);
+    let total = 0;
+    
+    inputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    
+    // Update total display
+    const totalElement = document.querySelector(`.flavor-total-${skuId}`);
+    if (totalElement) {
+        totalElement.textContent = total;
+    }
+    
+    // Validate and show message
+    const messageElement = document.querySelector(`.validation-message-${skuId}`);
+    const saveButton = document.getElementById('saveButton');
+    
+    if (total > skuStock) {
+        messageElement.innerHTML = `<span class="badge bg-danger">⚠ Exceeds SKU Stock by ${total - skuStock}</span>`;
+        saveButton.disabled = true;
+        saveButton.classList.remove('btn-success');
+        saveButton.classList.add('btn-secondary');
+    } else if (total < skuStock) {
+        messageElement.innerHTML = `<span class="badge bg-warning">ℹ ${skuStock - total} remaining in SKU</span>`;
+        saveButton.disabled = false;
+        saveButton.classList.remove('btn-secondary');
+        saveButton.classList.add('btn-success');
+    } else {
+        messageElement.innerHTML = `<span class="badge bg-success">✓ Matches SKU Stock</span>`;
+        saveButton.disabled = false;
+        saveButton.classList.remove('btn-secondary');
+        saveButton.classList.add('btn-success');
+    }
+}
+
+// Initialize validation on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[data-sku-id]');
+    const skuIds = new Set();
+    
+    inputs.forEach(input => {
+        const skuId = input.dataset.skuId;
+        skuIds.add(skuId);
+        
+        // Calculate initial variance if value exists
+        if (input.value) {
+            calculateVariance(input);
+        }
+    });
+    
+    // Validate each SKU total
+    skuIds.forEach(skuId => {
+        const skuStockElement = document.querySelector(`.sku-total-${skuId}`);
+        if (skuStockElement) {
+            const skuStock = parseInt(skuStockElement.textContent);
+            validateSKUTotal(parseInt(skuId), skuStock);
+        }
+    });
+});
+</script>
+{% endblock %}

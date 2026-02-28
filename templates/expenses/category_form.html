@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header {
+        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .form-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        padding: 1.5rem;
+    }
+    .icon-preview {
+        width: 48px; height: 48px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-3">
+    <div class="form-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-{% if is_edit %}edit{% else %}plus-circle{% endif %} me-2"></i>{{ title }}</h1>
+            <a href="{% url 'expenses:category_list' %}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="form-card">
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-1"></i>Please fix the errors below.
+                        {{ form.errors }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Preview -->
+                    <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                        <div class="icon-preview" id="iconPreview" style="background: {{ form.color.value|default:'#6b7280' }};">
+                            <i class="fas {{ form.icon.value|default:'fa-receipt' }}" id="iconPreviewIcon"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold" id="namePreview">{{ form.name.value|default:'Category Name' }}</div>
+                            <small class="text-muted">Preview</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                        {{ form.name }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        {{ form.description }}
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Icon</label>
+                            {{ form.icon }}
+                            <small class="text-muted">FontAwesome class (e.g., fa-building, fa-gas-pump)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Color</label>
+                            {{ form.color }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Sort Order</label>
+                            {{ form.sort_order }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">Active</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'expenses:category_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if is_edit %}Update{% else %}Create{% endif %} Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('{{ form.name.id_for_label }}');
+    const iconInput = document.getElementById('{{ form.icon.id_for_label }}');
+    const colorInput = document.getElementById('{{ form.color.id_for_label }}');
+
+    function updatePreview() {
+        document.getElementById('namePreview').textContent = nameInput.value || 'Category Name';
+        document.getElementById('iconPreviewIcon').className = 'fas ' + (iconInput.value || 'fa-receipt');
+        document.getElementById('iconPreview').style.background = colorInput.value || '#6b7280';
+    }
+    nameInput.addEventListener('input', updatePreview);
+    iconInput.addEventListener('input', updatePreview);
+    colorInput.addEventListener('input', updatePreview);
+});
+</script>
+{% endblock %}

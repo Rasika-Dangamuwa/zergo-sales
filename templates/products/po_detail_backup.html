@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}PO {{ po.po_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-file-invoice me-2"></i>{{ po.po_number }}</h4>
+                        <span class="badge status-{{ po.status }} fs-6">{{ po.get_status_display }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- PO Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Order Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Company:</th>
+                                    <td>{{ po.company.company_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Order Date:</th>
+                                    <td>{{ po.order_date }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Expected Delivery:</th>
+                                    <td>{{ po.expected_delivery_date|default:"Not specified" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Received Date:</th>
+                                    <td>{{ po.received_date|default:"Not received yet" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Tracking</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Created By:</th>
+                                    <td>{{ po.created_by.get_full_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Created At:</th>
+                                    <td>{{ po.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td><span class="badge status-{{ po.status }}">{{ po.get_status_display }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>GRNs Created:</th>
+                                    <td>{{ grns.count }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if po.notes %}
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-sticky-note me-2"></i>Notes:</strong> {{ po.notes }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Order Items -->
+                    <h5 class="text-muted mb-3"><i class="fas fa-boxes me-2"></i>Order Items</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Packs</th>
+                                    <th class="text-end">Bottles/Pack</th>
+                                    <th class="text-end">Total Bottles</th>
+                                    <th class="text-end">FOC</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Discount %</th>
+                                    <th class="text-end">Line Total</th>
+                                    <th class="text-end">Received</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.product.product_name }}</td>
+                                    <td class="text-end">{{ item.packs }}</td>
+                                    <td class="text-end">{{ item.bottles_per_pack }}</td>
+                                    <td class="text-end"><strong>{{ item.total_bottles }}</strong></td>
+                                    <td class="text-end">
+                                        {% if item.foc_bottles > 0 %}
+                                        <span class="badge bg-success">+{{ item.foc_bottles }}</span>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">Rs. {{ item.unit_price }}</td>
+                                    <td class="text-end">{{ item.discount_percentage }}%</td>
+                                    <td class="text-end"><strong>Rs. {{ item.line_total|floatformat:2 }}</strong></td>
+                                    <td class="text-end">
+                                        {% if item.received_quantity > 0 %}
+                                        <span class="badge bg-info">{{ item.received_quantity }}</span>
+                                        {% if item.received_foc > 0 %}
+                                        <span class="badge bg-success">+{{ item.received_foc }}</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="7" class="text-end">Subtotal:</th>
+                                    <th class="text-end">Rs. {{ po.subtotal|floatformat:2 }}</th>
+                                    <th></th>
+                                </tr>
+                                {% if po.discount > 0 %}
+                                <tr>
+                                    <th colspan="7" class="text-end">Discount:</th>
+                                    <th class="text-end text-danger">- Rs. {{ po.discount|floatformat:2 }}</th>
+                                    <th></th>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th colspan="7" class="text-end">Total Amount:</th>
+                                    <th class="text-end text-primary fs-5">Rs. {{ po.total|floatformat:2 }}</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- GRNs Created from this PO -->
+                    {% if grns %}
+                    <h5 class="text-muted mb-3 mt-4"><i class="fas fa-truck me-2"></i>Goods Received Notes</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>GRN Number</th>
+                                    <th>GRN Date</th>
+                                    <th>Status</th>
+                                    <th>Total Amount</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grn in grns %}
+                                <tr>
+                                    <td>{{ grn.grn_number }}</td>
+                                    <td>{{ grn.grn_date|date:"Y-m-d" }}</td>
+                                    <td><span class="badge status-{{ grn.status }}">{{ grn.get_status_display }}</span></td>
+                                    <td>Rs. {{ grn.total_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'products:purchase_detail' grn.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="mt-4">
+                        <a href="{% url 'products:po_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to List
+                        </a>
+                        
+                        {% if po.status == 'draft' %}
+                        <a href="{% url 'products:mark_po_ordered' po.pk %}" class="btn btn-primary" 
+                           onclick="return confirm('Mark this PO as ordered?')">
+                            <i class="fas fa-paper-plane me-1"></i>Mark as Ordered
+                        </a>
+                        <a href="{% url 'products:cancel_po' po.pk %}" class="btn btn-danger" 
+                           onclick="return confirm('Cancel this purchase order?')">
+                            <i class="fas fa-ban me-1"></i>Cancel PO
+                        </a>
+                        {% endif %}
+                        
+                        {% if po.status == 'ordered' %}
+                        <a href="{% url 'products:create_grn_from_po' po.pk %}" class="btn btn-success">
+                            <i class="fas fa-truck me-1"></i>Create GRN
+                        </a>
+                        <a href="{% url 'products:cancel_po' po.pk %}" class="btn btn-danger" 
+                           onclick="return confirm('Cancel this purchase order?')">
+                            <i class="fas fa-ban me-1"></i>Cancel PO
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Sidebar -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="summary-item">
+                        <span>Total Items:</span>
+                        <strong>{{ summary.total_items }}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Bottles:</span>
+                        <strong>{{ summary.total_bottles }}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total FOC:</span>
+                        <strong>{{ summary.total_foc }}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Received:</span>
+                        <strong class="text-success">{{ summary.total_received }}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>FOC Received:</span>
+                        <strong class="text-success">{{ summary.total_foc_received }}</strong>
+                    </div>
+                    <hr>
+                    <div class="summary-item fs-5">
+                        <span>Grand Total:</span>
+                        <strong class="text-primary">Rs. {{ summary.grand_total|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.status-draft { background-color: #6c757d; color: white; }
+.status-ordered { background-color: #0d6efd; color: white; }
+.status-received { background-color: #198754; color: white; }
+.status-cancelled { background-color: #dc3545; color: white; }
+</style>
+{% endblock %}

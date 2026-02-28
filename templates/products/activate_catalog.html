@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Global Catalog - Activate Products{% endblock %}
+
+{% block extra_css %}
+<style>
+    .catalog-stats {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    .stat-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        flex: 1;
+        min-width: 150px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+    .stat-card .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #4F46E5;
+    }
+    .stat-card .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .stat-card.activated .stat-value { color: #198754; }
+    .stat-card.remaining .stat-value { color: #0d6efd; }
+
+    .catalog-product-card {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        transition: border-color 0.2s;
+    }
+    .catalog-product-card:hover {
+        border-color: #4F46E5;
+    }
+    .catalog-product-card.already-activated {
+        background: #f8f9fa;
+        opacity: 0.7;
+    }
+    .catalog-product-card .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.5rem;
+    }
+    .catalog-product-card .product-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+    }
+    .catalog-product-card .product-code {
+        background: #6c757d;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    .catalog-product-card .product-meta {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    .catalog-product-card .product-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .filter-bar {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .bulk-bar {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 2px solid #4F46E5;
+        padding: 0.75rem 1rem;
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 100;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    }
+    .bulk-bar.show { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 py-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-globe text-primary me-2"></i>Global Product Catalog</h4>
+            <p class="text-muted mb-0 small">Browse and activate products from the central catalog into your inventory</p>
+        </div>
+        <a href="{% url 'products:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Products
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="catalog-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_catalog }}</div>
+            <div class="stat-label">Total in Catalog</div>
+        </div>
+        <div class="stat-card activated">
+            <div class="stat-value">{{ activated_count }}</div>
+            <div class="stat-label">Activated</div>
+        </div>
+        <div class="stat-card remaining">
+            <div class="stat-value">{{ remaining_count }}</div>
+            <div class="stat-label">Available to Activate</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3 col-6">
+                <label class="form-label small mb-1">Search</label>
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="Name or code..." value="{{ current_search }}">
+            </div>
+            <div class="col-md-2 col-6">
+                <label class="form-label small mb-1">Company</label>
+                <select name="company" class="form-select form-select-sm">
+                    <option value="">All Companies</option>
+                    {% for c in companies %}
+                        <option value="{{ c.pk }}" {% if current_company == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 col-6">
+                <label class="form-label small mb-1">Category</label>
+                <select name="category" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.pk }}" {% if current_category == cat.pk|stringformat:"d" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 col-6">
+                <label class="form-label small mb-1">&nbsp;</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="activated" value="1" id="showActivated" {% if show_activated %}checked{% endif %}>
+                    <label class="form-check-label small" for="showActivated">Show Activated</label>
+                </div>
+            </div>
+            <div class="col-md-2 col-12">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-search me-1"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Product List -->
+    <form method="post" action="{% url 'products:bulk_activate_products' %}" id="bulkForm">
+        {% csrf_token %}
+
+        {% for item in products_with_status %}
+        <div class="catalog-product-card {% if item.is_activated %}already-activated{% endif %}">
+            <div class="product-header">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        {% if not item.is_activated %}
+                        <input type="checkbox" class="form-check-input bulk-check" name="selected_products" value="{{ item.product.pk }}">
+                        {% endif %}
+                        <span class="product-name">{{ item.product.product_name }}</span>
+                        <span class="product-code">{{ item.product.product_code }}</span>
+                    </div>
+                    <div class="product-meta">
+                        <span><i class="fas fa-building"></i> {{ item.product.company.company_name }}</span>
+                        {% if item.product.category %}
+                        <span><i class="fas fa-tag"></i> {{ item.product.category.name }}</span>
+                        {% endif %}
+                        <span><i class="fas fa-ruler"></i> {{ item.product.size }}</span>
+                        <span><i class="fas fa-tag"></i> Rs.{{ item.product.marked_price }}</span>
+                        <span><i class="fas fa-box"></i> {{ item.product.bottles_per_pack }}/pack</span>
+                    </div>
+                </div>
+                <div>
+                    {% if item.is_activated %}
+                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Activated</span>
+                    {% else %}
+                        <a href="{% url 'products:activate_product' item.product.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Activate
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-box-open fa-3x mb-3"></i>
+            <p>No products found in the catalog{% if not show_activated %} (all may be activated already — check "Show Activated"){% endif %}.</p>
+        </div>
+        {% endfor %}
+
+        <!-- Bulk Activate Bar -->
+        <div class="bulk-bar" id="bulkBar">
+            <div>
+                <strong><span id="selectedCount">0</span> selected</strong>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="fas fa-check-double me-1"></i> Bulk Activate (Default Settings)
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checks = document.querySelectorAll('.bulk-check');
+    const bulkBar = document.getElementById('bulkBar');
+    const selectedCount = document.getElementById('selectedCount');
+
+    checks.forEach(function(cb) {
+        cb.addEventListener('change', updateBulkBar);
+    });
+
+    function updateBulkBar() {
+        const count = document.querySelectorAll('.bulk-check:checked').length;
+        selectedCount.textContent = count;
+        if (count > 0) {
+            bulkBar.classList.add('show');
+        } else {
+            bulkBar.classList.remove('show');
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Bank Account - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-university me-2"></i>Add Bank Account</h1>
+                <p class="mb-0 mt-2 opacity-75">Add a new bank account for {{ profile.business_name }}</p>
+            </div>
+            <div>
+                <a href="{% url 'business:settings' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Settings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Bank Details -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-university me-2"></i>Bank Details</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="bank_name" class="form-label required">Bank Name</label>
+                    <input type="text" class="form-control" id="bank_name" name="bank_name" required>
+                    <div class="form-text">Name of the bank (e.g., Bank of Ceylon, Commercial Bank)</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="branch_name" class="form-label required">Branch Name</label>
+                    <input type="text" class="form-control" id="branch_name" name="branch_name" required>
+                    <div class="form-text">Branch location/name</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="account_number" class="form-label required">Account Number</label>
+                    <input type="text" class="form-control" id="account_number" name="account_number" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="account_type" class="form-label required">Account Type</label>
+                    <select class="form-select" id="account_type" name="account_type" required>
+                        <option value="current" selected>Current Account</option>
+                        <option value="savings">Savings Account</option>
+                        <option value="foreign_currency">Foreign Currency Account</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Holder -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-user me-2"></i>Account Holder</h2>
+            
+            <div class="mb-3">
+                <label for="account_name" class="form-label required">Account Holder Name</label>
+                <input type="text" class="form-control" id="account_name" name="account_name" 
+                       value="{{ profile.business_name }}" required>
+                <div class="form-text">Should match business name: {{ profile.business_name }}</div>
+            </div>
+        </div>
+
+        <!-- International Banking (Optional) -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-globe me-2"></i>International Banking (Optional)</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="swift_code" class="form-label">SWIFT/BIC Code</label>
+                    <input type="text" class="form-control" id="swift_code" name="swift_code">
+                    <div class="form-text">For international transfers (e.g., BCEYLKLX)</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="iban" class="form-label">IBAN</label>
+                    <input type="text" class="form-control" id="iban" name="iban">
+                    <div class="form-text">International Bank Account Number</div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="currency" class="form-label">Currency</label>
+                <select class="form-select" id="currency" name="currency">
+                    <option value="LKR" selected>LKR - Sri Lankan Rupee</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="INR">INR - Indian Rupee</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-cog me-2"></i>Account Settings</h2>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_primary" name="is_primary">
+                    <label class="form-check-label" for="is_primary">
+                        <strong>Set as Primary Account</strong>
+                    </label>
+                    <div class="form-text">Primary account will be shown on invoices and payment instructions. Only one primary account allowed.</div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="purpose" class="form-label">Purpose</label>
+                <input type="text" class="form-control" id="purpose" name="purpose" 
+                       placeholder="e.g., Operations, International Payments, Petty Cash">
+                <div class="form-text">Purpose or use of this account (optional)</div>
+            </div>
+        </div>
+
+        <!-- Example Display -->
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>How it will appear on invoices:</h6>
+            <div class="mt-2">
+                <strong id="preview_bank_name">Bank Name</strong> - <span id="preview_branch_name">Branch Name</span><br>
+                Account: <code id="preview_account_number">XXXX-XXXX-XXXX</code><br>
+                Name: <span id="preview_account_name">{{ profile.business_name }}</span><br>
+                <span id="preview_swift" style="display:none;">SWIFT: <span></span><br></span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'business:settings' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Add Bank Account
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live preview update
+document.addEventListener('DOMContentLoaded', function() {
+    const fields = {
+        'bank_name': 'preview_bank_name',
+        'branch_name': 'preview_branch_name',
+        'account_number': 'preview_account_number',
+        'account_name': 'preview_account_name',
+        'swift_code': 'preview_swift'
+    };
+    
+    Object.keys(fields).forEach(function(inputId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(fields[inputId]);
+        
+        if (input && preview) {
+            input.addEventListener('input', function() {
+                if (inputId === 'swift_code') {
+                    if (this.value) {
+                        preview.style.display = 'block';
+                        preview.querySelector('span').textContent = this.value;
+                    } else {
+                        preview.style.display = 'none';
+                    }
+                } else {
+                    preview.textContent = this.value || (inputId === 'account_number' ? 'XXXX-XXXX-XXXX' : 
+                                                         inputId === 'bank_name' ? 'Bank Name' : 
+                                                         inputId === 'branch_name' ? 'Branch Name' : 
+                                                         '{{ profile.business_name }}');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

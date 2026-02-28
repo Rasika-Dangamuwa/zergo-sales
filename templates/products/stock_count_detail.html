@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Stock Count Detail - Zergo Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-clipboard-check"></i> Stock Count Details</h2>
+            <p class="text-muted">View detailed information about this stock count</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'products:stock_count_history' %}" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Back to History
+            </a>
+            <a href="{% url 'products:stock_count_delete' count.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Count Information -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Count Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Count Date:</th>
+                            <td>
+                                <strong>{{ count.count_date|date:"F d, Y" }}</strong><br>
+                                <small class="text-muted">{{ count.count_date|date:"h:i A" }}</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Counted By:</th>
+                            <td>
+                                {{ count.counted_by.get_full_name|default:count.counted_by.username }}<br>
+                                <small class="text-muted">{{ count.counted_by.email }}</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Stock Updated:</th>
+                            <td>
+                                {% if count.stock_updated %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Yes
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-times-circle"></i> No
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Information -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-box"></i> Product Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Product Name:</th>
+                            <td><strong>{{ count.product.product_name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Product Code:</th>
+                            <td>{{ count.product.product_code }}</td>
+                        </tr>
+                        <tr>
+                            <th>Size:</th>
+                            <td>{{ count.product.size }}</td>
+                        </tr>
+                        <tr>
+                            <th>Company:</th>
+                            <td>{{ count.product.company.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bottles Per Pack:</th>
+                            <td>{{ count.product.bottles_per_pack }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Count Details -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-calculator"></i> Count Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded">
+                                <h6 class="text-muted mb-2">System Stock</h6>
+                                <h2 class="text-secondary mb-0">{{ count.system_stock }}</h2>
+                                <small class="text-muted">bottles</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded">
+                                <h6 class="text-muted mb-2">Physical Count</h6>
+                                <h2 class="text-info mb-0">{{ count.physical_count }}</h2>
+                                <small class="text-muted">bottles</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded">
+                                <h6 class="text-muted mb-2">Variance</h6>
+                                <h2 class="{% if count.variance > 0 %}text-success{% elif count.variance < 0 %}text-danger{% else %}text-secondary{% endif %} mb-0">
+                                    {% if count.variance > 0 %}+{% endif %}{{ count.variance }}
+                                </h2>
+                                <small class="text-muted">bottles</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded">
+                                <h6 class="text-muted mb-2">Variance %</h6>
+                                <h2 class="{% if count.variance > 0 %}text-success{% elif count.variance < 0 %}text-danger{% else %}text-secondary{% endif %} mb-0">
+                                    {% if count.system_stock > 0 %}
+                                        {% widthratio count.variance count.system_stock 100 %}%
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </h2>
+                                <small class="text-muted">of system stock</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pack and Loose Breakdown -->
+                    {% if count.product.bottles_per_pack > 0 %}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-cubes"></i> Pack & Loose Breakdown (Physical Count)</h6>
+                        <p class="mb-0">
+                            <strong>{{ count.physical_count }} bottles</strong> = 
+                            <strong>{{ packs }} pack{{ packs|pluralize }}</strong> + 
+                            <strong>{{ loose }} loose</strong>
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Reason for Variance -->
+                    {% if count.adjustment_reason %}
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-comment-dots"></i> Reason for Variance:</h6>
+                        <p class="mb-0">{{ count.adjustment_reason }}</p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary">
+                        <p class="mb-0"><i class="fas fa-info-circle"></i> No reason provided for variance</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Movement (if stock was updated) -->
+    {% if count.stock_updated and stock_movement %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Related Stock Movement</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="25%">Reference Number:</th>
+                            <td>{{ stock_movement.reference_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Movement Type:</th>
+                            <td>
+                                <span class="badge {% if stock_movement.movement_type == 'IN' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ stock_movement.get_movement_type_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Quantity:</th>
+                            <td>
+                                {% if stock_movement.quantity > 0 %}+{% endif %}{{ stock_movement.quantity }} bottles
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Transaction Date:</th>
+                            <td>{{ stock_movement.transaction_date|date:"F d, Y - h:i A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ stock_movement.notes|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif count.stock_updated %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Stock was updated but no stock movement record was created (variance was zero).
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

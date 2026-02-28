@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}PO {{ po.po_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .product-table thead {
+        background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+        color: white;
+    }
+    
+    .product-table thead th {
+        padding: 12px 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: none;
+        text-align: center;
+    }
+    
+    .product-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .product-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .product-table tbody td {
+        padding: 10px 8px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    /* Center columns */
+    .product-table tbody td:nth-child(2),
+    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(4),
+    .product-table tbody td:nth-child(5),
+    .product-table tbody td:nth-child(6),
+    .product-table tbody td:nth-child(8) {
+        text-align: center;
+    }
+    
+    /* Financial columns - right alignment */
+    .product-table thead th:nth-child(7),
+    .product-table thead th:nth-child(9),
+    .product-table thead th:nth-child(10) {
+        text-align: right;
+    }
+    
+    .product-table tbody td:nth-child(7),
+    .product-table tbody td:nth-child(9),
+    .product-table tbody td:nth-child(10) {
+        text-align: right;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    
+    .section-title {
+        color: #8e44ad;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #8e44ad;
+    }
+    
+    .summary-card {
+        position: sticky;
+        top: 20px;
+        background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(142, 68, 173, 0.3);
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.95rem;
+    }
+    
+    .summary-item:nth-last-child(2) {
+        /* Total Discount - make it stand out */
+        color: #ffeb3b;
+        font-weight: 500;
+    }
+    
+    .summary-item:last-child {
+        /* Grand Total - emphasize */
+        border-bottom: none;
+        font-size: 1.2rem;
+        font-weight: 700;
+        padding-top: 15px;
+        margin-top: 10px;
+        border-top: 2px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        padding: 15px 10px;
+        margin: 10px -10px 0 -10px;
+        border-radius: 8px;
+    }
+    
+    .category-header {
+        background: #f8f9fa !important;
+        font-weight: 600;
+    }
+    
+    .badge {
+        padding: 6px 12px;
+        font-weight: 500;
+    }
+    
+    .status-draft { background-color: #6c757d; }
+    .status-ordered { background-color: #0d6efd; }
+    .status-received { background-color: #198754; }
+    .status-cancelled { background-color: #dc3545; }
+    
+    .product-name {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .pack-size {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-file-invoice me-2" style="color: #8e44ad;"></i>
+            Purchase Order: {{ po.po_number }}
+        </h2>
+        <div>
+            <a href="{% url 'products:print_po_pdf' po.pk %}" class="btn btn-primary btn-lg me-2" target="_blank">
+                <i class="fas fa-print me-2"></i>Print PDF
+            </a>
+            <span class="badge status-{{ po.status }} fs-5">{{ po.get_status_display }}</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <!-- PO Information -->
+            <div class="form-section">
+                <h5 class="section-title">Order Information</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Company</label>
+                        <div class="form-control-plaintext">{{ po.company.company_name }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Order Date</label>
+                        <div class="form-control-plaintext">{{ po.order_date }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Expected Delivery</label>
+                        <div class="form-control-plaintext">{{ po.expected_delivery_date|default:"Not specified" }}</div>
+                    </div>
+                    {% if po.notes %}
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Notes</label>
+                        <div class="form-control-plaintext">{{ po.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tracking Details -->
+            <div class="form-section">
+                <h5 class="section-title">Tracking Details</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Created By</label>
+                        <div class="form-control-plaintext">
+                            <i class="fas fa-user me-2"></i>
+                            {% if po.created_by %}
+                                {{ po.created_by.get_full_name|default:po.created_by.username }}
+                            {% else %}
+                                <span class="text-muted">Not set</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Created At</label>
+                        <div class="form-control-plaintext">
+                            <i class="far fa-clock me-2"></i>{{ po.created_at|date:"d M Y, h:i A" }}
+                        </div>
+                    </div>
+                    {% if po.received_date %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Received Date</label>
+                        <div class="form-control-plaintext">
+                            <i class="fas fa-truck me-2"></i>{{ po.received_date }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Products Table -->
+            <div class="form-section">
+                <h5 class="section-title">Products</h5>
+                <div class="table-responsive">
+                    <table class="table product-table" style="table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th style="width: 18%">Description</th>
+                                <th style="width: 7%">Cases</th>
+                                <th style="width: 7%">Loose</th>
+                                <th style="width: 8%">Qty</th>
+                                <th style="width: 6%">FOC</th>
+                                <th style="width: 10%">Unit Price</th>
+                                <th style="width: 12%">Val. Be. Disc</th>
+                                <th style="width: 8%">Disc %</th>
+                                <th style="width: 11%">Disc Amt</th>
+                                <th style="width: 11%">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% regroup items by product.size as size_list %}
+                            {% for size_group in size_list %}
+                                {% regroup size_group.list by product.marked_price as price_list %}
+                                {% for price_group in price_list %}
+                                    <tr class="table-secondary category-header">
+                                        <td colspan="10" class="fw-bold">
+                                            <i class="fas fa-tag me-2"></i>
+                                            {{ size_group.grouper }} - Rs. {{ price_group.grouper }}
+                                        </td>
+                                    </tr>
+                                    {% for item in price_group.list %}
+                                    <tr>
+                                        <!-- Description -->
+                                        <td>
+                                            <div class="product-name">{{ item.product.product_name }}</div>
+                                            <div class="pack-size">{{ item.bottles_per_pack }} btl/case</div>
+                                        </td>
+                                        <!-- Cases -->
+                                        <td>{{ item.packs }}</td>
+                                        <!-- Loose -->
+                                        <td>{{ item.loose_bottles }}</td>
+                                        <!-- Qty (total bottles) -->
+                                        <td><span class="badge bg-secondary">{{ item.total_bottles }}</span></td>
+                                        <!-- FOC -->
+                                        <td>{{ item.foc_bottles }}</td>
+                                        <!-- Unit Price -->
+                                        <td>{{ item.unit_price|floatformat:2|intcomma }}</td>
+                                        <!-- Val. Be. Disc -->
+                                        <td>
+                                            <div style="text-align: right; width: 100%; float: left;">
+                                                <span>Rs. {{ item.value_before_discount|floatformat:2|intcomma }}</span>
+                                            </div>
+                                        </td>
+                                        <!-- Disc % -->
+                                        <td>{{ item.discount_percentage }}</td>
+                                        <!-- Disc Amt -->
+                                        <td>
+                                            <div style="text-align: right; width: 100%; float: left;">
+                                                <span>Rs. {{ item.discount_amount|floatformat:2|intcomma }}</span>
+                                            </div>
+                                        </td>
+                                        <!-- Value -->
+                                        <td>
+                                            <div style="text-align: right; width: 100%; float: left;">
+                                                <span>Rs. {{ item.line_total|floatformat:2|intcomma }}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Related GRNs -->
+            {% if po.grns.exists %}
+            <div class="form-section">
+                <h5 class="section-title">Related GRNs</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>GRN Number</th>
+                                <th>Date</th>
+                                <th>Invoice No.</th>
+                                <th>Status</th>
+                                <th class="text-end">Total Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grn in po.grns.all %}
+                            <tr>
+                                <td>{{ grn.grn_number }}</td>
+                                <td>{{ grn.grn_date|date:"d M Y" }}</td>
+                                <td>{{ grn.supplier_invoice_number|default:"-" }}</td>
+                                <td><span class="badge status-{{ grn.status }}">{{ grn.get_status_display }}</span></td>
+                                <td class="text-end">Rs. {{ grn.total_amount|floatformat:2|intcomma }}</td>
+                                <td>
+                                    <a href="{% url 'products:purchase_detail' grn.pk %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="form-section">
+                <a href="{% url 'products:po_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to List
+                </a>
+                
+                <a href="{% url 'products:print_po_pdf' po.pk %}" class="btn btn-info" target="_blank">
+                    <i class="fas fa-print me-1"></i>Print PDF
+                </a>
+                
+                {% if po.status == 'draft' %}
+                <a href="{% url 'products:edit_po' po.pk %}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i>Edit PO
+                </a>
+                <a href="{% url 'products:mark_po_ordered' po.pk %}" class="btn btn-primary" 
+                   onclick="return confirm('Mark this PO as ordered?')">
+                    <i class="fas fa-paper-plane me-1"></i>Mark as Ordered
+                </a>
+                <a href="{% url 'products:cancel_po' po.pk %}" class="btn btn-danger" 
+                   onclick="return confirm('Cancel this purchase order?')">
+                    <i class="fas fa-ban me-1"></i>Cancel PO
+                </a>
+                {% endif %}
+                
+                {% if po.status == 'ordered' %}
+                <a href="{% url 'products:create_grn_from_po' po.pk %}" class="btn btn-success">
+                    <i class="fas fa-truck me-1"></i>Create GRN
+                </a>
+                <a href="{% url 'products:cancel_po' po.pk %}" class="btn btn-danger" 
+                   onclick="return confirm('Cancel this purchase order?')">
+                    <i class="fas fa-ban me-1"></i>Cancel PO
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Summary Sidebar -->
+        <div class="col-lg-3">
+            <div class="summary-card">
+                <h5 class="mb-3">Order Summary</h5>
+                <div class="summary-item">
+                    <span>Total Cases:</span>
+                    <span>{{ summary.total_packs }}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Total Loose:</span>
+                    <span>{{ summary.total_loose }}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Subtotal:</span>
+                    <span>Rs. {{ po.subtotal|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Total Discount:</span>
+                    <span>Rs. {{ po.discount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Grand Total:</span>
+                    <span>Rs. {{ po.total|floatformat:2|intcomma }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

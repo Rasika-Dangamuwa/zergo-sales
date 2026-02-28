@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Create Purchase Return - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-table {
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .product-table thead {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+    
+    .product-table thead th {
+        padding: 12px 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: none;
+        text-align: center;
+    }
+    
+    .product-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .product-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .product-table tbody td {
+        padding: 10px 8px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    /* Center columns */
+    .product-table tbody td:nth-child(2) {
+        text-align: center;
+    }
+    
+    /* Financial columns - right alignment */
+    .product-table thead th:nth-child(3),
+    .product-table thead th:nth-child(4),
+    .product-table thead th:nth-child(5),
+    .product-table thead th:nth-child(6),
+    .product-table thead th:nth-child(7),
+    .product-table thead th:nth-child(8) {
+        text-align: right;
+    }
+    
+    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(4),
+    .product-table tbody td:nth-child(5),
+    .product-table tbody td:nth-child(6),
+    .product-table tbody td:nth-child(7),
+    .product-table tbody td:nth-child(8) {
+        text-align: right;
+    }
+    
+    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(4) {
+        padding: 0 !important;
+    }
+    
+    .product-table tbody td:nth-child(3) span,
+    .product-table tbody td:nth-child(4) span {
+        display: block;
+        padding: 10px 8px;
+        text-align: right;
+    }
+    
+    .qty-input {
+        width: 70px;
+        padding: 5px 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    
+    .qty-input:focus {
+        border-color: #f5576c;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
+    }
+    
+    .category-header {
+        background-color: #e9ecef !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #495057;
+    }
+    
+    .category-header td {
+        padding: 12px 8px;
+        background-color: #e9ecef !important;
+    }
+    
+    .category-badge {
+        display: none;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
+        position: sticky;
+        top: 20px;
+    }
+    
+    .summary-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.95rem;
+    }
+    
+    .summary-item span:first-child {
+        text-align: left;
+    }
+    
+    .summary-item span:last-child {
+        text-align: right;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        padding-top: 20px;
+        font-size: 1.2rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    
+    .section-title {
+        color: #f5576c;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f5576c;
+    }
+    
+    .product-name {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .pack-size {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-undo me-2" style="color: #f5576c;"></i>
+            Create Purchase Return
+        </h2>
+        <a href="{% url 'products:purchase_return_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <form method="post" id="returnForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- Return Information -->
+                <div class="form-section">
+                    <h5 class="section-title">Return Information</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Company <span class="text-danger">*</span></label>
+                            <select name="company" id="companySelect" class="form-select" required>
+                                <option value="">Select Company</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.company_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Return Type <span class="text-danger">*</span></label>
+                            <select name="return_type" class="form-select" required>
+                                <option value="">Select Return Type</option>
+                                <option value="damaged">Damaged Product</option>
+                                <option value="expired">Expired Product</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Detailed Reason</label>
+                            <textarea name="detailed_reason" class="form-control" rows="2" 
+                                      placeholder="Provide detailed explanation for this return (optional)..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <div class="form-section">
+                    <h5 class="section-title">Products to Return</h5>
+                    <div class="table-responsive">
+                        <table class="table product-table" style="table-layout: fixed;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%">Description</th>
+                                    <th style="width: 8%">Qty</th>
+                                    <th style="width: 10%">Marked Price</th>
+                                    <th style="width: 10%">Invoice Disc%</th>
+                                    <th style="width: 11%">Invoice Price</th>
+                                    <th style="width: 10%">Dist Disc%</th>
+                                    <th style="width: 11%">Dist Price</th>
+                                    <th style="width: 10%">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% regroup products by size as size_list %}
+                                {% for size_group in size_list %}
+                                    {% regroup size_group.list by marked_price as price_list %}
+                                    {% for price_group in price_list %}
+                                        <tr class="category-header">
+                                            <td colspan="8">
+                                                {{ size_group.grouper }} - Rs. {{ price_group.grouper }}
+                                                <span class="category-badge">{{ price_group.list|length }} products</span>
+                                            </td>
+                                        </tr>
+                                        {% for product in price_group.list %}
+                                        <tr>
+                                            <!-- Description -->
+                                            <td>
+                                                <div class="product-name">{{ product.product_name }}</div>
+                                                <div class="pack-size">{{ product.bottles_per_pack }} btl/case | Non-Resaleable: {{ product.non_resaleable_stock }}</div>
+                                            </td>
+                                            <!-- Qty -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="quantity_{{ product.id }}" 
+                                                       class="qty-input" 
+                                                       min="0" 
+                                                       max="{{ product.non_resaleable_stock }}"
+                                                       value="0"
+                                                       data-product-id="{{ product.id }}"
+                                                       data-marked-price="{{ product.marked_price }}"
+                                                       data-shop-discount="{{ product.discount_percentage }}"
+                                                       data-company-discount="{{ product.company_discount_percentage }}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Marked Price -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;">
+                                                    <span>Rs. {{ product.marked_price|floatformat:2|intcomma }}</span>
+                                                </div>
+                                            </td>
+                                            <!-- Invoice Discount % -->
+                                            <td class="text-center">
+                                                <div class="input-group input-group-sm" style="width: 95px; margin: 0 auto;">
+                                                    <input type="number" 
+                                                           class="form-control shop-discount-{{ product.id }}" 
+                                                           step="0.01" 
+                                                           min="0" 
+                                                           max="100" 
+                                                           value="{{ product.discount_percentage|default:0 }}" 
+                                                           style="text-align: center; padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                                                           onchange="updateSummary()">
+                                                    <span class="input-group-text" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-left: 0;">%</span>
+                                                </div>
+                                            </td>
+                                            <!-- Invoice Price -->
+                                            <td class="text-end">
+                                                <span class="invoice-price-{{ product.id }}">Rs. 0.00</span>
+                                            </td>
+                                            <!-- Distributor Discount % -->
+                                            <td class="text-center">
+                                                <div class="input-group input-group-sm" style="width: 95px; margin: 0 auto;">
+                                                    <input type="number" 
+                                                           class="form-control company-discount-{{ product.id }}" 
+                                                           step="0.01" 
+                                                           min="0" 
+                                                           max="100" 
+                                                           value="{{ product.company_discount_percentage|default:0 }}" 
+                                                           style="text-align: center; padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                                                           onchange="updateSummary()">
+                                                    <span class="input-group-text" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-left: 0;">%</span>
+                                                </div>
+                                            </td>
+                                            <!-- Distributor Price -->
+                                            <td class="text-end">
+                                                <span class="distributor-price-{{ product.id }}">Rs. 0.00</span>
+                                            </td>
+                                            <!-- Line Total -->
+                                            <td class="text-end">
+                                                <span class="line-total" data-product-id="{{ product.id }}">Rs. 0.00</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Sidebar -->
+            <div class="col-lg-3">
+                <div class="summary-card">
+                    <h5 class="mb-3">Summary</h5>
+                    <div class="summary-item">
+                        <span>Total Items:</span>
+                        <span id="totalItems">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Quantity:</span>
+                        <span id="totalQty">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Amount:</span>
+                        <span>Rs. <span id="grandTotal">0.00</span></span>
+                    </div>
+                    <button type="submit" class="btn btn-light w-100 mt-4">
+                        <i class="fas fa-save"></i> Create Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateSummary() {
+    let totalItems = 0;
+    let totalQty = 0;
+    let grandTotal = 0;
+    
+    // Get all quantity inputs
+    const qtyInputs = document.querySelectorAll('input[name^="quantity_"]');
+    
+    qtyInputs.forEach(input => {
+        const qty = parseInt(input.value) || 0;
+        const markedPrice = parseFloat(input.dataset.markedPrice) || 0;
+        const productId = input.dataset.productId;
+        
+        // Get shop discount from input field (editable)
+        const shopDiscountInput = document.querySelector(`.shop-discount-${productId}`);
+        const shopDiscount = shopDiscountInput ? parseFloat(shopDiscountInput.value) || 0 : 0;
+        
+        // Get company discount from input field (editable)
+        const companyDiscountInput = document.querySelector(`.company-discount-${productId}`);
+        const companyDiscount = companyDiscountInput ? parseFloat(companyDiscountInput.value) || 0 : 0;
+        
+        // Calculate: marked_price - (marked_price * shop_discount / 100) = invoice_price
+        const invoicePrice = markedPrice - (markedPrice * shopDiscount / 100);
+        
+        // Calculate: invoice_price - (invoice_price * company_discount / 100) = distributor_price
+        const distributorPrice = invoicePrice - (invoicePrice * companyDiscount / 100);
+        
+        // Update invoice price display
+        const invoicePriceSpan = document.querySelector(`.invoice-price-${productId}`);
+        if (invoicePriceSpan) {
+            invoicePriceSpan.textContent = `Rs. ${invoicePrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+        
+        // Update distributor price display
+        const distributorPriceSpan = document.querySelector(`.distributor-price-${productId}`);
+        if (distributorPriceSpan) {
+            distributorPriceSpan.textContent = `Rs. ${distributorPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+        
+        const lineTotal = qty * distributorPrice;
+        
+        // Update line total display
+        const lineTotalSpan = document.querySelector(`.line-total[data-product-id="${productId}"]`);
+        if (lineTotalSpan) {
+            lineTotalSpan.textContent = `Rs. ${lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+        
+        // Add to totals if quantity > 0
+        if (qty > 0) {
+            totalItems++;
+            totalQty += qty;
+            grandTotal += lineTotal;
+        }
+    });
+    
+    // Update summary
+    document.getElementById('totalItems').textContent = totalItems;
+    document.getElementById('totalQty').textContent = totalQty;
+    document.getElementById('grandTotal').textContent = grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSummary();
+});
+</script>
+{% endblock %}

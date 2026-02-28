@@ -1,0 +1,144 @@
+{% extends "tenants/base_platform.html" %}
+{% load humanize %}
+
+{% block title %}Platform Dashboard - Zergo{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1" style="color: #1E293B;">Platform Dashboard</h4>
+            <p class="text-muted mb-0">Overview of all distributor businesses</p>
+        </div>
+        <a href="{% url 'tenants:distributor_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> New Distributor
+        </a>
+    </div>
+
+    <!-- Top Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: #EEF2FF; color: #4F46E5;">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ active_distributors }}</div>
+                        <div class="stat-label">Active Distributors</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: #ECFDF5; color: #10B981;">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ total_sales_all|floatformat:0|intcomma }}</div>
+                        <div class="stat-label">Total Sales (All)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ total_shops_all|intcomma }}</div>
+                        <div class="stat-label">Total Shops (All)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: #F0F9FF; color: #0EA5E9;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ total_users_all }}</div>
+                        <div class="stat-label">Total Users (All)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distributor Table -->
+    <div class="dist-table">
+        <div class="p-3 d-flex justify-content-between align-items-center border-bottom">
+            <h6 class="fw-bold mb-0">Distributors Overview</h6>
+            <span class="text-muted" style="font-size: 0.85rem;">{{ total_distributors }} total</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="px-3">Distributor</th>
+                        <th class="text-center">Plan</th>
+                        <th class="text-center">Users</th>
+                        <th class="text-center">Shops</th>
+                        <th class="text-end">Total Sales</th>
+                        <th class="text-end">Outstanding</th>
+                        <th class="text-center">Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in distributor_summaries %}
+                    <tr>
+                        <td class="px-3">
+                            <div class="fw-semibold">{{ item.distributor.name }}</div>
+                            <small class="text-muted">{{ item.distributor.code }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if item.distributor.plan == 'enterprise' %}
+                                <span class="badge badge-plan bg-primary">Enterprise</span>
+                            {% elif item.distributor.plan == 'professional' %}
+                                <span class="badge badge-plan bg-info">Professional</span>
+                            {% elif item.distributor.plan == 'basic' %}
+                                <span class="badge badge-plan bg-secondary">Basic</span>
+                            {% else %}
+                                <span class="badge badge-plan bg-warning text-dark">Trial</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ item.user_count }}</td>
+                        <td class="text-center">{{ item.shop_count|intcomma }}</td>
+                        <td class="text-end fw-semibold">{{ item.total_sales|floatformat:2|intcomma }}</td>
+                        <td class="text-end text-danger">{{ item.total_outstanding|floatformat:2|intcomma }}</td>
+                        <td class="text-center">
+                            {% if item.distributor.is_active %}
+                                <span class="badge bg-success-subtle text-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'tenants:distributor_detail' pk=item.distributor.pk %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="fas fa-building fa-2x mb-2 d-block"></i>
+                            No distributors yet. Create your first one!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,483 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ reset.reset_number }} - FOC Reset Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-top: 4px solid #667eea;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 1.25rem;
+        background: #f9fafb;
+        border-radius: 10px;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #6b7280;
+        font-weight: 600;
+        border: none;
+        background: transparent;
+        padding: 1rem 1.5rem;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #667eea;
+        background: white;
+        border-bottom: 3px solid #667eea;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .data-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6b7280;
+        padding: 1rem;
+        border: none;
+    }
+    
+    .data-table td {
+        padding: 1rem;
+        vertical-align: middle;
+        border: none;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .data-table tbody tr:hover {
+        background: #f9fafb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container-fluid">
+        <h1><i class="fas fa-redo me-3"></i>{{ reset.reset_number }}</h1>
+        <p><i class="far fa-calendar me-2"></i>{{ reset.reset_date|date:"F d, Y - g:i A" }} | Reset by: {{ reset.reset_by.get_full_name }}</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Summary Stats -->
+    <div class="summary-card">
+        <h5 class="fw-bold mb-3"><i class="fas fa-chart-bar me-2"></i>Reset Summary</h5>
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-label">FOC Received</div>
+                <div class="stat-value text-success">Rs. {{ reset.total_foc_received|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">FOC Given</div>
+                <div class="stat-value text-warning">Rs. {{ reset.total_foc_given|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">FOC Returned</div>
+                <div class="stat-value text-info">Rs. {{ reset.total_foc_returned|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Net FOC Value</div>
+                <div class="stat-value {% if reset.net_foc_value >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    Rs. {{ reset.net_foc_value|floatformat:2|intcomma }}
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Avg Utilization</div>
+                <div class="stat-value">{{ reset.avg_utilization|floatformat:1 }}%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value">{{ reset.total_transactions|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Products</div>
+                <div class="stat-value">{{ reset.total_products }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Sales Reps</div>
+                <div class="stat-value">{{ reset.total_sales_reps }}</div>
+            </div>
+        </div>
+        
+        {% if reset.notes %}
+        <div class="mt-4 pt-3 border-top">
+            <h6 class="fw-bold"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+            <p>{{ reset.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{% url 'sales:foc_reset_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Reset List
+        </a>
+    </div>
+
+    <!-- Tabbed Data Views -->
+    <ul class="nav nav-tabs mb-4" id="resetTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="companies-tab" data-bs-toggle="tab" data-bs-target="#companies" type="button" role="tab">
+                <i class="fas fa-building me-2"></i>Company Accounts
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">
+                <i class="fas fa-box me-2"></i>Products
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="salesreps-tab" data-bs-toggle="tab" data-bs-target="#salesreps" type="button" role="tab">
+                <i class="fas fa-user-tie me-2"></i>Sales Reps
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab">
+                <i class="fas fa-exchange-alt me-2"></i>Transaction Breakdown
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="all-transactions-tab" data-bs-toggle="tab" data-bs-target="#all-transactions" type="button" role="tab">
+                <i class="fas fa-list me-2"></i>All Transactions ({{ archived_transactions.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="resetTabsContent">
+        <!-- Company Accounts Tab -->
+        <div class="tab-pane fade show active" id="companies" role="tabpanel">
+            <div class="data-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th class="text-end">FOC Received</th>
+                            <th class="text-end">FOC Given</th>
+                            <th class="text-end">Net Value</th>
+                            <th class="text-end">Utilization %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if company_accounts %}
+                            {% for account in company_accounts %}
+                            <tr>
+                                <td class="fw-bold">{{ account.company }}</td>
+                                <td class="text-end text-success">Rs. {{ account.foc_received|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-warning">Rs. {{ account.foc_given|floatformat:2|intcomma }}</td>
+                                <td class="text-end {% if account.net_value >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                                    Rs. {{ account.net_value|floatformat:2|intcomma }}
+                                </td>
+                                <td class="text-end">{{ account.utilization|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No company accounts data</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Products Tab -->
+        <div class="tab-pane fade" id="products" role="tabpanel">
+            <div class="data-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Company</th>
+                            <th class="text-center">Received Qty</th>
+                            <th class="text-center">Given Qty</th>
+                            <th class="text-center">Returned Qty</th>
+                            <th class="text-end">Received Value</th>
+                            <th class="text-end">Given Value</th>
+                            <th class="text-end">Implicit Value</th>
+                            <th class="text-end">Returned Value</th>
+                            <th class="text-end">Net FOC Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if product_summary %}
+                            {% for product in product_summary %}
+                            <tr>
+                                <td class="fw-bold">{{ product.product }}</td>
+                                <td>{{ product.company }}</td>
+                                <td class="text-center">{{ product.foc_received_qty|floatformat:0 }}</td>
+                                <td class="text-center">{{ product.foc_given_qty|floatformat:0 }}</td>
+                                <td class="text-center">{{ product.foc_returned_qty|floatformat:0 }}</td>
+                                <td class="text-end">Rs. {{ product.foc_received_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ product.foc_given_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ product.implicit_foc_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ product.foc_returned_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end fw-bold {% if product.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    Rs. {{ product.net_foc_value|floatformat:2|intcomma }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <!-- Total Row -->
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="2" class="text-end">TOTAL</td>
+                                <td class="text-center">{{ total_received_qty|floatformat:0 }}</td>
+                                <td class="text-center">{{ total_given_qty|floatformat:0 }}</td>
+                                <td class="text-center">{{ total_returned_qty|floatformat:0 }}</td>
+                                <td class="text-end">Rs. {{ reset.total_foc_received|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ reset.total_foc_given|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ total_implicit_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ reset.total_foc_returned|floatformat:2|intcomma }}</td>
+                                <td class="text-end {% if reset.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    Rs. {{ reset.net_foc_value|floatformat:2|intcomma }}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center text-muted py-4">No product summary data</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sales Reps Tab -->
+        <div class="tab-pane fade" id="salesreps" role="tabpanel">
+            <div class="data-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Sales Representative</th>
+                            <th class="text-center">Given Qty</th>
+                            <th class="text-center">Returned Qty</th>
+                            <th class="text-end">Given Value</th>
+                            <th class="text-end">Implicit Value</th>
+                            <th class="text-end">Returned Value</th>
+                            <th class="text-end">Total FOC Used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if sales_rep_summary %}
+                            {% for rep in sales_rep_summary %}
+                            <tr>
+                                <td class="fw-bold">{{ rep.sales_rep }}</td>
+                                <td class="text-center">{{ rep.foc_given_qty|floatformat:0 }}</td>
+                                <td class="text-center">{{ rep.foc_returned_qty|floatformat:0 }}</td>
+                                <td class="text-end">Rs. {{ rep.foc_given_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ rep.implicit_foc_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ rep.foc_returned_value|floatformat:2|intcomma }}</td>
+                                {% with total_used=rep.foc_given_value|add:rep.implicit_foc_value|floatformat:2|add:0 %}
+                                {% with returned=rep.foc_returned_value|floatformat:2|add:0 %}
+                                <td class="text-end fw-bold">Rs. {{ rep.foc_given_value|add:rep.implicit_foc_value|floatformat:"-2"|add:rep.foc_returned_value|floatformat:"-2"|floatformat:2|intcomma }}</td>
+                                {% endwith %}
+                                {% endwith %}
+                            </tr>
+                            {% endfor %}
+                            <!-- Total Row -->
+                            <tr class="table-secondary fw-bold">
+                                <td class="text-end">TOTAL</td>
+                                <td class="text-center">-</td>
+                                <td class="text-center">-</td>
+                                <td class="text-end">Rs. {{ total_rep_given_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ total_rep_implicit_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ total_rep_returned_value|floatformat:2|intcomma }}</td>
+                                <td class="text-end">Rs. {{ total_foc_used|floatformat:2|intcomma }}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No sales rep summary data</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Transaction Breakdown Tab -->
+        <div class="tab-pane fade" id="transactions" role="tabpanel">
+            <div class="data-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Transaction Type</th>
+                            <th class="text-center">Count</th>
+                            <th class="text-end">Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if transaction_breakdown %}
+                            {% for txn in transaction_breakdown %}
+                            <tr>
+                                <td class="fw-bold">
+                                    {% if txn.type == 'foc_received' %}
+                                        <span class="badge bg-success">FOC Received</span>
+                                    {% elif txn.type == 'foc_given' %}
+                                        <span class="badge bg-warning text-dark">FOC Given</span>
+                                    {% elif txn.type == 'implicit_foc' %}
+                                        <span class="badge bg-info">Implicit FOC</span>
+                                    {% elif txn.type == 'return_foc_restored' %}
+                                        <span class="badge bg-primary">FOC Restored</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ txn.type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ txn.count|intcomma }}</td>
+                                <td class="text-end fw-bold">Rs. {{ txn.total_value|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                            <!-- Net FOC Value Row -->
+                            <tr class="table-secondary fw-bold border-top">
+                                <td>NET FOC VALUE</td>
+                                <td class="text-center">{{ reset.total_transactions }}</td>
+                                <td class="text-end {% if reset.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    Rs. {{ reset.net_foc_value|floatformat:2|intcomma }}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">No transaction breakdown data</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- All Transactions Tab -->
+        <div class="tab-pane fade" id="all-transactions" role="tabpanel">
+            <div class="data-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Company</th>
+                            <th>Product</th>
+                            <th>Shop</th>
+                            <th>Sales Rep</th>
+                            <th class="text-center">FOC Qty</th>
+                            <th class="text-end">FOC Value</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if archived_transactions %}
+                            {% for txn in archived_transactions %}
+                            <tr>
+                                <td>{{ txn.transaction_date|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if txn.transaction_type == 'foc_received' %}
+                                        <span class="badge bg-success">FOC Received</span>
+                                    {% elif txn.transaction_type == 'foc_given' %}
+                                        <span class="badge bg-warning text-dark">FOC Given</span>
+                                    {% elif txn.transaction_type == 'implicit_foc' %}
+                                        <span class="badge bg-info">Implicit FOC</span>
+                                    {% elif txn.transaction_type == 'return_foc_restored' %}
+                                        <span class="badge bg-primary">FOC Restored</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ txn.transaction_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ txn.company_name|default:"-" }}</td>
+                                <td>
+                                    {% if txn.product_name %}
+                                        {{ txn.product_name }}{% if txn.product_size %} - {{ txn.product_size }}{% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ txn.shop_name|default:"-" }}</td>
+                                <td>{{ txn.sales_rep_name|default:"-" }}</td>
+                                <td class="text-center">{{ txn.foc_quantity|floatformat:0 }}</td>
+                                <td class="text-end fw-bold">Rs. {{ txn.foc_value|floatformat:2|intcomma }}</td>
+                                <td>
+                                    {% if txn.reference_number %}
+                                        {% if txn.purchase_id %}
+                                            <a href="{% url 'products:purchase_detail' txn.purchase_id %}" class="text-decoration-none">
+                                                <code class="text-danger fw-bold">
+                                                    <i class="fas fa-file-invoice me-1"></i>{{ txn.reference_number }}
+                                                </code>
+                                            </a>
+                                        {% elif txn.bill_id %}
+                                            <a href="{% url 'sales:detail' txn.bill_id %}" class="text-decoration-none">
+                                                <i class="fas fa-store me-1 text-primary"></i>
+                                                <span class="text-primary fw-bold">{{ txn.reference_number }}</span>
+                                            </a>
+                                        {% elif txn.return_id %}
+                                            <a href="{% url 'sales:return_detail' txn.return_id %}" class="text-decoration-none">
+                                                <i class="fas fa-undo me-1 text-info"></i>
+                                                <span class="text-info fw-bold">{{ txn.reference_number }}</span>
+                                            </a>
+                                        {% elif 'RESET' in txn.reference_number %}
+                                            <code class="text-secondary">{{ txn.reference_number }}</code>
+                                        {% else %}
+                                            <code class="text-secondary">{{ txn.reference_number }}</code>
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">No archived transactions</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

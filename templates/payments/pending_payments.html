@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Pending Settlements - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #667eea;
+        --primary-dark: #764ba2;
+        --warning-color: #ffc107;
+        --success-color: #28a745;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 1.5rem;
+        margin: -1rem -1rem 1.5rem -1rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.pending { border-color: #ffc107; }
+    .stat-card.total { border-color: #667eea; }
+    
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        opacity: 0.15;
+        float: right;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1e293b;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0.25rem 0 0 0;
+    }
+    
+    /* Desktop Table Styling */
+    .payment-table-container {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    
+    .payment-table-container .table {
+        margin-bottom: 0;
+    }
+    
+    .payment-table-container thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .payment-table-container thead th {
+        color: white;
+        font-weight: 600;
+        border: none;
+        padding: 1rem;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .payment-table-container tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .payment-table-container tbody tr:hover {
+        background-color: #f8fafc;
+        transform: translateX(4px);
+    }
+    
+    .payment-table-container tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: #f1f5f9;
+    }
+    
+    .payment-table-container tbody td strong {
+        color: #1e293b;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-table-action {
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .badge {
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    .badge-cash { background-color: #28a745; color: white; }
+    .badge-cheque { background-color: #17a2b8; color: white; }
+    .badge-bank_transfer { background-color: #6f42c1; color: white; }
+    .badge-credit { background-color: #ffc107; color: #000; }
+    .badge-return_adjustment { background-color: #e83e8c; color: white; }
+    
+    .mobile-payment-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border-left: 5px solid #ffc107;
+        position: relative;
+    }
+    
+    .mobile-payment-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 80px;
+        background: #flex-start;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #f1f5f9;
+        gap: 0.75rem;
+    }
+    
+    .mobile-payment-card .card-header > div {
+        flex: 1;
+        min-width: 0;
+    }
+        word-break: break-all;
+    }
+    
+    .mobile-payment-card .payment-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.25remrem;
+        white-space: nowrap
+    }
+    
+        padding: 0.5rem;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .mobile-payment-card .info-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        background: #f8fafc;
+        border-radius: 6px;
+    }
+    
+    .mobile-payment-card .info-row i {
+        color: #667eea;
+        width: 16px;
+        text-align: center;
+    }
+    
+    .mobile-payment-card .btn {
+        font-weight: 600;
+        padding: 0.75rem;
+        border-radius: 8px;
+    .mobile-payment-card:active {
+        transform: scale(0.98);
+    }
+    
+    .mobile-payment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
+    
+    .mobile-payment-card .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+    
+    .mobile-payment-card .payment-number {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mobile-payment-card .payment-date {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    .mobile-payment-card .payment-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.75rem 0;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #28a745;
+        margin-bottom: 1rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1rem 0;
+            margin: -1rem -1rem 1.5rem -1rem;
+        }
+        
+        .page-header h1 {
+            font-size: 1.25rem;
+        }
+        
+        .page-header p {
+            font-size: 0.85rem;
+        }
+        
+        .page-header .d-flex {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .page-header .btn {
+            width: 100%;
+        }
+        
+        .quick-stats {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.25rem;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+        }
+        
+        .mobile-payment-card {
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .mobile-payment-card .payment-number {
+            font-size: 1rem;
+        }
+        
+        .mobile-payment-card .payment-amount {
+            font-size: 1.3rem;
+        }
+        
+        .mobile-payment-card .d-grid {
+            gap: 0.5rem;
+        }
+        
+        .empty-state {
+            padding: 2rem 1rem;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+        }
+        
+        .empty-state h4 {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-clock me-2"></i>Pending Settlements</h1>
+                <p class="mb-0 mt-2 opacity-75">Settlements awaiting verification</p>
+            </div>
+            <div>
+                <a href="{% url 'sales:settlement_list' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-1"></i>All Settlements
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="quick-stats">
+        <div class="stat-card pending">
+            <i class="fas fa-clock stat-icon"></i>
+            <p class="stat-value">{{ stats.total_count|default:0 }}</p>
+            <p class="stat-label">Pending Settlements</p>
+        </div>
+        <div class="stat-card total">
+            <i class="fas fa-money-bill-wave stat-icon"></i>
+            <p class="stat-value">Rs. {{ stats.total_amount|default:0|floatformat:2|intcomma }}</p>
+            <p class="stat-label">Total Amount</p>
+        </div>
+    </div>
+
+    <!-- Desktop View -->
+    <div class="payment-table-container d-none d-md-block">
+        {% if settlements %}
+            <div class="table-responsive">
+                <table class="payment-table table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Settlement #</th>
+                            <th>Date & Time</th>
+                            <th>Shop</th>
+                            <th>Bill</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>Received By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for settlement in settlements %}
+                        <tr>
+                            <td>
+                                <strong>{{ settlement.settlement_number }}</strong>
+
+                            </td>
+                            <td>
+                                <div>{{ settlement.settlement_date|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ settlement.settlement_date|date:"h:i A" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ settlement.shop.shop_name|default:"N/A" }}</strong>
+                                {% if settlement.shop.shop_code %}
+                                <br><small class="text-muted">{{ settlement.shop.shop_code }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if settlement.bill %}
+                                <a href="{% url 'sales:detail' settlement.bill.pk %}" class="text-decoration-none">
+                                    {{ settlement.bill.bill_number }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Direct</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-method badge-{{ settlement.settlement_method }}">
+                                    {{ settlement.get_settlement_method_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="text-primary" style="font-size: 1.1rem;">
+                                    Rs. {{ settlement.amount|floatformat:2|intcomma }}
+                                </strong>
+                            </td>
+                            <td>
+                                <div>{{ settlement.received_by.get_full_name|default:"System" }}</div>
+                                {% if settlement.verified_by %}
+                                <small class="text-muted">✓ {{ settlement.verified_by.username }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" 
+                                       class="btn btn-sm btn-outline-primary btn-action"
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if settlement.status == 'unsettled' and request.user.user_type != 'sales_rep' %}
+                                        {% if settlement.settlement_method == 'cheque' %}
+                                        <a href="{% url 'sales:clear_cheque' settlement.pk %}" 
+                                           class="btn btn-sm btn-success btn-action"
+                                           title="Clear Cheque">
+                                            <i class="fas fa-check"></i>
+                                        </a>
+                                        {% elif settlement.settlement_method == 'bank_transfer' %}
+                                        <a href="{% url 'sales:confirm_bank_transfer' settlement.pk %}" 
+                                           class="btn btn-sm btn-success btn-action"
+                                           title="Confirm Transfer">
+                                            <i class="fas fa-check"></i>
+                                        </a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h4>No Pending Settlements</h4>
+                <p class="text-muted">All Settlements have been verified. Great work!</p>
+                <a href="{% url 'sales:settlement_list' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-list me-1"></i>View All Settlements
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Mobile View -->
+    <div class="d-md-none">
+        {% if settlements %}
+            {% for settlement in settlements %}
+            <div class="mobile-payment-card">
+                <div class="card-header">
+                    <div>
+                        <div class="payment-number">{{ settlement.settlement_number }}</div>
+                        <div class="payment-date">
+                            <i class="fas fa-calendar me-1"></i>{{ settlement.settlement_date|date:"d M Y, h:i A" }}
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ settlement.settlement_method }}">
+                        {{ settlement.get_settlement_method_display }}
+                    </span>
+                </div>
+                
+                <div class="payment-amount">
+                    Rs. {{ settlement.amount|floatformat:2|intcomma }}
+                </div>
+                
+                <div class="info-row">
+                    <i class="fas fa-store"></i>
+                    <strong>{{ settlement.shop.shop_name }}</strong>
+                </div>
+                
+                {% if settlement.bill %}
+                <div class="info-row">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>Bill: <a href="{% url 'sales:detail' settlement.bill.pk %}">{{ settlement.bill.bill_number }}</a></span>
+                </div>
+                {% endif %}
+                
+                {% if settlement.settlement_method == 'cheque' %}
+                <div class="info-row">
+                    <i class="fas fa-money-check"></i>
+                    <span>
+                        <small><strong>Cheque:</strong> {{ settlement.reference_number }}<br>
+                        <strong>Bank:</strong> {{ settlement.bank_name }}<br>
+                        <strong>Date:</strong> {{ settlement.cheque_date|date:"d M Y" }}</small>
+                    </span>
+                </div>
+                {% elif settlement.settlement_method == 'bank_transfer' %}
+                <div class="info-row">
+                    <i class="fas fa-university"></i>
+                    <span>
+                        <small><strong>Ref:</strong> {{ settlement.reference_number }}<br>
+                        <strong>Bank:</strong> {{ settlement.bank_name }}</small>
+                    </span>
+                </div>
+                {% endif %}
+                
+                <div class="info-row">
+                    <i class="fas fa-user"></i>
+                    <span><small>{{ settlement.received_by.get_full_name }}</small></span>
+                </div>
+                
+                <div class="d-grid gap-2" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #f1f5f9;">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>View Details
+                    </a>
+                    {% if request.user.is_office_staff or request.user.is_staff %}
+                    <a href="{% url 'sales:verify_settlement' settlement.pk %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-check me-1"></i>Verify Payment
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h4>No Pending Settlements</h4>
+                <p class="text-muted">All Settlements have been verified. Great work!</p>
+                <a href="{% url 'sales:settlement_list' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-list me-1"></i>View All Settlements
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+
+
+

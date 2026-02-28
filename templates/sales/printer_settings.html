@@ -1,0 +1,890 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== Page Header ===== */
+.ps-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: #fff;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+.ps-header::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -8%;
+    width: 220px;
+    height: 220px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+}
+.ps-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .25rem; }
+.ps-header .ps-sub { font-size: .88rem; opacity: .8; margin: 0; }
+.ps-header .ps-meta {
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: .5rem .85rem;
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    white-space: nowrap;
+}
+
+/* ===== Horizontal Tab Nav ===== */
+.ps-tabs {
+    background: #fff;
+    border-radius: 12px;
+    padding: .5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 5px rgba(0,0,0,.06);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+}
+.ps-tabs .nav-link {
+    color: #475569;
+    border-radius: 8px;
+    padding: .6rem 1rem;
+    font-weight: 600;
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    transition: all .2s;
+    border: 1px solid transparent;
+}
+.ps-tabs .nav-link:hover { background: #f0f4ff; color: #2563eb; }
+.ps-tabs .nav-link.active {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,235,.3);
+}
+.ps-tabs .nav-link .tab-icon { width: 18px; text-align: center; }
+
+/* ===== Section Cards ===== */
+.section-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+}
+.section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+.section-head h5 { font-weight: 700; color: #1f2937; margin: 0; font-size: 1.05rem; }
+.section-head .badge { font-size: .72rem; }
+
+/* ===== Form Controls ===== */
+.form-label { font-weight: 600; color: #374151; font-size: .88rem; margin-bottom: .35rem; }
+.form-text { font-size: .78rem; }
+.form-control, .form-select {
+    border-radius: 8px;
+    border-color: #d1d5db;
+    font-size: .9rem;
+    padding: .5rem .75rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 .2rem rgba(37,99,235,.12);
+}
+.form-switch .form-check-input { width: 2.8em; height: 1.4em; cursor: pointer; }
+
+/* ===== Paper Size Grid ===== */
+.paper-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+.paper-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s ease;
+    background: #fff;
+    position: relative;
+}
+.paper-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(37,99,235,.12);
+    border-color: #93c5fd;
+}
+.paper-card.selected {
+    border-color: #2563eb;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f7ff 100%);
+    box-shadow: 0 4px 12px rgba(37,99,235,.18);
+}
+.paper-card input[type="radio"] { display: none; }
+.paper-icon { font-size: 1.8em; margin-bottom: 6px; color: #94a3b8; }
+.paper-card.selected .paper-icon { color: #2563eb; }
+.paper-name { font-weight: 700; font-size: .9rem; color: #1f2937; margin-bottom: 6px; }
+.paper-specs {
+    font-size: .7rem;
+    color: #64748b;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #e5e7eb;
+}
+.paper-specs-row { display: flex; justify-content: space-between; margin: 2px 0; }
+.paper-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+
+/* ===== Spec Display ===== */
+.specs-panel {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+    border: 1px solid #e2e8f0;
+}
+.specs-panel h6 { font-weight: 700; color: #334155; margin-bottom: .75rem; font-size: .9rem; }
+.spec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+}
+.spec-item {
+    text-align: center;
+    padding: 10px 8px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.spec-value { font-size: 1.2rem; font-weight: 700; color: #2563eb; display: block; margin-bottom: 2px; }
+.spec-label { font-size: .68rem; color: #64748b; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+
+/* ===== Print Copies Grid ===== */
+.copies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+.copy-card {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+}
+.copy-card .copy-icon { font-size: 1.5rem; margin-bottom: .5rem; }
+.copy-card .copy-label { font-weight: 600; font-size: .82rem; color: #334155; margin-bottom: .5rem; }
+.copy-card .copy-sub { font-size: .72rem; color: #94a3b8; }
+.copy-card input {
+    width: 60px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    padding: .4rem;
+    font-weight: 700;
+    font-size: 1rem;
+    margin: .35rem auto 0;
+    display: block;
+}
+.copy-card input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 .15rem rgba(37,99,235,.15); }
+
+/* ===== Branding Preview ===== */
+.brand-preview-card {
+    background: #f8fafc;
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+}
+.brand-preview-card .preview-logo { margin-bottom: .5rem; }
+.brand-preview-card .preview-logo img { max-width: 140px; max-height: 55px; }
+.brand-preview-card .preview-name { font-size: 1.15rem; font-weight: 700; color: #1f2937; }
+.brand-preview-card .preview-info { font-size: .8rem; color: #64748b; }
+
+/* ===== Toggle Grid ===== */
+.toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+.toggle-item {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: .6rem .75rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.toggle-item label { font-size: .85rem; margin: 0; cursor: pointer; }
+
+/* ===== Footer Tabs ===== */
+.footer-tabs .nav-link {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: .5rem .85rem;
+}
+.footer-tabs .nav-link.active { color: #2563eb; border-color: #2563eb; }
+.footer-tab-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 1rem;
+    background: #fafbfc;
+}
+
+/* ===== Save Button ===== */
+.btn-save {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #fff;
+    border: none;
+    padding: .65rem 2rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: .95rem;
+    transition: all .25s;
+}
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37,99,235,.35);
+    color: #fff;
+}
+.btn-save:active { transform: translateY(0); }
+
+/* ===== Responsive ===== */
+@media (max-width: 767px) {
+    .ps-header { padding: 1rem; }
+    .ps-header h1 { font-size: 1.15rem; }
+    .ps-tabs .nav-link { font-size: .78rem; padding: .5rem .7rem; }
+    .ps-tabs .nav-link .tab-text { display: none; }
+    .ps-tabs .nav-link .tab-icon { margin: 0; }
+    .section-card { padding: 1rem; }
+    .paper-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .copies-grid { grid-template-columns: 1fr 1fr; }
+    .toggle-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="ps-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-print me-2"></i>{{ page_title }}</h1>
+                <p class="ps-sub">Configure receipt printing, paper size, branding &amp; footer messages</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="ps-meta">
+                    <i class="fas fa-file-alt"></i>
+                    <span>{{ print_profile.get_paper_size_display|default:print_profile.paper_size|upper }}</span>
+                </div>
+                <div class="ps-meta">
+                    {% if print_profile.use_distributor_profile %}
+                    <i class="fas fa-store"></i> <span>Distributor</span>
+                    {% elif print_profile.company %}
+                    <i class="fas fa-industry"></i> <span>{{ print_profile.company.company_name|truncatechars:18 }}</span>
+                    {% else %}
+                    <i class="fas fa-cog"></i> <span>Default</span>
+                    {% endif %}
+                </div>
+                <div class="ps-meta">
+                    <i class="fas fa-clock"></i>
+                    <span>{{ print_profile.updated_at|date:"M d, H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert" style="border-radius:10px;font-size:.9rem;">
+            <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% elif msg.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-1"></i>
+            {{ msg }}
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="printerSettingsForm">
+        {% csrf_token %}
+
+        <!-- ===== TAB NAVIGATION ===== -->
+        <nav class="ps-tabs nav" id="printerTabs" role="tablist">
+            <a class="nav-link active" data-bs-toggle="pill" href="#tab-branding" role="tab">
+                <span class="tab-icon"><i class="fas fa-building"></i></span>
+                <span class="tab-text">Branding</span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#tab-paper" role="tab">
+                <span class="tab-icon"><i class="fas fa-file-alt"></i></span>
+                <span class="tab-text">Paper &amp; Layout</span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#tab-printer" role="tab">
+                <span class="tab-icon"><i class="fas fa-print"></i></span>
+                <span class="tab-text">Printer &amp; Copies</span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#tab-footer" role="tab">
+                <span class="tab-icon"><i class="fas fa-comment-dots"></i></span>
+                <span class="tab-text">Footer Messages</span>
+            </a>
+        </nav>
+
+        <!-- ===== TAB CONTENT ===== -->
+        <div class="tab-content" id="printerTabContent">
+
+            <!-- ============================================================ -->
+            <!-- TAB 1: BRANDING -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade show active" id="tab-branding" role="tabpanel">
+
+                <!-- Branding Source -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-palette me-2 text-primary"></i>Branding Source</h5>
+                        <span class="badge bg-primary">
+                            {% if print_profile.use_distributor_profile %}Distributor{% elif print_profile.company %}{{ print_profile.company.company_name }}{% else %}Default{% endif %}
+                        </span>
+                    </div>
+                    <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem;">Choose which company's branding (logo, name, contact info) appears on receipts</p>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="use_distributor_profile" id="use_distributor_profile"
+                                       {% if print_profile.use_distributor_profile %}checked{% endif %}
+                                       onchange="toggleBrandingSource()">
+                                <label class="form-check-label fw-bold" for="use_distributor_profile">
+                                    <i class="fas fa-store me-1 text-primary"></i>Use Distributor Profile
+                                </label>
+                            </div>
+                            {% if distributor_profile %}
+                            <small class="text-muted d-block ms-4 mb-3">
+                                <i class="fas fa-info-circle me-1"></i>{{ distributor_profile.business_name }}
+                            </small>
+                            {% endif %}
+
+                            <div id="companySelectDiv" style="{% if print_profile.use_distributor_profile %}opacity:0.5;pointer-events:none;{% endif %}">
+                                <label for="company_id" class="form-label">
+                                    <i class="fas fa-industry me-1 text-secondary"></i>Company Branding
+                                </label>
+                                <select class="form-select" name="company_id" id="company_id"
+                                        {% if print_profile.use_distributor_profile %}disabled{% endif %}
+                                        onchange="updateBrandingPreview()">
+                                    <option value="">-- Select Company --</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.id }}"
+                                            data-name="{{ company.company_name }}"
+                                            data-tagline="{{ company.tagline|default:'' }}"
+                                            data-address="{{ company.address|default:'' }}"
+                                            data-city="{{ company.city|default:'' }}"
+                                            data-phone="{{ company.phone_number|default:'' }}"
+                                            data-email="{{ company.email|default:'' }}"
+                                            data-website="{{ company.website|default:'' }}"
+                                            data-logo="{% if company.logo_receipt %}{{ company.logo_receipt.url }}{% elif company.logo %}{{ company.logo.url }}{% endif %}"
+                                            {% if print_profile.company_id == company.id %}selected{% endif %}>
+                                        {{ company.company_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text"><i class="fas fa-info-circle me-1"></i>Use company-specific branding on receipts</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label mb-2"><i class="fas fa-eye me-1 text-primary"></i>Preview</label>
+                            <div class="brand-preview-card" id="brandingPreview">
+                                <div id="previewLogo" class="preview-logo" style="display:none;">
+                                    <img id="previewLogoImg" src="" alt="Logo">
+                                </div>
+                                <div id="previewName" class="preview-name"></div>
+                                <div id="previewTagline" class="preview-info fst-italic" style="display:none;"></div>
+                                <div id="previewAddress" class="preview-info" style="display:none;"></div>
+                                <div id="previewPhone" class="preview-info" style="display:none;"></div>
+                                <div id="previewEmail" class="preview-info" style="display:none;"></div>
+                                <div id="previewWebsite" class="preview-info" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Display Toggles -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-toggle-on me-2 text-success"></i>Receipt Elements</h5>
+                        <span class="badge bg-success">Display Controls</span>
+                    </div>
+                    <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem;">Select which branding elements to show on printed receipts</p>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-item">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="show_logo" id="show_logo"
+                                       {% if print_profile.show_logo %}checked{% endif %}>
+                            </div>
+                            <label for="show_logo"><i class="fas fa-image me-1 text-primary"></i>Logo</label>
+                        </div>
+
+                        <div class="toggle-item">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="show_tagline" id="show_tagline"
+                                       {% if print_profile.show_tagline %}checked{% endif %}>
+                            </div>
+                            <label for="show_tagline"><i class="fas fa-quote-right me-1 text-info"></i>Tagline</label>
+                        </div>
+
+                        <div class="toggle-item">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="show_address" id="show_address"
+                                       {% if print_profile.show_address %}checked{% endif %}>
+                            </div>
+                            <label for="show_address"><i class="fas fa-map-marker-alt me-1 text-danger"></i>Address</label>
+                        </div>
+
+                        <div class="toggle-item">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="show_contact" id="show_contact"
+                                       {% if print_profile.show_contact %}checked{% endif %}>
+                            </div>
+                            <label for="show_contact"><i class="fas fa-phone me-1 text-success"></i>Phone &amp; Email</label>
+                        </div>
+
+                        <div class="toggle-item">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="show_website" id="show_website"
+                                       {% if print_profile.show_website %}checked{% endif %}>
+                            </div>
+                            <label for="show_website"><i class="fas fa-globe me-1 text-warning"></i>Website</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- TAB 2: PAPER & LAYOUT -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="tab-paper" role="tabpanel">
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-ruler-combined me-2 text-primary"></i>Paper Size</h5>
+                        <span class="badge bg-primary">{{ print_profile.paper_size|upper }}</span>
+                    </div>
+                    <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem;">Select the paper size for your printer. Font sizes and layout are auto-optimized.</p>
+
+                    <div class="paper-grid">
+                        {% for paper in paper_sizes %}
+                        <label class="paper-card {% if print_profile.paper_size == paper.code %}selected{% endif %}" data-paper-code="{{ paper.code }}">
+                            <input type="radio" name="paper_size" value="{{ paper.code }}"
+                                   {% if print_profile.paper_size == paper.code %}checked{% endif %}
+                                   onchange="updatePaperSpecs('{{ paper.code }}')">
+                            {% if paper.is_thermal %}
+                            <span class="paper-badge">THERMAL</span>
+                            {% endif %}
+                            <div class="paper-icon">
+                                <i class="fas fa-{% if paper.is_thermal %}receipt{% else %}file-alt{% endif %}"></i>
+                            </div>
+                            <div class="paper-name">{{ paper.name }}</div>
+                            <div class="paper-specs">
+                                <div class="paper-specs-row">
+                                    <span>Width:</span><strong>{{ paper.width_mm }}mm</strong>
+                                </div>
+                                <div class="paper-specs-row">
+                                    <span>Chars:</span><strong>{{ paper.chars_per_line }}</strong>
+                                </div>
+                                <div class="paper-specs-row">
+                                    <span>Font:</span><strong>{{ paper.optimal_fonts.body }}pt</strong>
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Paper Specs Display -->
+                    <div class="specs-panel" id="specsDisplay" style="display:none;">
+                        <h6><i class="fas fa-info-circle me-2"></i>Selected Paper Specifications</h6>
+                        <div class="spec-grid">
+                            <div class="spec-item">
+                                <span class="spec-value" id="specWidth">-</span>
+                                <span class="spec-label">Width (mm)</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-value" id="specChars">-</span>
+                                <span class="spec-label">Chars/Line</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-value" id="specFontHeader">-</span>
+                                <span class="spec-label">Header Font</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-value" id="specFontBody">-</span>
+                                <span class="spec-label">Body Font</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-value" id="specFontFooter">-</span>
+                                <span class="spec-label">Footer Font</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-value" id="specCategory">-</span>
+                                <span class="spec-label">Category</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- TAB 3: PRINTER & COPIES -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="tab-printer" role="tabpanel">
+
+                <!-- Printer Hardware -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-cogs me-2 text-primary"></i>Printer Hardware</h5>
+                        <span class="badge bg-primary">{{ print_profile.printer_name|default:"System Default" }}</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label for="printer_name" class="form-label">Printer Name / Model</label>
+                            <input type="text" class="form-control" name="printer_name" id="printer_name"
+                                   value="{{ print_profile.printer_name|default:'' }}"
+                                   placeholder="e.g., POS-80, EPSON TM-T20, Bluetooth Printer">
+                            <div class="form-text"><i class="fas fa-info-circle me-1"></i>Leave blank to use system default printer</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" name="auto_print" id="auto_print"
+                                       {% if print_profile.auto_print %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="auto_print">
+                                    <i class="fas fa-bolt me-1 text-warning"></i>Auto-Print
+                                </label>
+                            </div>
+                            <div class="form-text">Print automatically after creating a bill</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Print Copies -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-copy me-2 text-success"></i>Print Copies per Receipt Type</h5>
+                    </div>
+                    <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem;">Set how many copies to print for each receipt type</p>
+
+                    <div class="copies-grid">
+                        <div class="copy-card">
+                            <div class="copy-icon text-success"><i class="fas fa-file-invoice"></i></div>
+                            <div class="copy-label">Sales Bills</div>
+                            <div class="copy-sub">Invoices</div>
+                            <input type="number" name="bill_print_copies" id="bill_print_copies"
+                                   value="{{ print_profile.bill_print_copies }}" min="1" max="10">
+                        </div>
+                        <div class="copy-card">
+                            <div class="copy-icon text-primary"><i class="fas fa-receipt"></i></div>
+                            <div class="copy-label">Payments</div>
+                            <div class="copy-sub">Payment receipts</div>
+                            <input type="number" name="payment_print_copies" id="payment_print_copies"
+                                   value="{{ print_profile.payment_print_copies }}" min="1" max="10">
+                        </div>
+                        <div class="copy-card">
+                            <div class="copy-icon text-danger"><i class="fas fa-undo"></i></div>
+                            <div class="copy-label">Returns</div>
+                            <div class="copy-sub">Cash return receipts</div>
+                            <input type="number" name="return_print_copies" id="return_print_copies"
+                                   value="{{ print_profile.return_print_copies }}" min="1" max="10">
+                        </div>
+                        <div class="copy-card">
+                            <div class="copy-icon text-warning"><i class="fas fa-truck"></i></div>
+                            <div class="copy-label">Field Receipts</div>
+                            <div class="copy-sub">Field cash receipts</div>
+                            <input type="number" name="field_receipt_print_copies" id="field_receipt_print_copies"
+                                   value="{{ print_profile.field_receipt_print_copies }}" min="1" max="10">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- TAB 4: FOOTER MESSAGES -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="tab-footer" role="tabpanel">
+                <div class="section-card">
+                    <div class="section-head">
+                        <h5><i class="fas fa-comment-dots me-2 text-primary"></i>Receipt Footer Messages</h5>
+                        <span class="badge bg-primary">Per Receipt Type</span>
+                    </div>
+                    <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem;">Customize the footer message printed at the bottom of each receipt type</p>
+
+                    <!-- Footer Receipt Type Tabs -->
+                    <ul class="nav nav-tabs footer-tabs" id="footerTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="footer-bill-tab" data-bs-toggle="tab" data-bs-target="#footer-bill" type="button" role="tab">
+                                <i class="fas fa-file-invoice me-1"></i>Sales Bill
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="footer-payment-tab" data-bs-toggle="tab" data-bs-target="#footer-payment" type="button" role="tab">
+                                <i class="fas fa-money-bill-wave me-1"></i>Payment
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="footer-return-tab" data-bs-toggle="tab" data-bs-target="#footer-return_cash" type="button" role="tab">
+                                <i class="fas fa-undo me-1"></i>Return
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="footer-field-tab" data-bs-toggle="tab" data-bs-target="#footer-field_receipt" type="button" role="tab">
+                                <i class="fas fa-receipt me-1"></i>Field Receipt
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content footer-tab-content" id="footerTabContent">
+                        {% for rt_code, rt_data in footer_profiles.items %}
+                        <div class="tab-pane fade {% if rt_code == 'bill' %}show active{% endif %}" id="footer-{{ rt_code }}" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Line 1 <span class="text-danger">*</span></label>
+                                    {% if rt_code == print_profile.receipt_type %}
+                                    <input type="text" class="form-control" name="footer_line1"
+                                           value="{{ rt_data.footer_line1 }}"
+                                           placeholder="e.g., Thank you for your business!" maxlength="200">
+                                    {% else %}
+                                    <input type="text" class="form-control" name="footer_line1_{{ rt_code }}"
+                                           value="{{ rt_data.footer_line1 }}"
+                                           placeholder="e.g., Thank you for your business!" maxlength="200">
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Line 2 <span class="text-muted fw-normal">(optional)</span></label>
+                                    {% if rt_code == print_profile.receipt_type %}
+                                    <input type="text" class="form-control" name="footer_line2"
+                                           value="{{ rt_data.footer_line2 }}"
+                                           placeholder="e.g., Visit again!" maxlength="200">
+                                    {% else %}
+                                    <input type="text" class="form-control" name="footer_line2_{{ rt_code }}"
+                                           value="{{ rt_data.footer_line2 }}"
+                                           placeholder="e.g., Visit again!" maxlength="200">
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Line 3 <span class="text-muted fw-normal">(optional)</span></label>
+                                    {% if rt_code == print_profile.receipt_type %}
+                                    <input type="text" class="form-control" name="footer_line3"
+                                           value="{{ rt_data.footer_line3 }}"
+                                           placeholder="e.g., Terms & conditions apply" maxlength="200">
+                                    {% else %}
+                                    <input type="text" class="form-control" name="footer_line3_{{ rt_code }}"
+                                           value="{{ rt_data.footer_line3 }}"
+                                           placeholder="e.g., Terms & conditions apply" maxlength="200">
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== SAVE BUTTON ===== -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+            <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary" style="border-radius:10px;">
+                <i class="fas fa-arrow-left me-1"></i>Dashboard
+            </a>
+            <button type="submit" class="btn btn-save">
+                <i class="fas fa-save me-2"></i>Save Settings
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ paper_sizes_json|json_script:"paper-sizes-data" }}
+{{ optimization_settings|json_script:"optimization-settings" }}
+<script>
+const paperSizesData = JSON.parse(document.getElementById('paper-sizes-data').textContent);
+const optimizationSettings = JSON.parse(document.getElementById('optimization-settings').textContent);
+
+// ===== Branding Source Toggle =====
+function toggleBrandingSource() {
+    const useDistributor = document.getElementById('use_distributor_profile').checked;
+    const companySelect = document.getElementById('company_id');
+    const companyDiv = document.getElementById('companySelectDiv');
+
+    if (useDistributor) {
+        companySelect.disabled = true;
+        companyDiv.style.opacity = '0.5';
+        companyDiv.style.pointerEvents = 'none';
+        loadDistributorBranding();
+    } else {
+        companySelect.disabled = false;
+        companyDiv.style.opacity = '1';
+        companyDiv.style.pointerEvents = 'auto';
+        updateBrandingPreview();
+    }
+}
+
+// ===== Load Distributor Branding =====
+function loadDistributorBranding() {
+    {% if distributor_profile %}
+    document.getElementById('previewName').textContent = "{{ distributor_profile.business_name|escapejs }}";
+    document.getElementById('previewTagline').textContent = "{{ distributor_profile.tagline|default:''|escapejs }}";
+    document.getElementById('previewAddress').textContent = '{{ distributor_profile.address_line1|default:''|escapejs }}';
+    document.getElementById('previewPhone').textContent = '{{ distributor_profile.primary_phone|default:''|escapejs }}';
+    document.getElementById('previewEmail').textContent = '{{ distributor_profile.primary_email|default:''|escapejs }}';
+    document.getElementById('previewWebsite').textContent = '{{ distributor_profile.website|default:''|escapejs }}';
+
+    {% if distributor_profile.logo_receipt %}
+    document.getElementById('previewLogoImg').src = "{{ distributor_profile.logo_receipt.url }}";
+    document.getElementById('previewLogo').style.display = 'block';
+    {% elif distributor_profile.logo %}
+    document.getElementById('previewLogoImg').src = "{{ distributor_profile.logo.url }}";
+    document.getElementById('previewLogo').style.display = 'block';
+    {% else %}
+    document.getElementById('previewLogo').style.display = 'none';
+    {% endif %}
+
+    document.getElementById('previewTagline').style.display = "{{ distributor_profile.tagline|default:'' }}" ? 'block' : 'none';
+    document.getElementById('previewAddress').style.display = "{{ distributor_profile.address_line1|default:'' }}" ? 'block' : 'none';
+    document.getElementById('previewPhone').style.display = "{{ distributor_profile.primary_phone|default:'' }}" ? 'block' : 'none';
+    document.getElementById('previewEmail').style.display = "{{ distributor_profile.primary_email|default:'' }}" ? 'block' : 'none';
+    document.getElementById('previewWebsite').style.display = "{{ distributor_profile.website|default:'' }}" ? 'block' : 'none';
+    {% endif %}
+}
+
+// ===== Update Branding Preview =====
+function updateBrandingPreview() {
+    const companySelect = document.getElementById('company_id');
+    const selectedOption = companySelect.options[companySelect.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+        loadDistributorBranding();
+        return;
+    }
+
+    const name = selectedOption.dataset.name || '';
+    const tagline = selectedOption.dataset.tagline || '';
+    const address = selectedOption.dataset.address || '';
+    const city = selectedOption.dataset.city || '';
+    const phone = selectedOption.dataset.phone || '';
+    const email = selectedOption.dataset.email || '';
+    const website = selectedOption.dataset.website || '';
+    const logo = selectedOption.dataset.logo || '';
+    const fullAddress = city ? `${address}, ${city}` : address;
+
+    document.getElementById('previewName').textContent = name;
+    document.getElementById('previewTagline').textContent = tagline;
+    document.getElementById('previewAddress').innerHTML = fullAddress ? '<i class="fas fa-map-marker-alt me-1"></i>' + fullAddress : '';
+    document.getElementById('previewPhone').innerHTML = phone ? '<i class="fas fa-phone me-1"></i>' + phone : '';
+    document.getElementById('previewEmail').innerHTML = email ? '<i class="fas fa-envelope me-1"></i>' + email : '';
+    document.getElementById('previewWebsite').innerHTML = website ? '<i class="fas fa-globe me-1"></i>' + website : '';
+
+    if (logo) {
+        document.getElementById('previewLogoImg').src = logo;
+        document.getElementById('previewLogo').style.display = 'block';
+    } else {
+        document.getElementById('previewLogo').style.display = 'none';
+    }
+
+    document.getElementById('previewTagline').style.display = tagline ? 'block' : 'none';
+    document.getElementById('previewAddress').style.display = fullAddress ? 'block' : 'none';
+    document.getElementById('previewPhone').style.display = phone ? 'block' : 'none';
+    document.getElementById('previewEmail').style.display = email ? 'block' : 'none';
+    document.getElementById('previewWebsite').style.display = website ? 'block' : 'none';
+}
+
+// ===== Paper Size Card Selection =====
+document.querySelectorAll('.paper-card').forEach(card => {
+    card.addEventListener('click', function() {
+        document.querySelectorAll('.paper-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+        this.querySelector('input').checked = true;
+        updatePaperSpecs(this.dataset.paperCode);
+    });
+});
+
+// ===== Update Paper Specs Display =====
+function updatePaperSpecs(paperCode) {
+    const paper = paperSizesData.find(p => p.code === paperCode);
+    if (!paper) return;
+
+    document.getElementById('specsDisplay').style.display = 'block';
+    document.getElementById('specWidth').textContent = paper.width_mm;
+    document.getElementById('specChars').textContent = paper.chars_per_line;
+    document.getElementById('specFontHeader').textContent = paper.optimal_fonts.header + 'pt';
+    document.getElementById('specFontBody').textContent = paper.optimal_fonts.body + 'pt';
+    document.getElementById('specFontFooter').textContent = paper.optimal_fonts.footer + 'pt';
+    document.getElementById('specCategory').textContent = paper.category.toUpperCase();
+    updatePreviewFonts(paper);
+}
+
+// ===== Update Preview Fonts =====
+function updatePreviewFonts(paper) {
+    const el = (id) => document.getElementById(id);
+    if (el('previewName')) el('previewName').style.fontSize = paper.optimal_fonts.header + 'pt';
+    if (el('previewTagline')) el('previewTagline').style.fontSize = paper.optimal_fonts.footer + 'pt';
+    if (el('previewAddress')) el('previewAddress').style.fontSize = paper.optimal_fonts.footer + 'pt';
+    if (el('previewPhone')) el('previewPhone').style.fontSize = paper.optimal_fonts.footer + 'pt';
+    if (el('previewEmail')) el('previewEmail').style.fontSize = paper.optimal_fonts.footer + 'pt';
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Load branding preview
+    if (document.getElementById('use_distributor_profile').checked) {
+        loadDistributorBranding();
+    } else {
+        updateBrandingPreview();
+    }
+
+    // Show specs for selected paper
+    const selectedPaper = document.querySelector('.paper-card.selected');
+    if (selectedPaper) {
+        updatePaperSpecs(selectedPaper.dataset.paperCode);
+    }
+
+    // Persist active tab in URL hash
+    const hash = window.location.hash;
+    if (hash) {
+        const tabLink = document.querySelector(`.ps-tabs a[href="${hash}"]`);
+        if (tabLink) {
+            const tab = new bootstrap.Tab(tabLink);
+            tab.show();
+        }
+    }
+    document.querySelectorAll('.ps-tabs a[data-bs-toggle="pill"]').forEach(link => {
+        link.addEventListener('shown.bs.tab', function(e) {
+            history.replaceState(null, null, e.target.getAttribute('href'));
+        });
+    });
+});
+</script>
+{% endblock %}

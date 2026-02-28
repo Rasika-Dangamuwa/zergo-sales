@@ -1,0 +1,598 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}User Management — Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981; --emerald-bg: #d1fae5;
+    --amber: #f59e0b; --amber-bg: #fef3c7;
+    --rose: #ef4444; --rose-bg: #fee2e2;
+    --violet: #8b5cf6; --violet-bg: #ede9fe;
+    --cyan: #06b6d4; --cyan-bg: #cffafe;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155;
+    --s800: #1e293b; --s900: #0f172a;
+    --r: 14px; --rs: 10px;
+    --sh1: 0 1px 3px rgba(0,0,0,.06);
+    --sh2: 0 4px 14px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; }
+.um-container { max-width: 1280px; margin: 0 auto; padding: .75rem 1rem; }
+
+/* ===== HEADER ===== */
+.um-hdr {
+    background: var(--brand-gradient);
+    border-radius: var(--r);
+    padding: 1.25rem 1.5rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+.um-hdr::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -8%;
+    width: 220px; height: 220px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+}
+.um-hdr-l { position: relative; z-index: 1; }
+.um-hdr-t { font-size: 1.5rem; font-weight: 800; margin: 0; }
+.um-hdr-s { font-size: .85rem; opacity: .85; margin: .2rem 0 0; }
+.um-hdr-r { position: relative; z-index: 1; }
+.um-hdr-r .btn {
+    background: #fff; color: var(--brand); border: none; font-weight: 700;
+    border-radius: var(--rs); padding: .55rem 1.1rem; font-size: .85rem;
+}
+.um-hdr-r .btn:hover { background: #e3f2fd; color: var(--brand-dark); }
+
+/* ===== STATS ===== */
+.um-stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: .65rem;
+    margin-bottom: 1rem;
+}
+.um-stat {
+    background: #fff;
+    border-radius: var(--rs);
+    padding: .75rem 1rem;
+    box-shadow: var(--sh1);
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+}
+.um-stat-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; flex-shrink: 0;
+}
+.um-stat-icon.bl { background: var(--brand-light); color: var(--brand); }
+.um-stat-icon.gn { background: var(--emerald-bg); color: var(--emerald); }
+.um-stat-icon.rs { background: var(--rose-bg); color: var(--rose); }
+.um-stat-icon.vi { background: var(--violet-bg); color: var(--violet); }
+.um-stat-icon.am { background: var(--amber-bg); color: var(--amber); }
+.um-stat-icon.cy { background: var(--cyan-bg); color: var(--cyan); }
+.um-stat-val { font-size: 1.3rem; font-weight: 800; color: var(--s900); line-height: 1; }
+.um-stat-lbl { font-size: .68rem; font-weight: 600; color: var(--s500); text-transform: uppercase; letter-spacing: .3px; }
+
+/* ===== CONTROLS BAR ===== */
+.um-cbar {
+    background: #fff; border-radius: var(--rs);
+    padding: .85rem 1rem; margin-bottom: .75rem;
+    box-shadow: var(--sh1);
+}
+.um-cbar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.um-filters {
+    display: flex; gap: .35rem; flex-wrap: wrap; align-items: center;
+}
+.um-filter-btn {
+    padding: .4rem .7rem; border: none; background: var(--s100);
+    border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .78rem;
+    color: var(--s500); transition: all .15s; white-space: nowrap;
+    text-decoration: none;
+}
+.um-filter-btn.active { background: var(--brand); color: #fff; }
+.um-filter-btn:hover:not(.active) { background: var(--s200); color: var(--s700); text-decoration: none; }
+.um-search-wrap { flex: 1; min-width: 200px; position: relative; }
+.um-search-wrap i {
+    position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+    color: var(--s400); font-size: .85rem;
+}
+.um-search-wrap input {
+    width: 100%; padding: .55rem .75rem .55rem 2.3rem;
+    border: 2px solid var(--s200); border-radius: var(--rs);
+    font-size: .88rem; outline: none; transition: border .2s;
+}
+.um-search-wrap input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,120,215,.08); }
+.um-filter-lbl {
+    font-size: .7rem; font-weight: 700; color: var(--s500);
+    margin-right: .15rem; align-self: center; white-space: nowrap;
+}
+.um-divider {
+    width: 1px; height: 20px; background: var(--s200);
+    margin: 0 .15rem; align-self: center;
+}
+.um-count {
+    font-size: .8rem; font-weight: 600; color: var(--s500);
+    margin-bottom: .5rem;
+}
+
+/* ===== USER CARDS (mobile) ===== */
+.um-list { display: flex; flex-direction: column; gap: .5rem; }
+.um-card {
+    background: #fff; border-radius: var(--rs);
+    padding: .85rem 1rem; box-shadow: var(--sh1);
+    display: flex; align-items: center; gap: .85rem;
+    transition: all .2s; cursor: pointer;
+    text-decoration: none; color: inherit;
+    border: 2px solid transparent;
+}
+.um-card:hover {
+    border-color: var(--brand-light);
+    box-shadow: var(--sh2);
+    transform: translateY(-1px);
+    color: inherit;
+    text-decoration: none;
+}
+.um-avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--s200);
+}
+.um-avatar-placeholder {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; flex-shrink: 0;
+    color: #fff;
+}
+.um-avatar-placeholder.admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.um-avatar-placeholder.office { background: linear-gradient(135deg, #0078D7, #005BA1); }
+.um-avatar-placeholder.sales_rep { background: linear-gradient(135deg, #10b981, #059669); }
+.um-card-body { flex: 1; min-width: 0; }
+.um-card-name {
+    font-size: .92rem; font-weight: 700; color: var(--s900);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin: 0; line-height: 1.2;
+}
+.um-card-meta {
+    display: flex; flex-wrap: wrap; gap: .25rem .65rem;
+    font-size: .75rem; color: var(--s500); margin-top: .15rem;
+}
+.um-card-meta i { width: 13px; text-align: center; margin-right: .15rem; color: var(--s400); }
+.um-card-right {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: .3rem; flex-shrink: 0;
+}
+.um-role-badge {
+    display: inline-flex; align-items: center; gap: .25rem;
+    padding: .2rem .55rem; border-radius: 12px;
+    font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .3px;
+}
+.um-role-badge.admin { background: var(--rose-bg); color: #991b1b; }
+.um-role-badge.office { background: var(--brand-light); color: var(--brand-dark); }
+.um-role-badge.sales_rep { background: var(--emerald-bg); color: #065f46; }
+.um-status-pill {
+    display: inline-flex; align-items: center; gap: .2rem;
+    padding: .15rem .5rem; border-radius: 10px;
+    font-size: .65rem; font-weight: 700;
+}
+.um-status-pill.active { background: var(--emerald-bg); color: #065f46; }
+.um-status-pill.inactive { background: var(--rose-bg); color: #991b1b; }
+.um-status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+}
+.um-status-dot.active { background: var(--emerald); }
+.um-status-dot.inactive { background: var(--rose); }
+.um-card-stats {
+    display: flex; gap: .5rem; font-size: .68rem; color: var(--s500);
+    margin-top: .2rem;
+}
+.um-card-stats span { white-space: nowrap; }
+
+/* ===== DESKTOP TABLE VIEW ===== */
+.um-table-wrap {
+    display: none;
+    background: #fff;
+    border-radius: var(--r);
+    box-shadow: var(--sh1);
+    overflow: hidden;
+}
+.um-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+}
+.um-tbl thead th {
+    text-align: left;
+    font-weight: 700;
+    color: var(--s500);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding: .85rem 1rem;
+    border-bottom: 2px solid var(--s100);
+    background: var(--s50);
+    white-space: nowrap;
+}
+.um-tbl tbody tr {
+    transition: background .15s;
+    cursor: pointer;
+}
+.um-tbl tbody tr:hover {
+    background: var(--brand-light);
+}
+.um-tbl tbody td {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--s100);
+    color: var(--s700);
+    vertical-align: middle;
+}
+.um-tbl-user {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+.um-tbl-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--s200);
+    flex-shrink: 0;
+}
+.um-tbl-avatar-ph {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; font-weight: 700; flex-shrink: 0;
+    color: #fff;
+}
+.um-tbl-avatar-ph.admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.um-tbl-avatar-ph.office { background: linear-gradient(135deg, #0078D7, #005BA1); }
+.um-tbl-avatar-ph.sales_rep { background: linear-gradient(135deg, #10b981, #059669); }
+.um-tbl-name { font-weight: 700; color: var(--s900); font-size: .9rem; line-height: 1.2; }
+.um-tbl-username { font-size: .75rem; color: var(--s500); }
+.um-tbl-empid { font-family: monospace; font-size: .8rem; color: var(--s600); }
+.um-tbl-phone { font-size: .85rem; color: var(--s600); }
+.um-tbl-login { font-size: .82rem; color: var(--s500); }
+.um-tbl-stats { font-size: .78rem; color: var(--s500); white-space: nowrap; }
+.um-tbl-stats strong { color: var(--s800); }
+
+/* ===== EMPTY STATE ===== */
+.um-empty {
+    text-align: center; padding: 3rem 1rem;
+    background: #fff; border-radius: var(--rs);
+    box-shadow: var(--sh1);
+}
+.um-empty i { font-size: 2.5rem; color: var(--s300); margin-bottom: .75rem; }
+.um-empty h3 { font-size: 1.1rem; color: var(--s700); margin-bottom: .3rem; }
+.um-empty p { font-size: .88rem; color: var(--s500); }
+
+/* ===== DESKTOP ≥992px ===== */
+@media (min-width: 992px) {
+    .um-list { display: none !important; }
+    .um-table-wrap { display: block; }
+    .um-cbar-row { flex-wrap: nowrap; }
+}
+
+/* ===== TABLET ===== */
+@media (max-width: 991px) and (min-width: 577px) {
+    .um-stats { grid-template-columns: repeat(3, 1fr); }
+    .um-container { padding: .5rem .75rem; }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 576px) {
+    .um-container { padding: .35rem; }
+    .um-hdr { padding: .75rem 1rem; }
+    .um-hdr-t { font-size: 1.1rem; }
+    .um-hdr-s { font-size: .72rem; }
+    .um-stats { grid-template-columns: repeat(3, 1fr); gap: .35rem; }
+    .um-stat { padding: .45rem .55rem; }
+    .um-stat-icon { width: 34px; height: 34px; font-size: .75rem; }
+    .um-stat-val { font-size: .95rem; }
+    .um-card { padding: .6rem .7rem; gap: .55rem; }
+    .um-avatar, .um-avatar-placeholder { width: 38px; height: 38px; font-size: .85rem; }
+    .um-card-meta { font-size: .62rem; }
+    .um-card-right { gap: .15rem; }
+    .um-cbar { padding: .6rem .7rem; }
+    .um-cbar-row { gap: .5rem; }
+    .um-filter-btn { padding: .3rem .55rem; font-size: .7rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="um-container">
+    <!-- Header -->
+    <div class="um-hdr">
+        <div class="um-hdr-l">
+            <h1 class="um-hdr-t"><i class="fas fa-users-cog me-2"></i>User Management</h1>
+            <p class="um-hdr-s">Manage all system users, roles and access</p>
+        </div>
+        <div class="um-hdr-r">
+            <a href="{% url 'accounts:user_create' %}" class="btn">
+                <i class="fas fa-user-plus me-1"></i> New User
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="um-stats">
+        <div class="um-stat">
+            <div class="um-stat-icon bl"><i class="fas fa-users"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.total }}</div>
+                <div class="um-stat-lbl">Total Users</div>
+            </div>
+        </div>
+        <div class="um-stat">
+            <div class="um-stat-icon gn"><i class="fas fa-user-check"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.active }}</div>
+                <div class="um-stat-lbl">Active</div>
+            </div>
+        </div>
+        <div class="um-stat">
+            <div class="um-stat-icon rs"><i class="fas fa-user-slash"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.inactive }}</div>
+                <div class="um-stat-lbl">Inactive</div>
+            </div>
+        </div>
+        {% if request.user.user_type == 'admin' %}
+        <div class="um-stat">
+            <div class="um-stat-icon am"><i class="fas fa-shield-alt"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.admins }}</div>
+                <div class="um-stat-lbl">Admins</div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="um-stat">
+            <div class="um-stat-icon cy"><i class="fas fa-building"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.office }}</div>
+                <div class="um-stat-lbl">Distributors</div>
+            </div>
+        </div>
+        <div class="um-stat">
+            <div class="um-stat-icon vi"><i class="fas fa-car"></i></div>
+            <div>
+                <div class="um-stat-val">{{ stats.sales_reps }}</div>
+                <div class="um-stat-lbl">Sales Reps</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="um-cbar">
+        <div class="um-cbar-row">
+            <!-- Role Filters -->
+            <div class="um-filters">
+                <span class="um-filter-lbl">ROLE:</span>
+                <a href="?role=all&status={{ status_filter }}&q={{ search_query }}"
+                   class="um-filter-btn {% if role_filter == 'all' %}active{% endif %}">All</a>
+                {% if request.user.user_type == 'admin' %}
+                <a href="?role=admin&status={{ status_filter }}&q={{ search_query }}"
+                   class="um-filter-btn {% if role_filter == 'admin' %}active{% endif %}">
+                    <i class="fas fa-shield-alt me-1"></i>Admin
+                </a>
+                {% endif %}
+                <a href="?role=office&status={{ status_filter }}&q={{ search_query }}"
+                   class="um-filter-btn {% if role_filter == 'office' %}active{% endif %}">
+                    <i class="fas fa-building me-1"></i>Distributor
+                </a>
+                <a href="?role=sales_rep&status={{ status_filter }}&q={{ search_query }}"
+                   class="um-filter-btn {% if role_filter == 'sales_rep' %}active{% endif %}">
+                    <i class="fas fa-car me-1"></i>Sales Rep
+                </a>
+
+                <span class="um-divider"></span>
+
+                <span class="um-filter-lbl">STATUS:</span>
+                <a href="?role={{ role_filter }}&status=active&q={{ search_query }}"
+                   class="um-filter-btn {% if status_filter == 'active' %}active{% endif %}">Active</a>
+                <a href="?role={{ role_filter }}&status=inactive&q={{ search_query }}"
+                   class="um-filter-btn {% if status_filter == 'inactive' %}active{% endif %}">Inactive</a>
+                <a href="?role={{ role_filter }}&status=all&q={{ search_query }}"
+                   class="um-filter-btn {% if status_filter == 'all' %}active{% endif %}">All</a>
+            </div>
+            <!-- Search -->
+            <div class="um-search-wrap">
+                <i class="fas fa-search"></i>
+                <form method="get" id="searchForm">
+                    <input type="hidden" name="role" value="{{ role_filter }}">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    <input type="text" name="q" value="{{ search_query }}"
+                           placeholder="Search by name, username, employee ID, phone..."
+                           id="userSearch">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Count -->
+    <div class="um-count">
+        <i class="fas fa-list me-1"></i>{{ result_count }} user{{ result_count|pluralize }} found
+    </div>
+
+    {% if user_data %}
+    <!-- ===== DESKTOP TABLE VIEW (≥992px) ===== -->
+    <div class="um-table-wrap">
+        <table class="um-tbl">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Employee ID</th>
+                    <th>Phone</th>
+                    <th>Last Login</th>
+                    <th>Activity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in user_data %}
+                <tr onclick="window.location='{% url 'accounts:user_detail' item.user.pk %}'">
+                    <td>
+                        <div class="um-tbl-user">
+                            {% if item.user.profile_picture %}
+                                <img src="{{ item.user.profile_picture.url }}" class="um-tbl-avatar" alt="">
+                            {% else %}
+                                <div class="um-tbl-avatar-ph {{ item.user.user_type }}">
+                                    {{ item.user.first_name|first }}{{ item.user.last_name|first }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="um-tbl-name">{{ item.user.get_full_name|default:item.user.username }}</div>
+                                <div class="um-tbl-username">@{{ item.user.username }}{% if item.user.email %} &middot; {{ item.user.email }}{% endif %}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="um-role-badge {{ item.user.user_type }}">
+                            {% if item.user.user_type == 'admin' %}
+                                <i class="fas fa-shield-alt"></i> Admin
+                            {% elif item.user.user_type == 'office' %}
+                                <i class="fas fa-building"></i> Distributor
+                            {% else %}
+                                <i class="fas fa-car"></i> Sales Rep
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="um-status-pill {% if item.user.is_active and item.user.is_active_employee %}active{% else %}inactive{% endif %}">
+                            <span class="um-status-dot {% if item.user.is_active and item.user.is_active_employee %}active{% else %}inactive{% endif %}"></span>
+                            {% if item.user.is_active and item.user.is_active_employee %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.user.employee_id %}
+                            <span class="um-tbl-empid">{{ item.user.employee_id }}</span>
+                        {% else %}
+                            <span style="color:var(--s400);font-style:italic;font-size:.82rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.user.phone_number %}
+                            <span class="um-tbl-phone">{{ item.user.phone_number }}</span>
+                        {% else %}
+                            <span style="color:var(--s400);font-style:italic;font-size:.82rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.user.last_login %}
+                            <span class="um-tbl-login">{{ item.user.last_login|timesince }} ago</span>
+                        {% else %}
+                            <span style="color:var(--s400);font-style:italic;font-size:.82rem;">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.user.user_type == 'sales_rep' %}
+                            <div class="um-tbl-stats">
+                                <strong>{{ item.month_bills|default:"0" }}</strong> bills &middot;
+                                Rs. <strong>{{ item.month_revenue|default:"0"|intcomma }}</strong>
+                            </div>
+                        {% else %}
+                            <span style="color:var(--s400);font-size:.82rem;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== MOBILE CARD VIEW (<992px) ===== -->
+    <div class="um-list">
+        {% for item in user_data %}
+        <a href="{% url 'accounts:user_detail' item.user.pk %}" class="um-card">
+            {% if item.user.profile_picture %}
+                <img src="{{ item.user.profile_picture.url }}" class="um-avatar" alt="">
+            {% else %}
+                <div class="um-avatar-placeholder {{ item.user.user_type }}">
+                    {{ item.user.first_name|first }}{{ item.user.last_name|first }}
+                </div>
+            {% endif %}
+            <div class="um-card-body">
+                <h3 class="um-card-name">{{ item.user.get_full_name|default:item.user.username }}</h3>
+                <div class="um-card-meta">
+                    <span><i class="fas fa-at"></i>{{ item.user.username }}</span>
+                    {% if item.user.employee_id %}
+                    <span><i class="fas fa-id-badge"></i>{{ item.user.employee_id }}</span>
+                    {% endif %}
+                    {% if item.user.phone_number %}
+                    <span><i class="fas fa-phone"></i>{{ item.user.phone_number }}</span>
+                    {% endif %}
+                </div>
+                {% if item.user.user_type == 'sales_rep' %}
+                <div class="um-card-stats">
+                    <span><i class="fas fa-file-invoice me-1"></i>{{ item.month_bills|default:"0" }} bills this month</span>
+                    <span><i class="fas fa-coins me-1"></i>Rs. {{ item.month_revenue|default:"0"|intcomma }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="um-card-right">
+                <span class="um-role-badge {{ item.user.user_type }}">
+                    {% if item.user.user_type == 'admin' %}
+                        <i class="fas fa-shield-alt"></i> Admin
+                    {% elif item.user.user_type == 'office' %}
+                        <i class="fas fa-building"></i> Distributor
+                    {% else %}
+                        <i class="fas fa-car"></i> Sales Rep
+                    {% endif %}
+                </span>
+                <span class="um-status-pill {% if item.user.is_active and item.user.is_active_employee %}active{% else %}inactive{% endif %}">
+                    <span class="um-status-dot {% if item.user.is_active and item.user.is_active_employee %}active{% else %}inactive{% endif %}"></span>
+                    {% if item.user.is_active and item.user.is_active_employee %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="um-empty">
+        <i class="fas fa-users-slash d-block"></i>
+        <h3>No Users Found</h3>
+        <p>No users match your current filters. Try adjusting your search.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Debounced search
+let searchTimer;
+const searchInput = document.getElementById('userSearch');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            document.getElementById('searchForm').submit();
+        }, 500);
+    });
+}
+</script>
+{% endblock %}

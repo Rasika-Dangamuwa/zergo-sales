@@ -1,0 +1,1026 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Return Note - {{ return.return_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 100%;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .return-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 1em;
+        font-weight: 600;
+    }
+    
+    .status-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .status-approved {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-rejected {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .items-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .settlement-alert {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 5px solid;
+    }
+    
+    .settlement-alert-cash {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        color: #856404;
+    }
+    
+    .settlement-alert-settled {
+        background-color: #d4edda;
+        border-color: #28a745;
+        color: #155724;
+    }
+    
+    .settlement-alert-available {
+        background-color: #d1ecf1;
+        border-color: #17a2b8;
+        color: #0c5460;
+    }
+    
+    .settlement-badge {
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1em;
+        margin-bottom: 15px;
+    }
+    
+    .settlement-unsettled {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .settlement-settled {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .settlement-available {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .settlement-partially {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .settlement-fully {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .settlement-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    /* Mobile Enhancements */
+    .mobile-action-bar {
+        position: relative;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: none;
+        gap: 10px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .mobile-action-bar .btn {
+        flex: 1;
+        padding: 14px;
+        font-size: 1.05em;
+        font-weight: 600;
+    }
+    
+    .collapsible-section {
+        margin-bottom: 15px;
+    }
+    
+    .section-header {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #dee2e6;
+        user-select: none;
+    }
+    
+    .section-header:hover {
+        background: #e9ecef;
+    }
+    
+    .section-header h5 {
+        margin: 0;
+        font-size: 1.1em;
+    }
+    
+    .section-content {
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        padding: 15px;
+        background: white;
+    }
+    
+    .section-content.collapsed {
+        display: none;
+    }
+    
+    .toggle-icon {
+        transition: transform 0.3s;
+    }
+    
+    .toggle-icon.rotated {
+        transform: rotate(180deg);
+    }
+    
+    /* Bill Adjustment History */
+    .bill-adjustment-item {
+        background: #f8f9fa;
+        border-left: 4px solid #17a2b8;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
+    
+    .bill-adjustment-item strong {
+        color: #17a2b8;
+    }
+    
+    /* Mobile Item Card Styles */
+    .mobile-item-card {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .mobile-item-card .item-number {
+        display: inline-block;
+        background: #007bff;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .mobile-item-card .product-name {
+        font-weight: 600;
+        font-size: 1.05em;
+        color: #212529;
+        margin-bottom: 10px;
+    }
+    
+    .mobile-item-card .item-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .mobile-item-card .item-info {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+    }
+    
+    .mobile-item-card .item-info.total {
+        grid-column: 1 / -1;
+        border-top: 2px solid #dee2e6;
+        padding-top: 10px;
+        margin-top: 4px;
+        font-weight: 600;
+    }
+    
+    .mobile-item-card .item-info .label {
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+    
+    .mobile-item-card .item-info .value {
+        color: #212529;
+        font-weight: 600;
+    }
+    
+    .mobile-total {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        font-size: 1.1em;
+        font-weight: 600;
+    }
+    
+    @media (max-width: 768px) {
+        .mobile-action-bar {
+            display: flex;
+            flex-direction: column;
+            position: relative !important;
+        }
+        
+        .action-buttons {
+            display: none !important; /* Hide desktop buttons on mobile */
+        }
+        
+        .mobile-full-width {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .mobile-btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1.05em;
+        }
+        
+        .mobile-btn i {
+            margin-right: 8px;
+        }
+        
+        .return-header {
+            margin: 0 0 20px 0;
+            padding: 20px 15px;
+            border-radius: 10px;
+        }
+        
+        .return-header .row {
+            flex-direction: column;
+        }
+        
+        .return-header .col-md-4 {
+            text-align: left !important;
+            margin-top: 15px;
+        }
+        
+        .info-card {
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 8px 0;
+        }
+        
+        .info-label {
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 0.95em;
+        }
+        
+        .items-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .items-table table {
+            font-size: 0.85em;
+            min-width: 500px;
+        }
+        
+        .items-table th,
+        .items-table td {
+            padding: 8px 6px;
+            white-space: nowrap;
+        }
+        
+        .status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+        }
+        
+        .settlement-badge {
+            font-size: 0.85em;
+            padding: 6px 12px;
+        }
+        
+        .settlement-alert {
+            padding: 15px;
+            font-size: 0.9em;
+        }
+        
+        .settlement-alert h5 {
+            font-size: 1.1em;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        .d-flex.justify-content-between h2 {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .d-flex.justify-content-between > div {
+            width: 100%;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        form {
+            display: inline-block;
+            width: auto;
+        }
+    }
+
+    /* Icon spacing */
+    .fas, .far, .fab {
+        margin-right: 0.35rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-undo"></i> Sales Return Note</h2>
+        <div>
+            <a href="{% url 'sales:mobile_return_print' return.pk %}" class="btn btn-warning me-2">
+                <i class="fas fa-print"></i> Print Receipt
+            </a>
+            <a href="{{ back_url }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> {{ back_label }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Return Header -->
+    <div class="return-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h3>{{ return.return_number }}</h3>
+                <p class="mb-1"><i class="fas fa-calendar"></i> {{ return.return_date|date:"F d, Y - h:i A" }}</p>
+                <p class="mb-0">
+                    {% if return.shop %}
+                        <i class="fas fa-store"></i> {{ return.shop.shop_name }}
+                    {% elif return.customer_name %}
+                        <i class="fas fa-user"></i> {{ return.customer_name }} <span class="badge bg-secondary">Unregistered</span>
+                    {% else %}
+                        <i class="fas fa-user"></i> Unknown Customer
+                    {% endif %}
+                </p>
+                {% if return.is_verified %}
+                <p class="mb-0 mt-2">
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle"></i> Verified by {{ return.verified_by.get_full_name|default:return.verified_by.username }}
+                    </span>
+                    <small class="text-muted">{{ return.verified_at|date:"M d, Y h:i A" }}</small>
+                </p>
+                {% else %}
+                <p class="mb-0 mt-2">
+                    <span class="badge bg-warning text-dark">
+                        <i class="fas fa-exclamation-triangle"></i> Unverified
+                    </span>
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="settlement-badge settlement-{{ return.settlement_status|slice:':10' }}">
+                    {% if return.settlement_status == 'unsettled' %}
+                        <i class="fas fa-exclamation-circle"></i> Unsettled
+                    {% elif return.settlement_status == 'settled_cash' %}
+                        <i class="fas fa-check-circle"></i> Cash Settled
+                    {% elif return.settlement_status == 'cancelled' %}
+                        <i class="fas fa-ban"></i> Cancelled
+                    {% elif return.settlement_status == 'available' %}
+                        <i class="fas fa-check"></i> Available
+                    {% elif return.settlement_status == 'partially_applied' %}
+                        <i class="fas fa-hourglass-half"></i> Partial
+                    {% elif return.settlement_status == 'fully_applied' %}
+                        <i class="fas fa-check-double"></i> Fully Applied
+                    {% endif %}
+                </span>
+                <h4 class="mt-3">Rs. {{ return.total_amount|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settlement Status Alert -->
+    {% if return.settlement_method == 'cash' %}
+        {% if return.settlement_status == 'unsettled' %}
+        <div class="settlement-alert settlement-alert-cash">
+            <h5><i class="fas fa-exclamation-triangle"></i> Cash Settlement Required</h5>
+            <p class="mb-2"><strong>Refund Method:</strong> Cash Refund</p>
+            <p class="mb-0">
+                <i class="fas fa-info-circle"></i> This return requires cash payment to the customer. 
+                Please count the cash carefully and process the payment.
+            </p>
+        </div>
+        {% elif return.settlement_status == 'settled_cash' %}
+        <div class="settlement-alert settlement-alert-settled">
+            <h5><i class="fas fa-check-circle"></i> Cash Settled</h5>
+            <p class="mb-2"><strong>Voucher No.:</strong> {{ return.cash_receipt_number }}</p>
+            <p class="mb-2"><strong>Paid By:</strong> {{ return.cash_paid_by.get_full_name|default:return.cash_paid_by.username }}</p>
+            <p class="mb-0"><strong>Paid At:</strong> {{ return.cash_paid_at|date:"F d, Y - h:i A" }}</p>
+        </div>
+        {% endif %}
+    {% elif return.settlement_method == 'bill_adjustment' %}
+        <div class="settlement-alert settlement-alert-available">
+            <h5><i class="fas fa-info-circle"></i> Settlement Information</h5>
+            <p class="mb-2"><strong>Refund Method:</strong> {{ return.get_settlement_method_display }}</p>
+            <p class="mb-2"><strong>Status:</strong> 
+                <span class="settlement-badge settlement-{{ return.settlement_status|slice:':10' }}">
+                    {{ return.get_settlement_status_display }}
+                </span>
+            </p>
+            {% if return.settlement_status == 'available' %}
+                <p class="mb-0">
+                    <i class="fas fa-check-circle"></i> This return is available for bill adjustment. 
+                    Available amount: <strong>Rs. {{ return.total_amount|floatformat:2 }}</strong>
+                </p>
+            {% elif return.settlement_status == 'partially_applied' %}
+                <p class="mb-0">
+                    <i class="fas fa-hourglass-half"></i> Partially applied to bills. 
+                    Remaining amount: <strong>Rs. {{ remaining_amount|floatformat:2 }}</strong>
+                </p>
+            {% elif return.settlement_status == 'fully_applied' %}
+                <p class="mb-0">
+                    <i class="fas fa-check-double"></i> Fully applied to bills. 
+                    Amount used: <strong>Rs. {{ return.applied_amount|floatformat:2 }}</strong>
+                </p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Return Information -->
+        <div class="col-md-6">
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fas fa-info-circle"></i> Return Information</h5>
+                
+                <div class="info-row">
+                    <span class="info-label">Return Reason:</span>
+                    <span class="info-value">{{ return.get_return_reason_display }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Created By:</span>
+                    <span class="info-value">{{ return.created_by.get_full_name|default:return.created_by.username }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Created At:</span>
+                    <span class="info-value">{{ return.created_at|date:"F d, Y - h:i A" }}</span>
+                </div>
+                
+                {% if return.notes %}
+                <div class="info-row">
+                    <span class="info-label">Notes:</span>
+                    <span class="info-value">{{ return.notes }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Financial & Transaction Info -->
+        <div class="col-md-6">
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fas fa-dollar-sign"></i> Financial Information</h5>
+                
+                <div class="info-row">
+                    <span class="info-label">Total Return Amount:</span>
+                    <span class="info-value">Rs. {{ return.total_amount|floatformat:2 }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Settlement Method:</span>
+                    <span class="info-value">
+                        {{ return.get_settlement_method_display }}
+                        {% if not return.is_verified and return.settlement_status == 'unsettled' and return.settlement_status != 'cancelled' %}
+                        <button class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#editSettlementMethodModal">
+                            <i class="fas fa-edit"></i> Change
+                        </button>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Settlement Status:</span>
+                    <span class="info-value">
+                        <span class="settlement-badge settlement-{{ return.settlement_status|slice:':10' }}">
+                            {{ return.get_settlement_status_display }}
+                        </span>
+                        {% if return.cash_receipt_number %}
+                            <br><small class="text-muted">Voucher: <strong>{{ return.cash_receipt_number }}</strong></small>
+                        {% elif return.settlement_status == 'fully_applied' or return.settlement_status == 'partially_applied' %}
+                            <br><small class="text-muted">Rs. {{ return.applied_amount|floatformat:2 }} applied to {{ settlement_applications.count }} bill{{ settlement_applications.count|pluralize }}</small>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                {% if return.cash_receipt_number %}
+                <div class="info-row">
+                    <span class="info-label">Cash Voucher:</span>
+                    <span class="info-value text-success">
+                        <strong>{{ return.cash_receipt_number }}</strong>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cash Paid:</span>
+                    <span class="info-value text-success">Rs. {{ return.total_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Paid By:</span>
+                    <span class="info-value">{{ return.cash_paid_by.get_full_name|default:return.cash_paid_by.username }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Paid On:</span>
+                    <span class="info-value">{{ return.cash_paid_at|date:"M d, Y h:i A" }}</span>
+                </div>
+                {% elif return.settlement_status == 'settled_cash' %}
+                <div class="info-row">
+                    <span class="info-label">Cash Settled:</span>
+                    <span class="info-value text-success">Rs. {{ return.total_amount|floatformat:2 }}</span>
+                </div>
+                {% elif return.settlement_status in 'available,partially_applied,fully_applied' %}
+                <div class="info-row">
+                    <span class="info-label">Available for Bills:</span>
+                    <span class="info-value">Rs. {{ remaining_amount|floatformat:2 }}</span>
+                </div>
+                {% if return.applied_amount > 0 %}
+                <div class="info-row">
+                    <span class="info-label">Applied to Bills:</span>
+                    <span class="info-value">Rs. {{ return.applied_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% endif %}
+                
+                {% if return.sale %}
+                <div class="info-row">
+                    <span class="info-label">Related Sale:</span>
+                    <span class="info-value">
+                        <a href="{% url 'sales:sale_detail' return.sale.id %}">{{ return.sale.sale_number }}</a>
+                    </span>
+                </div>
+                {% endif %}
+                
+                {% if return.bill %}
+                <div class="info-row">
+                    <span class="info-label">Related Bill:</span>
+                    <span class="info-value">
+                        <a href="{% url 'sales:detail' return.bill.id %}">{{ return.bill.bill_number }}</a>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Applications (if return was used for bill settlements) -->
+    {% if settlement_applications and return.settlement_status != 'cancelled' %}
+    <div class="info-card">
+        <h5 class="mb-3"><i class="fas fa-file-invoice-dollar"></i> Bill Applications</h5>
+        <p class="text-muted mb-3">This return credit has been used for the following bill settlements:</p>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Bill Number</th>
+                        <th>Shop</th>
+                        <th>Settlement Date</th>
+                        <th>Amount Used</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for settlement in settlement_applications %}
+                    <tr>
+                        <td>
+                            <strong>{{ settlement.bill.bill_number }}</strong>
+                        </td>
+                        <td>
+                            {% if settlement.bill.shop %}
+                                {{ settlement.bill.shop.shop_name }}
+                            {% elif settlement.bill.customer_name %}
+                                {{ settlement.bill.customer_name }} <span class="badge bg-secondary">Unregistered</span>
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </td>
+                        <td>{{ settlement.settlement_date|date:"M d, Y h:i A" }}</td>
+                        <td><strong class="text-success">Rs. {{ settlement.amount|floatformat:2 }}</strong></td>
+                        <td>
+                            <a href="{% url 'sales:detail' settlement.bill.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> View Bill
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="3" class="text-end">Total Applied:</th>
+                        <th class="text-success">Rs. {{ return.applied_amount|floatformat:2 }}</th>
+                        <th></th>
+                    </tr>
+                    {% if return.settlement_status != 'fully_applied' %}
+                    <tr>
+                        <th colspan="3" class="text-end">Remaining Available:</th>
+                        <th class="text-warning">Rs. {{ remaining_amount|floatformat:2 }}</th>
+                        <th></th>
+                    </tr>
+                    {% endif %}
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Return Items -->
+    <div class="info-card">
+        <h5 class="mb-3"><i class="fas fa-list"></i> Return Items</h5>
+        
+        <!-- Desktop Table View -->
+        <div class="items-table d-none d-md-block">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>FOC Qty</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in return.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.product.product_name }}</td>
+                        <td>{{ item.quantity|floatformat:2 }}</td>
+                        <td>
+                            {% if item.foc_quantity > 0 %}
+                                <span class="badge bg-success">{{ item.foc_quantity|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>Rs. {{ item.unit_price|floatformat:2 }}</td>
+                        <td>Rs. {{ item.total_price|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No items in this return</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <th colspan="5" class="text-end">Total:</th>
+                        <th>Rs. {{ return.total_amount|floatformat:2 }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+            {% for item in return.items.all %}
+            <div class="mobile-item-card">
+                <div class="item-number">#{{ forloop.counter }}</div>
+                <div class="item-details">
+                    <div class="product-name">{{ item.product.product_name }}</div>
+                    <div class="item-info-grid">
+                        <div class="item-info">
+                            <span class="label">Qty:</span>
+                            <span class="value">{{ item.quantity|floatformat:2 }}</span>
+                        </div>
+                        <div class="item-info">
+                            <span class="label">FOC Qty:</span>
+                            <span class="value">
+                                {% if item.foc_quantity > 0 %}
+                                    <span class="badge bg-success">{{ item.foc_quantity|floatformat:2 }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="item-info">
+                            <span class="label">Unit Price:</span>
+                            <span class="value">Rs. {{ item.unit_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="item-info total">
+                            <span class="label">Total:</span>
+                            <span class="value">Rs. {{ item.total_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No items in this return</p>
+            </div>
+            {% endfor %}
+            
+            {% if return.items.all %}
+            <div class="mobile-total">
+                <span class="label">Total Amount:</span>
+                <span class="value">Rs. {{ return.total_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <!-- Print Receipt Button (Always Available) -->
+        <a href="{% url 'sales:mobile_return_print' return.pk %}" class="btn btn-warning btn-lg">
+            <i class="fas fa-print"></i> Print Receipt
+        </a>
+        
+        <!-- Manager Verification Button (Office/Admin Only) -->
+        {% if not request.user.is_sales_rep and not return.is_verified and return.settlement_status != 'cancelled' %}
+        <form method="post" onsubmit="return confirm('Verify this return? This will lock it from changes.');" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="verify_return">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-check-circle"></i> Verify Return
+            </button>
+        </form>
+        {% endif %}
+        
+        {% if return.settlement_method == 'cash' %}
+            {% if return.settlement_status == 'unsettled' %}
+                <form method="post" onsubmit="return confirm('Process cash payment of Rs. {{ return.total_amount }} to customer?');" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="settle_cash">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-money-bill-wave"></i> Process Cash Payment
+                    </button>
+                </form>
+            {% elif return.settlement_status == 'settled_cash' %}
+                <a href="{% url 'sales:return_receipt_print' return.pk %}" class="btn btn-success btn-lg">
+                    <i class="fas fa-receipt"></i> View Payment Voucher
+                </a>
+            {% endif %}
+        {% elif return.settlement_method == 'bill_adjustment' %}
+            {% if return.settlement_status == 'cancelled' %}
+                {# Don't show any apply button for cancelled returns #}
+            {% elif return.settlement_status != 'fully_applied' %}
+                <a href="{% if return.shop %}{% url 'sales:list' %}?shop={{ return.shop.id }}{% else %}{% url 'sales:list' %}{% endif %}" class="btn btn-info btn-lg">
+                    <i class="fas fa-file-invoice-dollar"></i> Apply to Bill
+                </a>
+                <span class="ms-3 text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Available: Rs. {{ remaining_amount|floatformat:2 }}
+                </span>
+            {% else %}
+                <span class="btn btn-secondary btn-lg disabled">
+                    <i class="fas fa-check-double"></i> Fully Applied to Bills
+                </span>
+            {% endif %}
+        {% endif %}
+        
+        {% if not return.is_verified and return.settlement_status != 'cancelled' %}
+            <button class="btn btn-outline-warning btn-lg" onclick="cancelReturn()">
+                <i class="fas fa-ban"></i> Cancel
+            </button>
+        {% elif return.is_verified %}
+        <button class="btn btn-outline-danger btn-lg disabled" disabled title="Cannot cancel verified returns">
+            <i class="fas fa-lock"></i> Cancel (Verified)
+        </button>
+        {% elif return.settlement_status == 'cancelled' %}
+        <button class="btn btn-secondary btn-lg disabled" disabled>
+            <i class="fas fa-ban"></i> Already Cancelled
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- Mobile Action Bar -->
+    <div class="mobile-action-bar">
+        <a href="{% url 'sales:mobile_return_print' return.pk %}" class="btn btn-warning w-100">
+            <i class="fas fa-print"></i> Print Receipt
+        </a>
+        
+        {% if return.settlement_method == 'cash' %}
+            {% if return.settlement_status == 'unsettled' %}
+                <form method="post" onsubmit="return confirm('Process cash payment?');" style="width: 100%;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="settle_cash">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-money-bill-wave"></i> Process Cash
+                    </button>
+                </form>
+            {% elif return.settlement_status == 'settled_cash' %}
+                <a href="{% url 'sales:return_receipt_print' return.pk %}" class="btn btn-success w-100">
+                    <i class="fas fa-receipt"></i> View Voucher
+                </a>
+            {% endif %}
+        {% elif return.settlement_method == 'bill_adjustment' %}
+            {% if return.settlement_status != 'fully_applied' and return.settlement_status != 'cancelled' %}
+                <a href="{% if return.shop %}{% url 'sales:list' %}?shop={{ return.shop.id }}{% else %}{% url 'sales:list' %}{% endif %}" class="btn btn-info w-100">
+                    <i class="fas fa-file-invoice-dollar"></i> Apply to Bill
+                </a>
+            {% endif %}
+        {% endif %}
+        
+        {% if not return.is_verified and return.settlement_status != 'cancelled' %}
+            <button class="btn btn-outline-warning w-100" onclick="cancelReturn()">
+                <i class="fas fa-ban"></i> Cancel
+            </button>
+        {% elif return.is_verified %}
+        <button class="btn btn-outline-danger w-100 disabled" disabled title="Cannot cancel verified returns">
+            <i class="fas fa-lock"></i> Cancel (Verified)
+        </button>
+        {% elif return.settlement_status == 'cancelled' %}
+        <button class="btn btn-secondary w-100 disabled" disabled>
+            <i class="fas fa-ban"></i> Already Cancelled
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSection(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.toggle-icon');
+    
+    content.classList.toggle('collapsed');
+    icon.classList.toggle('rotated');
+}
+
+function cancelReturn() {
+    if (confirm('Are you sure you want to cancel this return? Stock will be reversed and commission adjusted.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancel">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function printReceipt() {
+    window.open('{% url "sales:return_receipt_print" return.pk %}', '_blank');
+}
+</script>
+
+<!-- Settlement Method Edit Modal -->
+<div class="modal fade" id="editSettlementMethodModal" tabindex="-1" aria-labelledby="editSettlementMethodLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editSettlementMethodLabel">
+                    <i class="fas fa-hand-holding-usd"></i> Change Settlement Method
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_settlement_method">
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle"></i> Select how the customer should receive their refund
+                    </p>
+                    
+                    <div class="settlement-method-options">
+                        <div class="form-check mb-3 p-3 border rounded {% if return.settlement_method == 'cash' %}bg-light{% endif %}">
+                            <input class="form-check-input" type="radio" name="settlement_method" id="methodCash" value="cash" {% if return.settlement_method == 'cash' %}checked{% endif %} required>
+                            <label class="form-check-label w-100" for="methodCash">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success me-3"></i>
+                                    <div>
+                                        <strong>Cash Refund</strong>
+                                        <div class="small text-muted">Customer gets cash now or at office</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3 p-3 border rounded {% if return.settlement_method == 'bill_adjustment' %}bg-light{% endif %}">
+                            <input class="form-check-input" type="radio" name="settlement_method" id="methodBillAdjustment" value="bill_adjustment" {% if return.settlement_method == 'bill_adjustment' %}checked{% endif %}>
+                            <label class="form-check-label w-100" for="methodBillAdjustment">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-invoice-dollar fa-2x text-info me-3"></i>
+                                    <div>
+                                        <strong>Bill Adjustment</strong>
+                                        <div class="small text-muted">Apply credit to future bills</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Verify Payment - {{ settlement.payment_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .verify-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .verify-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+    
+    .verify-icon {
+        font-size: 4rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+    }
+    
+    .payment-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .payment-summary .amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 1rem 0;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .info-item label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-item .value {
+        font-size: 1.1rem;
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .badge-method {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .badge-cash { background-color: #28a745; color: white; }
+    .badge-cheque { background-color: #17a2b8; color: white; }
+    .badge-bank_transfer { background-color: #6f42c1; color: white; }
+    .badge-credit { background-color: #ffc107; color: #000; }
+    
+    .warning-box {
+        background: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .warning-box h5 {
+        color: #856404;
+        margin-bottom: 0.5rem;
+    }
+    
+    .warning-box p {
+        color: #856404;
+        margin: 0;
+    }
+    
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn-verify {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+    
+    .btn-verify:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+    
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+    
+    .btn-cancel:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .verify-container {
+            padding: 1rem;
+        }
+        
+        .verify-card {
+            padding: 1.5rem;
+        }
+        
+        .payment-summary .amount {
+            font-size: 2rem;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-container">
+    <div class="verify-card">
+        <div class="verify-header">
+            <i class="fas fa-check-circle verify-icon"></i>
+            <h2>Verify Payment</h2>
+            <p class="text-muted">Review payment details and confirm verification</p>
+        </div>
+        
+        <div class="payment-summary">
+            <div class="text-center">
+                <h5 class="mb-0">{{ settlement.payment_number }}</h5>
+                <div class="amount">Rs. {{ settlement.amount|floatformat:2|intcomma }}</div>
+                <p class="mb-0">
+                    <i class="fas fa-calendar me-2"></i>{{ settlement.payment_date|date:"F d, Y - h:i A" }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <label><i class="fas fa-store me-1"></i>Shop</label>
+                <div class="value">{{ settlement.shop.shop_name }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-receipt me-1"></i>Bill Number</label>
+                <div class="value">
+                    {% if settlement.bill %}
+                        {{ settlement.bill.sale_number }}
+                    {% else %}
+                        <span class="text-muted">Direct Payment</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-credit-card me-1"></i>Payment Method</label>
+                <div class="value">
+                    <span class="badge-method badge-{{ settlement.payment_method }}">
+                        {{ settlement.get_payment_method_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-user me-1"></i>Received By</label>
+                <div class="value">{{ settlement.received_by.get_full_name }}</div>
+            </div>
+        </div>
+        
+        {% if settlement.payment_method == 'cheque' %}
+        <div class="info-grid">
+            <div class="info-item">
+                <label><i class="fas fa-money-check me-1"></i>Cheque Number</label>
+                <div class="value">{{ settlement.reference_number|default:"N/A" }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-university me-1"></i>Bank Name</label>
+                <div class="value">{{ settlement.bank_name|default:"N/A" }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-calendar-check me-1"></i>Cheque Date</label>
+                <div class="value">{{ settlement.cheque_date|date:"F d, Y"|default:"N/A" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if settlement.payment_method == 'bank_transfer' %}
+        <div class="info-grid">
+            <div class="info-item">
+                <label><i class="fas fa-hashtag me-1"></i>Reference Number</label>
+                <div class="value">{{ settlement.reference_number|default:"N/A" }}</div>
+            </div>
+            
+            <div class="info-item">
+                <label><i class="fas fa-university me-1"></i>Bank Name</label>
+                <div class="value">{{ settlement.bank_name|default:"N/A" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if settlement.notes %}
+        <div class="info-item mb-3">
+            <label><i class="fas fa-sticky-note me-1"></i>Notes</label>
+            <div class="value">{{ settlement.notes }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="warning-box">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Important</h5>
+            <p>
+                By verifying this payment, you confirm that the payment details are accurate and the transaction is legitimate. 
+                This action will mark the payment as completed and cannot be undone.
+            </p>
+        </div>
+        
+        <form method="post" id="verifyForm">
+            {% csrf_token %}
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-verify">
+                    <i class="fas fa-check-circle me-2"></i>Verify Payment
+                </button>
+                <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-cancel">
+                    <i class="fas fa-times-circle me-2"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('verifyForm').addEventListener('submit', function(e) {
+    if (!confirm('Are you sure you want to verify this payment? This action cannot be undone.')) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}
+
+
+

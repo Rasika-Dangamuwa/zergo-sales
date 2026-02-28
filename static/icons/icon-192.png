@@ -1,0 +1,17 @@
+This is a placeholder file. Replace with actual PNG icons:
+
+REQUIRED ICONS:
+1. icon-192.png (192x192 pixels)
+2. icon-512.png (512x512 pixels)
+
+You can generate icons online at:
+- https://favicon.io/favicon-converter/
+- https://www.favicon-generator.org/
+- https://realfavicongenerator.net/
+
+Or use any image editing software to create PNG files with your app logo.
+
+Recommended colors:
+- Primary: #4F46E5 (Indigo)
+- Background: White or transparent
+- Include "ZS" or "Zergo" text/logo

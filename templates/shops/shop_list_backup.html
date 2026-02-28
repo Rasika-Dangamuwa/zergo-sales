@@ -1,0 +1,2009 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Shops — Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981;
+    --emerald-bg: #d1fae5;
+    --amber: #f59e0b;
+    --amber-bg: #fef3c7;
+    --rose: #ef4444;
+    --rose-bg: #fee2e2;
+    --violet: #8b5cf6;
+    --violet-bg: #ede9fe;
+    --cyan: #06b6d4;
+    --cyan-bg: #cffafe;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-900: #0f172a;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+    --shadow: 0 4px 14px rgba(0,0,0,.08);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,.12);
+}
+
+/* ===== HERO HEADER ===== */
+.page-hero {
+    background: var(--brand-gradient);
+    border-radius: var(--radius);
+    padding: 1.5rem 2rem;
+    color: #fff;
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+.page-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%; right: -10%;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,.06);
+    border-radius: 50%;
+}
+.page-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; left: 10%;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,.04);
+    border-radius: 50%;
+}
+.hero-inner {
+    position: relative; z-index: 1;
+}
+.hero-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 .25rem;
+}
+.hero-sub {
+    opacity: .9;
+    font-size: .9rem;
+    margin: 0;
+}
+.hero-actions .btn {
+    border-radius: var(--radius-sm);
+    padding: .5rem 1.25rem;
+    font-weight: 600;
+    font-size: .85rem;
+    border: 2px solid rgba(255,255,255,.3);
+    color: #fff;
+    background: rgba(255,255,255,.12);
+    transition: all .2s;
+}
+.hero-actions .btn:hover {
+    background: rgba(255,255,255,.25);
+    border-color: rgba(255,255,255,.5);
+    color: #fff;
+}
+.hero-actions .btn-add {
+    background: #fff;
+    color: var(--brand);
+    border: none;
+    font-weight: 700;
+}
+.hero-actions .btn-add:hover {
+    background: #e3f2fd;
+    color: var(--brand-dark);
+}
+
+/* ===== STAT PILLS ===== */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+}
+.stat-pill {
+    background: #fff;
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    border-top: 3px solid var(--brand);
+    transition: transform .2s;
+}
+.stat-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+.stat-pill.emerald { border-top-color: var(--emerald); }
+.stat-pill.amber { border-top-color: var(--amber); }
+.stat-pill.rose { border-top-color: var(--rose); }
+.stat-pill.violet { border-top-color: var(--violet); }
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--slate-900);
+    line-height: 1;
+}
+.stat-label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    margin-top: .35rem;
+}
+
+/* ===== ATTENTION ALERTS ===== */
+.attention-strip {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+}
+.att-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .45rem .85rem;
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.att-chip.pending { background: var(--amber-bg); color: #92400e; }
+.att-chip.overdue { background: var(--rose-bg); color: #991b1b; }
+.att-chip.photo { background: var(--violet-bg); color: #5b21b6; }
+.att-chip.credit { background: var(--cyan-bg); color: #155e75; }
+
+/* ===== FILTER & SEARCH BAR ===== */
+.toolbar {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+.filter-tabs {
+    display: flex;
+    gap: .35rem;
+    background: var(--slate-100);
+    padding: .25rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: .75rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.filter-tab {
+    padding: .45rem .85rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .8rem;
+    color: var(--slate-500);
+    transition: all .2s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+}
+.filter-tab.active {
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    color: var(--brand);
+}
+.filter-tab .badge {
+    font-size: .65rem;
+    padding: .15rem .45rem;
+    border-radius: 10px;
+    font-weight: 700;
+}
+.view-toggle {
+    display: flex;
+    gap: .25rem;
+    background: var(--slate-100);
+    padding: .25rem;
+    border-radius: var(--radius-sm);
+}
+.view-toggle button {
+    padding: .45rem .85rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .82rem;
+    color: var(--slate-500);
+    transition: all .2s;
+}
+.view-toggle button.active {
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    color: var(--brand);
+}
+.search-box {
+    position: relative;
+}
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--slate-400);
+}
+.search-box input {
+    border-radius: var(--radius-sm);
+    padding: .7rem 1rem .7rem 2.5rem;
+    border: 2px solid var(--slate-200);
+    font-size: .9rem;
+    width: 100%;
+    transition: all .2s;
+}
+.search-box input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(0,120,215,.1);
+    outline: none;
+}
+
+/* ===== LOCATION BAR ===== */
+.location-bar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.loc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .85rem;
+    background: var(--slate-100);
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--slate-500);
+}
+.loc-status.active {
+    background: var(--emerald-bg);
+    color: #065f46;
+}
+.loc-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--slate-400);
+}
+.loc-dot.active {
+    background: var(--emerald);
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 6px rgba(16,185,129,.5);
+}
+@keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:.4; }
+}
+
+/* ===== MAP ===== */
+#map {
+    height: 480px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 0;
+    z-index: 0;
+}
+.map-wrap {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+}
+
+/* Map custom markers */
+.custom-marker-wrap { background: none !important; border: none !important; }
+.user-loc-marker { background: none !important; border: none !important; }
+.map-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    transition: transform .15s;
+}
+.map-marker i {
+    transform: rotate(45deg);
+    font-size: .7rem;
+    color: #fff;
+}
+.map-marker.lv3 { background: var(--emerald); }
+.map-marker.lv2 { background: var(--brand); }
+.map-marker.lv1 { background: var(--slate-400); }
+.map-marker.has-pending { box-shadow: 0 0 0 3px rgba(245,158,11,.6), 0 2px 8px rgba(0,0,0,.25); }
+.map-marker.is-new::after {
+    content: '★';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    transform: rotate(45deg);
+    font-size: .6rem;
+    color: #facc15;
+    text-shadow: 0 0 3px rgba(0,0,0,.4);
+}
+
+/* Rich map popup */
+.leaflet-popup-content-wrapper {
+    border-radius: 14px !important;
+    padding: 0 !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,.15) !important;
+    overflow: hidden;
+}
+.leaflet-popup-content {
+    margin: 0 !important;
+    width: 260px !important;
+}
+.mp {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.mp-head {
+    background: var(--brand-gradient);
+    color: #fff;
+    padding: .75rem .9rem;
+}
+.mp-head-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .5rem;
+}
+.mp-name {
+    font-weight: 700;
+    font-size: .9rem;
+    line-height: 1.25;
+}
+.mp-lv {
+    flex-shrink: 0;
+    font-size: .6rem;
+    font-weight: 700;
+    padding: .15rem .45rem;
+    border-radius: 5px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+.mp-lv.lv3 { background: rgba(16,185,129,.85); }
+.mp-lv.lv2 { background: rgba(14,165,233,.85); }
+.mp-lv.lv1 { background: rgba(148,163,184,.85); }
+.mp-code {
+    font-size: .7rem;
+    opacity: .85;
+    margin-top: .15rem;
+}
+.mp-body {
+    padding: .65rem .9rem;
+    font-size: .78rem;
+    color: var(--slate-700);
+}
+.mp-row {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .2rem 0;
+}
+.mp-row i {
+    width: 14px;
+    text-align: center;
+    color: var(--brand);
+    font-size: .7rem;
+}
+.mp-divider {
+    height: 1px;
+    background: var(--slate-100);
+    margin: .4rem 0;
+}
+.mp-pending {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+    padding: .15rem 0;
+}
+.mp-tag {
+    font-size: .65rem;
+    font-weight: 600;
+    padding: .15rem .4rem;
+    border-radius: 5px;
+}
+.mp-tag.bills { background: #fef3c7; color: #92400e; }
+.mp-tag.payments { background: #dbeafe; color: #1e40af; }
+.mp-tag.returns { background: #fce7f3; color: #9d174d; }
+.mp-tag.outstanding { background: #fee2e2; color: #991b1b; }
+.mp-tag.new-tag { background: #d1fae5; color: #065f46; }
+.mp-visit {
+    font-size: .7rem;
+    color: var(--slate-500);
+    padding: .2rem 0;
+}
+.mp-visit i { font-size: .6rem; margin-right: .2rem; }
+.mp-foot {
+    padding: .5rem .9rem .7rem;
+    text-align: center;
+}
+.mp-btn {
+    display: inline-block;
+    width: 100%;
+    padding: .4rem .75rem;
+    background: var(--brand-gradient);
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    text-align: center;
+    transition: opacity .2s;
+}
+.mp-btn:hover { opacity: .88; color: #fff; }
+.mp-btn.disabled {
+    background: var(--slate-200);
+    color: var(--slate-400);
+    pointer-events: none;
+}
+
+/* Map legend */
+.map-legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 1000;
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: .6rem .85rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    font-size: .72rem;
+    max-width: 180px;
+    transition: all .25s;
+}
+.map-legend.collapsed .legend-body { display: none; }
+.map-legend.collapsed { padding: .4rem .65rem; }
+.legend-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--slate-700);
+    font-size: .73rem;
+    user-select: none;
+}
+.legend-toggle i { font-size: .6rem; color: var(--slate-400); transition: transform .2s; }
+.map-legend.collapsed .legend-toggle i { transform: rotate(180deg); }
+.legend-body { margin-top: .4rem; }
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .2rem 0;
+    color: var(--slate-600);
+}
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1.5px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.legend-dot.lv3 { background: var(--emerald); }
+.legend-dot.lv2 { background: var(--brand); }
+.legend-dot.lv1 { background: var(--slate-400); }
+.legend-dot.user { background: var(--rose); }
+.legend-dot.pending { background: var(--amber); }
+.legend-ring {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid var(--amber);
+    background: transparent;
+}
+
+/* Map toolbar */
+.map-toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+.map-tool-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(8px);
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--slate-700);
+    font-size: .8rem;
+    transition: all .2s;
+}
+.map-tool-btn:hover { background: var(--brand); color: #fff; }
+.map-tool-btn.active { background: var(--brand); color: #fff; }
+
+/* Map stats bar */
+.map-stats-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    display: flex;
+    gap: .3rem;
+    flex-wrap: wrap;
+}
+.map-stat-chip {
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(8px);
+    padding: .25rem .6rem;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    color: var(--slate-700);
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+.map-stat-chip .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+.map-stat-chip .dot.emerald { background: var(--emerald); }
+.map-stat-chip .dot.brand { background: var(--brand); }
+.map-stat-chip .dot.slate { background: var(--slate-400); }
+.map-stat-chip .dot.amber { background: var(--amber); }
+
+/* ===== SHOP CARDS ===== */
+.shop-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 0;
+    margin-bottom: .75rem;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--brand);
+    transition: all .25s;
+    cursor: pointer;
+    overflow: hidden;
+}
+.shop-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+.shop-card:active {
+    transform: scale(.99);
+}
+.shop-card.level-1 { border-left-color: var(--slate-400); }
+.shop-card.level-2 { border-left-color: var(--cyan); }
+.shop-card.level-3 { border-left-color: var(--emerald); }
+.shop-card.has-pending { border-left-color: var(--amber); }
+
+.card-body-inner {
+    padding: 1rem;
+}
+
+/* Shop photo */
+.shop-avatar {
+    width: 110px; height: 110px;
+    border-radius: 14px;
+    object-fit: cover;
+    border: 2px solid var(--slate-200);
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.shop-avatar-placeholder {
+    width: 110px; height: 110px;
+    border-radius: 14px;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+/* Access badge */
+.access-badge {
+    font-size: .65rem;
+    padding: .2rem .5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+.access-badge.lv1 { background: var(--slate-200); color: var(--slate-600); }
+.access-badge.lv2 { background: var(--cyan-bg); color: #155e75; }
+.access-badge.lv3 { background: var(--emerald-bg); color: #065f46; }
+
+/* Type badge */
+.type-badge {
+    font-size: .65rem;
+    padding: .2rem .55rem;
+    border-radius: 6px;
+    font-weight: 700;
+    background: var(--brand-light);
+    color: var(--brand-dark);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+/* Pending indicators row */
+.pending-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-top: .5rem;
+}
+.pending-tag {
+    font-size: .7rem;
+    padding: .2rem .5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+}
+.pending-tag.bills { background: var(--rose-bg); color: #991b1b; }
+.pending-tag.payments { background: var(--amber-bg); color: #92400e; }
+.pending-tag.returns { background: var(--violet-bg); color: #5b21b6; }
+.pending-tag.photo-needed { background: #fce7f3; color: #9d174d; }
+
+/* Outstanding bar */
+.outstanding-bar {
+    background: var(--amber-bg);
+    border-radius: 8px;
+    padding: .5rem .75rem;
+    margin-top: .5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .8rem;
+}
+.outstanding-bar .label {
+    font-weight: 600;
+    color: #78350f;
+}
+.outstanding-bar .amount {
+    font-weight: 800;
+    color: #92400e;
+}
+
+/* Credit bar */
+.credit-mini {
+    margin-top: .5rem;
+}
+.credit-mini .bar-bg {
+    height: 4px;
+    background: var(--slate-200);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.credit-mini .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .3s;
+}
+.credit-mini .bar-fill.green { background: var(--emerald); }
+.credit-mini .bar-fill.amber { background: var(--amber); }
+.credit-mini .bar-fill.red { background: var(--rose); }
+
+/* Quick actions */
+.quick-actions {
+    display: flex;
+    gap: .35rem;
+    padding: .65rem 1rem;
+    border-top: 1px solid var(--slate-100);
+    background: var(--slate-50);
+}
+.quick-actions .btn {
+    border-radius: 8px;
+    padding: .4rem .75rem;
+    font-size: .78rem;
+    font-weight: 600;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    transition: all .2s;
+}
+.quick-actions .btn-primary {
+    background: var(--brand-gradient);
+    border: none;
+    color: #fff;
+}
+.quick-actions .btn-outline-secondary {
+    border: 2px solid var(--slate-200);
+    color: var(--slate-600);
+    background: #fff;
+}
+.quick-actions .btn-outline-secondary:hover {
+    background: var(--slate-100);
+    border-color: var(--slate-300);
+}
+.quick-actions .btn-locked {
+    border: 2px solid var(--slate-200);
+    color: var(--slate-400);
+    background: var(--slate-50);
+    cursor: not-allowed;
+}
+
+/* Distance badge */
+.distance-badge {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    font-size: .65rem;
+    padding: .2rem .55rem;
+    border-radius: 6px;
+    font-weight: 700;
+    display: none;
+}
+
+/* Shop count */
+.shop-count-text {
+    font-size: .85rem;
+    color: var(--slate-500);
+    font-weight: 600;
+}
+
+/* Sort dropdown */
+.sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E") no-repeat right .6rem center;
+    border: 2px solid var(--slate-200);
+    border-radius: 8px;
+    padding: .35rem 1.8rem .35rem .65rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--slate-700);
+    cursor: pointer;
+    transition: border-color .2s;
+    outline: none;
+}
+.sort-select:focus { border-color: var(--brand); }
+.sort-select:hover { border-color: var(--brand); }
+
+/* Floating add button */
+.fab {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0,120,215,.4);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: all .2s;
+    text-decoration: none;
+}
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0,120,215,.5);
+    color: #fff;
+}
+
+/* NEW badge */
+.new-ribbon {
+    position: absolute;
+    top: .6rem;
+    right: .6rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    font-size: .6rem;
+    font-weight: 800;
+    padding: .2rem .55rem;
+    border-radius: 6px;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(16,185,129,.35);
+    z-index: 2;
+    animation: newPulse 2.5s ease-in-out infinite;
+}
+@keyframes newPulse {
+    0%,100% { box-shadow: 0 2px 6px rgba(16,185,129,.35); }
+    50% { box-shadow: 0 2px 12px rgba(16,185,129,.55); }
+}
+.shop-card { position: relative; }
+
+/* Date filter bar */
+.date-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+.date-preset-btn {
+    padding: .35rem .75rem;
+    border: 2px solid var(--slate-200);
+    background: #fff;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--slate-600);
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+}
+.date-preset-btn:hover {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+.date-preset-btn.active {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+}
+.date-input {
+    border: 2px solid var(--slate-200);
+    border-radius: 8px;
+    padding: .35rem .6rem;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--slate-700);
+    outline: none;
+    transition: border .2s;
+    max-width: 140px;
+}
+.date-input:focus { border-color: var(--brand); }
+.date-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .65rem;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+    background: var(--brand-light);
+    color: var(--brand-dark);
+}
+.date-filter-badge .clear-btn {
+    background: none;
+    border: none;
+    color: var(--brand-dark);
+    cursor: pointer;
+    padding: 0;
+    font-size: .85rem;
+    line-height: 1;
+    opacity: .7;
+    transition: opacity .2s;
+}
+.date-filter-badge .clear-btn:hover { opacity: 1; }
+
+/* Nearby controls */
+.nearby-controls {
+    display: none;
+    padding: .75rem;
+    background: var(--slate-50);
+    border-radius: var(--radius-sm);
+    margin-top: .5rem;
+}
+
+/* ===== NO RESULTS ===== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.empty-state i {
+    font-size: 3rem;
+    color: var(--slate-300);
+    margin-bottom: 1rem;
+    display: block;
+}
+.empty-state h5 {
+    font-weight: 700;
+    color: var(--slate-700);
+    margin-bottom: .5rem;
+}
+.empty-state p {
+    color: var(--slate-500);
+    margin-bottom: 1rem;
+}
+
+/* ===== COLLAPSIBLE DATE FILTER ===== */
+.date-section { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--slate-200); }
+.date-toggle-btn {
+    display: none;
+    align-items: center;
+    gap: .4rem;
+    background: none;
+    border: 1.5px solid var(--slate-200);
+    border-radius: 8px;
+    padding: .35rem .75rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--slate-600);
+    cursor: pointer;
+    transition: all .2s;
+    width: 100%;
+    justify-content: center;
+}
+.date-toggle-btn:hover, .date-toggle-btn.active { border-color: var(--brand); color: var(--brand); }
+.date-toggle-btn i.chevron { margin-left: auto; font-size: .6rem; transition: transform .2s; }
+.date-toggle-btn.active i.chevron { transform: rotate(180deg); }
+.date-section-body { display: block; }
+
+/* ===== TOOLBAR MOBILE SECTIONS ===== */
+.toolbar-search-row { display: flex; gap: .5rem; align-items: center; flex-wrap: nowrap; }
+.toolbar-search-row .search-box { flex: 1; min-width: 0; }
+.toolbar-loc-row { display: flex; gap: .5rem; align-items: center; margin-top: .5rem; }
+
+/* ===== SHOP COUNT + SORT ROW ===== */
+.count-sort-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .5rem;
+    gap: .5rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+    .stat-value { font-size: 1.25rem; }
+    .page-hero { padding: 1.25rem; }
+    .hero-title { font-size: 1.5rem; }
+    #map { height: 350px; }
+    .map-stats-bar { flex-wrap: wrap; }
+    .map-stat-chip { font-size: .62rem; padding: .2rem .45rem; }
+    .map-legend { max-width: 155px; font-size: .66rem; bottom: 8px; left: 8px; }
+    .attention-strip { margin-bottom: 1rem; }
+    .toolbar-search-row { flex-wrap: wrap; }
+    .location-bar { width: 100%; justify-content: space-between; }
+    .toolbar-loc-row { margin-top: .35rem; }
+}
+
+@media (max-width: 576px) {
+    .container-fluid { padding-left: .5rem; padding-right: .5rem; padding-top: .5rem !important; }
+
+    /* Hero compact */
+    .page-hero { padding: .85rem 1rem; border-radius: 12px; margin-bottom: .65rem; }
+    .page-hero::before { width: 150px; height: 150px; }
+    .page-hero::after { display: none; }
+    .hero-title { font-size: 1.2rem; }
+    .hero-sub { font-size: .75rem; }
+    .hero-actions .btn { padding: .35rem .7rem; font-size: .75rem; }
+
+    /* Stats compact */
+    .stat-grid { gap: .35rem; margin-bottom: .65rem; }
+    .stat-pill { padding: .6rem .4rem; border-top-width: 2px; border-radius: 8px; }
+    .stat-value { font-size: 1.05rem; }
+    .stat-label { font-size: .62rem; letter-spacing: .2px; margin-top: .2rem; }
+
+    /* Attention strip */
+    .attention-strip { margin-bottom: .65rem; gap: .35rem; }
+    .att-chip { padding: .3rem .65rem; font-size: .72rem; }
+
+    /* Toolbar */
+    .toolbar { padding: .65rem; border-radius: 10px; margin-bottom: .65rem; }
+    .filter-tabs { margin-bottom: .5rem; gap: .25rem; padding: .2rem; }
+    .filter-tab { padding: .35rem .55rem; font-size: .72rem; border-radius: 7px; }
+    .filter-tab .badge { font-size: .58rem; padding: .1rem .35rem; }
+    .view-toggle { padding: .2rem; }
+    .view-toggle button { padding: .35rem .55rem; font-size: .72rem; }
+
+    /* Search + Location stacked */
+    .toolbar-search-row { flex-wrap: wrap; gap: .4rem; }
+    .search-box input { padding: .55rem .75rem .55rem 2rem; font-size: .82rem; border-radius: 8px; }
+    .search-box i { left: .7rem; }
+    .location-bar { width: 100%; justify-content: space-between; }
+    .loc-status { padding: .3rem .6rem; font-size: .72rem; }
+    #nearbyBtn { font-size: .72rem; padding: .3rem .6rem; }
+
+    /* Date filter collapsible on mobile */
+    .date-toggle-btn { display: flex; }
+    .date-section-body:not(.show) { display: none; }
+    .date-section { margin-top: .4rem; padding-top: .4rem; }
+    .date-filter-bar { gap: .3rem; }
+    .date-preset-btn { padding: .3rem .5rem; font-size: .7rem; border-radius: 6px; }
+    .date-input { max-width: 110px; padding: .3rem .4rem; font-size: .72rem; }
+
+    /* Sort */
+    .sort-select { font-size: .72rem; padding: .3rem 1.5rem .3rem .5rem; }
+
+    /* Shop cards compact */
+    .shop-card { margin-bottom: .5rem; border-radius: 10px; border-left-width: 3px; }
+    .card-body-inner { padding: .7rem; }
+    .shop-avatar, .shop-avatar-placeholder { width: 88px; height: 88px; border-radius: 12px; font-size: 2rem; }
+    .card-body-inner .d-flex.gap-3 { gap: .6rem !important; }
+    h6 { font-size: .88rem !important; }
+    .access-badge { font-size: .58rem; padding: .15rem .4rem; }
+    .type-badge { font-size: .58rem; padding: .15rem .4rem; }
+
+    /* Contact info compact grid */
+    .contact-info-row { gap: .15rem .6rem !important; font-size: .73rem !important; }
+    .contact-info-row span { white-space: nowrap; }
+
+    /* Pending tags */
+    .pending-row { gap: .25rem; margin-top: .35rem; }
+    .pending-tag { font-size: .65rem; padding: .15rem .4rem; }
+
+    /* Outstanding bar */
+    .outstanding-bar { padding: .4rem .6rem; margin-top: .35rem; font-size: .73rem; border-radius: 6px; }
+
+    /* Credit bar */
+    .credit-mini { margin-top: .35rem; }
+
+    /* Quick actions */
+    .quick-actions { padding: .45rem .7rem; gap: .3rem; }
+    .quick-actions .btn { padding: .4rem .6rem; font-size: .72rem; min-height: 34px; border-radius: 7px; }
+
+    /* New ribbon */
+    .new-ribbon { top: .4rem; right: .4rem; font-size: .55rem; padding: .15rem .4rem; }
+
+    /* FAB */
+    .fab { display: flex; bottom: 70px; right: 16px; width: 50px; height: 50px; font-size: 1.1rem; }
+    .hero-actions .btn-add-desktop { display: none; }
+
+    /* Map popup */
+    .leaflet-popup-content { width: 230px !important; }
+    .mp-head { padding: .6rem .75rem; }
+    .mp-name { font-size: .82rem; }
+    .mp-body { padding: .5rem .75rem; font-size: .72rem; }
+    .mp-foot { padding: .4rem .75rem .6rem; }
+}
+
+@media (max-width: 400px) {
+    .container-fluid { padding-left: .35rem; padding-right: .35rem; }
+    .page-hero { padding: .7rem .85rem; }
+    .hero-title { font-size: 1.1rem; }
+    .hero-sub { font-size: .7rem; }
+    .hero-actions .btn { padding: .3rem .55rem; font-size: .7rem; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); gap: .3rem; }
+    .stat-pill { padding: .5rem .3rem; }
+    .stat-value { font-size: .95rem; }
+    .stat-label { font-size: .58rem; }
+    .toolbar { padding: .55rem; }
+    .filter-tab { padding: .3rem .45rem; font-size: .68rem; }
+    .shop-avatar, .shop-avatar-placeholder { width: 72px; height: 72px; font-size: 1.75rem; border-radius: 10px; }
+    .card-body-inner { padding: .6rem; }
+    h6 { font-size: .82rem !important; }
+    .contact-info-row { font-size: .68rem !important; }
+    .outstanding-bar { font-size: .68rem; }
+    .quick-actions .btn { font-size: .68rem; padding: .35rem .5rem; min-height: 32px; }
+    .sort-select { font-size: .68rem; }
+    .date-preset-btn { font-size: .65rem; padding: .25rem .4rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:960px; padding-top:.75rem;">
+
+    <!-- ===== HERO HEADER ===== -->
+    <div class="page-hero">
+        <div class="hero-inner">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <h1 class="hero-title"><i class="fas fa-store me-2"></i>My Shops</h1>
+                    <p class="hero-sub">{{ total_all_shops }} registered shop{{ total_all_shops|pluralize }}{% if new_shops_today %} · <strong>{{ new_shops_today }} new today</strong>{% endif %}{% if is_date_filtered %} · <i class="fas fa-filter" style="font-size:.7rem"></i> Showing {{ total_shops }} filtered{% endif %}</p>
+                </div>
+                <div class="hero-actions d-flex gap-2">
+                    <a href="{% url 'shops:map' %}" class="btn">
+                        <i class="fas fa-globe me-1"></i>Full Map
+                    </a>
+                    <a href="{% url 'shops:add' %}" class="btn btn-add btn-add-desktop">
+                        <i class="fas fa-plus me-1"></i>Add Shop
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STAT PILLS ===== -->
+    <div class="stat-grid">
+        <div class="stat-pill">
+            <div class="stat-value">{{ total_shops }}</div>
+            <div class="stat-label">{% if is_date_filtered %}Showing{% else %}Total{% endif %} Shops</div>
+        </div>
+        <div class="stat-pill emerald">
+            <div class="stat-value" style="color:var(--emerald)">{{ new_shops_7d }}</div>
+            <div class="stat-label">New This Week</div>
+        </div>
+        <div class="stat-pill amber">
+            <div class="stat-value" style="color:var(--amber)">{{ total_all_pending }}</div>
+            <div class="stat-label">Pending Items</div>
+        </div>
+        <div class="stat-pill rose">
+            <div class="stat-value" style="color:var(--rose)">Rs. {{ grand_outstanding|floatformat:0|intcomma }}</div>
+            <div class="stat-label">Total Outstanding</div>
+        </div>
+    </div>
+
+    <!-- ===== ATTENTION STRIP ===== -->
+    {% if shops_with_pending or shops_no_visit_30d or shops_need_photo or shops_over_credit %}
+    <div class="attention-strip">
+        {% if shops_with_pending %}
+        <span class="att-chip pending">
+            <i class="fas fa-exclamation-triangle"></i>{{ shops_with_pending }} shop{{ shops_with_pending|pluralize }} with pending
+        </span>
+        {% endif %}
+        {% if shops_no_visit_30d %}
+        <span class="att-chip overdue">
+            <i class="fas fa-calendar-times"></i>{{ shops_no_visit_30d }} not visited 30d+
+        </span>
+        {% endif %}
+        {% if shops_need_photo %}
+        <span class="att-chip photo">
+            <i class="fas fa-camera"></i>{{ shops_need_photo }} need photo
+        </span>
+        {% endif %}
+        {% if shops_over_credit %}
+        <span class="att-chip credit">
+            <i class="fas fa-credit-card"></i>{{ shops_over_credit }} near credit limit
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ===== TOOLBAR: FILTERS + SEARCH ===== -->
+    <div class="toolbar">
+        <!-- Filter Tabs -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div class="filter-tabs" id="filterTabs">
+                <button class="filter-tab active" onclick="filterShops('all', this)">
+                    <i class="fas fa-th"></i>All
+                    <span class="badge bg-secondary">{{ total_shops }}</span>
+                </button>
+                {% if new_shops_7d %}
+                <button class="filter-tab" onclick="filterShops('new', this)">
+                    <i class="fas fa-sparkles"></i>New
+                    <span class="badge" style="background:var(--emerald)">{{ new_shops_7d }}</span>
+                </button>
+                {% endif %}
+                {% if level_3_count %}
+                <button class="filter-tab" onclick="filterShops('level-3', this)">
+                    <i class="fas fa-star"></i>Full
+                    <span class="badge" style="background:var(--emerald)">{{ level_3_count }}</span>
+                </button>
+                {% endif %}
+                {% if level_2_count %}
+                <button class="filter-tab" onclick="filterShops('level-2', this)">
+                    <i class="fas fa-unlock-alt"></i>Standard
+                    <span class="badge" style="background:var(--cyan)">{{ level_2_count }}</span>
+                </button>
+                {% endif %}
+                {% if level_1_count %}
+                <button class="filter-tab" onclick="filterShops('level-1', this)">
+                    <i class="fas fa-eye"></i>View Only
+                    <span class="badge bg-secondary">{{ level_1_count }}</span>
+                </button>
+                {% endif %}
+                {% if shops_with_pending %}
+                <button class="filter-tab" onclick="filterShops('pending', this)">
+                    <i class="fas fa-exclamation-circle"></i>Pending
+                    <span class="badge" style="background:var(--amber)">{{ shops_with_pending }}</span>
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <div class="view-toggle">
+                    <button id="listViewBtn" class="active" onclick="switchView('list')">
+                        <i class="fas fa-list me-1"></i>List
+                    </button>
+                    <button id="mapViewBtn" onclick="switchView('map')">
+                        <i class="fas fa-map me-1"></i>Map
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search + Location -->
+        <div class="toolbar-search-row">
+            <div class="search-box flex-grow-1">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchShop" placeholder="Search by name, owner, city...">
+            </div>
+            <div class="location-bar">
+                <span class="loc-status" id="locationStatus">
+                    <span class="loc-dot"></span>
+                    <span>Off</span>
+                </span>
+                <button class="btn btn-sm btn-outline-primary" style="border-radius:20px; font-size:.78rem; font-weight:600; padding:.35rem .75rem;" id="nearbyBtn" onclick="toggleNearby()">
+                    <i class="fas fa-location-arrow me-1"></i>Nearby
+                </button>
+            </div>
+        </div>
+
+        <!-- Nearby Controls -->
+        <div class="nearby-controls" id="nearbyControls">
+            <label class="form-label small mb-1" style="font-weight:600;">Radius: <strong id="radiusValue">5</strong> km</label>
+            <input type="range" class="form-range" id="radiusSlider" min="1" max="20" value="5" step="0.5">
+        </div>
+
+        <!-- Registration Date Filter -->
+        <div class="date-section">
+            <!-- Mobile toggle button -->
+            <button class="date-toggle-btn{% if is_date_filtered %} active{% endif %}" id="dateToggleBtn" onclick="toggleDateFilter()">
+                <i class="fas fa-calendar-alt" style="color:var(--brand)"></i>
+                <span>Registration Date{% if is_date_filtered %}: <strong>{% if date_preset == 'today' %}Today{% elif date_preset == '7d' %}7 Days{% elif date_preset == '30d' %}30 Days{% elif date_preset == '90d' %}90 Days{% else %}Custom{% endif %}</strong>{% endif %}</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </button>
+            <!-- Desktop always visible / mobile collapsible -->
+            <div class="date-section-body" id="dateSectionBody">
+                {% if is_date_filtered %}
+                <div class="d-flex align-items-center gap-2 mb-2 mt-2">
+                    <span class="date-filter-badge">
+                        <i class="fas fa-filter"></i>
+                        {% if date_preset == 'today' %}Today{% elif date_preset == '7d' %}Last 7 Days{% elif date_preset == '30d' %}Last 30 Days{% elif date_preset == '90d' %}Last 90 Days{% else %}{{ date_from }} — {{ date_to }}{% endif %}
+                        ({{ total_shops }})
+                        <a href="{% url 'shops:list' %}" class="clear-btn" title="Clear filter">&times;</a>
+                    </span>
+                </div>
+                {% endif %}
+            <form method="get" action="{% url 'shops:list' %}" id="dateFilterForm" class="date-filter-bar" style="margin-top:.5rem;">
+                <button type="submit" name="date_preset" value="today" class="date-preset-btn{% if date_preset == 'today' %} active{% endif %}">
+                    Today{% if new_shops_today %} <span style="background:var(--emerald);color:#fff;border-radius:6px;padding:.1rem .35rem;font-size:.65rem;margin-left:.25rem;">{{ new_shops_today }}</span>{% endif %}
+                </button>
+                <button type="submit" name="date_preset" value="7d" class="date-preset-btn{% if date_preset == '7d' %} active{% endif %}">7 Days</button>
+                <button type="submit" name="date_preset" value="30d" class="date-preset-btn{% if date_preset == '30d' %} active{% endif %}">30 Days</button>
+                <button type="submit" name="date_preset" value="90d" class="date-preset-btn{% if date_preset == '90d' %} active{% endif %}">90 Days</button>
+                <span style="color:var(--slate-300);font-size:.8rem;">|</span>
+                <input type="date" name="date_from" value="{{ date_from }}" class="date-input" placeholder="From" title="Registered from">
+                <span style="font-size:.75rem;color:var(--slate-400)">to</span>
+                <input type="date" name="date_to" value="{{ date_to }}" class="date-input" placeholder="To" title="Registered to">
+                <button type="submit" class="date-preset-btn" style="background:var(--brand);color:#fff;border-color:var(--brand);">
+                    <i class="fas fa-search me-1"></i>Go
+                </button>
+                {% if is_date_filtered %}
+                <a href="{% url 'shops:list' %}" class="date-preset-btn" style="color:var(--rose);border-color:var(--rose);">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+                {% endif %}
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SHOP COUNT + SORT ===== -->
+    <div class="count-sort-row">
+        <span class="shop-count-text" id="shopCount">{{ total_shops }} shop{{ total_shops|pluralize }}</span>
+        <select class="sort-select" id="sortSelect" onchange="sortShops(this.value)">
+            <option value="default">Sort: Default</option>
+            <option value="name-asc">Name A → Z</option>
+            <option value="name-desc">Name Z → A</option>
+            <option value="visit-recent">Visit: Most Recent</option>
+            <option value="visit-oldest">Visit: Longest Ago</option>
+            <option value="never-visited">Never Visited First</option>
+            <option value="outstanding-desc">Outstanding: High → Low</option>
+            <option value="created-newest">Registered: Newest</option>
+            <option value="created-oldest">Registered: Oldest</option>
+        </select>
+    </div>
+
+    <!-- ===== MAP VIEW ===== -->
+    <div id="mapView" style="display:none;">
+        <div class="map-wrap">
+            <div id="map"></div>
+
+            <!-- Map stats bar (top-left) -->
+            <div class="map-stats-bar" id="mapStatsBar"></div>
+
+            <!-- Map toolbar (top-right) -->
+            <div class="map-toolbar">
+                <button class="map-tool-btn" onclick="fitAllMarkers()" title="Fit all shops">
+                    <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="map-tool-btn" onclick="centerOnUser()" title="My location">
+                    <i class="fas fa-crosshairs"></i>
+                </button>
+                <button class="map-tool-btn" id="legendToggleBtn" onclick="toggleLegend()" title="Toggle legend">
+                    <i class="fas fa-layer-group"></i>
+                </button>
+            </div>
+
+            <!-- Map legend (bottom-left) -->
+            <div class="map-legend" id="mapLegend">
+                <div class="legend-toggle" onclick="toggleLegend()">
+                    <span><i class="fas fa-layer-group me-1"></i>Legend</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="legend-body">
+                    <div class="legend-item"><span class="legend-dot lv3"></span> Full Access</div>
+                    <div class="legend-item"><span class="legend-dot lv2"></span> Standard</div>
+                    <div class="legend-item"><span class="legend-dot lv1"></span> View Only</div>
+                    <div class="legend-item"><span class="legend-ring"></span> Has Pending</div>
+                    <div class="legend-item"><span class="legend-dot user"></span> Your Location</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LIST VIEW ===== -->
+    <div id="listView">
+        <div id="shopList">
+            {% for shop in shops %}
+            <div class="shop-card {% if shop.user_access_level == 1 %}level-1{% elif shop.user_access_level == 2 %}level-2{% elif shop.user_access_level == 3 %}level-3{% endif %}{% if shop.total_pending > 0 %} has-pending{% endif %} shop-item"
+                 data-shop-id="{{ shop.id }}"
+                 data-lat="{{ shop.latitude }}"
+                 data-lon="{{ shop.longitude }}"
+                 data-level="{{ shop.user_access_level }}"
+                 data-pending="{{ shop.total_pending }}"
+                 data-new="{% if shop.is_new %}1{% else %}0{% endif %}"
+                 data-created="{{ shop.created_at|date:'Y-m-d' }}"
+                 data-name="{{ shop.shop_name }}"
+                 data-code="{{ shop.shop_code }}"
+                 data-owner="{{ shop.owner_name }}"
+                 data-type="{{ shop.get_shop_type_display }}"
+                 data-phone="{{ shop.phone_number }}"
+                 data-city="{{ shop.city }}{% if shop.district %}, {{ shop.district }}{% endif %}"
+                 data-outstanding="{{ shop.total_outstanding }}"
+                 data-visit-days="{{ shop.days_since_visit|default_if_none:'never' }}"
+                 data-pending-bills="{{ shop.pending_bills_count }}"
+                 data-pending-payments="{{ shop.pending_payments_count }}"
+                 data-pending-returns="{{ shop.pending_returns_count }}"
+                 {% if shop.user_access_level >= 2 %}onclick="window.location.href='{% url 'shops:detail' shop.pk %}'"{% endif %}>
+                
+                {% if shop.is_new %}
+                <span class="new-ribbon"><i class="fas fa-star me-1" style="font-size:.5rem"></i>NEW</span>
+                {% endif %}
+
+                <div class="card-body-inner">
+                    <div class="d-flex gap-3">
+                        <!-- Avatar -->
+                        <div>
+                            {% if shop.shop_photo %}
+                            <img src="{{ shop.shop_photo.url }}" alt="{{ shop.shop_name }}" class="shop-avatar">
+                            {% else %}
+                            <div class="shop-avatar-placeholder">{{ shop.shop_name|first|upper }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <h6 style="font-weight:700; color:var(--slate-900); margin:0; font-size:.95rem;">{{ shop.shop_name }}</h6>
+                                        <span class="access-badge {% if shop.user_access_level == 1 %}lv1{% elif shop.user_access_level == 2 %}lv2{% elif shop.user_access_level == 3 %}lv3{% endif %}">
+                                            {% if shop.user_access_level == 1 %}View{% elif shop.user_access_level == 2 %}Standard{% elif shop.user_access_level == 3 %}Full{% endif %}
+                                        </span>
+                                    </div>
+                                    <div style="font-size:.8rem; color:var(--slate-500); margin-top:.15rem;">
+                                        <i class="fas fa-user me-1" style="font-size:.7rem;"></i>{{ shop.owner_name }}
+                                        <span style="margin:0 .4rem; color:var(--slate-300);">·</span>
+                                        <span style="color:var(--slate-400);">{{ shop.shop_code }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="type-badge">{{ shop.get_shop_type_display }}</span>
+                                    <span class="distance-badge" data-distance></span>
+                                </div>
+                            </div>
+
+                            <!-- Contact & Location row -->
+                            <div class="d-flex flex-wrap gap-3 mt-2 contact-info-row" style="font-size:.8rem; color:var(--slate-600);">
+                                <span>
+                                    <i class="fas fa-phone" style="color:var(--brand); font-size:.7rem; margin-right:.25rem;"></i>
+                                    <a href="tel:{{ shop.phone_number }}" onclick="event.stopPropagation();" style="color:var(--slate-600); text-decoration:none;">{{ shop.phone_number }}</a>
+                                </span>
+                                <span>
+                                    <i class="fas fa-map-marker-alt" style="color:var(--brand); font-size:.7rem; margin-right:.25rem;"></i>
+                                    {{ shop.city }}{% if shop.district %}, {{ shop.district }}{% endif %}
+                                </span>
+                                <span{% if is_date_filtered %} style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding:.25rem .5rem; border-radius:6px; border:1px solid #fbbf24; font-weight:600; color:var(--slate-800);"{% endif %}>
+                                    <i class="fas fa-calendar-{% if is_date_filtered %}check{% else %}plus{% endif %}" style="color:{% if is_date_filtered %}var(--amber){% elif shop.is_new %}var(--emerald){% else %}var(--slate-400){% endif %}; font-size:.7rem; margin-right:.25rem;"></i>
+                                    {% if is_date_filtered %}<strong>Reg:</strong> {% endif %}{{ shop.created_at|date:'M d, Y' }}
+                                </span>
+                                {% if shop.last_visit_date %}
+                                <span>
+                                    <i class="fas fa-clock" style="color:{% if shop.days_since_visit > 30 %}var(--rose){% elif shop.days_since_visit > 14 %}var(--amber){% else %}var(--emerald){% endif %}; font-size:.7rem; margin-right:.25rem;"></i>
+                                    {% if shop.days_since_visit == 0 %}Today{% elif shop.days_since_visit == 1 %}Yesterday{% else %}{{ shop.days_since_visit }}d ago{% endif %}
+                                </span>
+                                {% else %}
+                                <span style="color:var(--slate-400);">
+                                    <i class="fas fa-clock" style="font-size:.7rem; margin-right:.25rem;"></i>Never visited
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Pending indicators -->
+                            {% if shop.total_pending > 0 or shop.needs_photo %}
+                            <div class="pending-row">
+                                {% if shop.pending_bills_count > 0 %}
+                                <span class="pending-tag bills">
+                                    <i class="fas fa-file-invoice-dollar"></i>{{ shop.pending_bills_count }} unpaid bill{{ shop.pending_bills_count|pluralize }}
+                                </span>
+                                {% endif %}
+                                {% if shop.pending_payments_count > 0 %}
+                                <span class="pending-tag payments">
+                                    <i class="fas fa-hourglass-half"></i>{{ shop.pending_payments_count }} pending verification
+                                </span>
+                                {% endif %}
+                                {% if shop.pending_returns_count > 0 %}
+                                <span class="pending-tag returns">
+                                    <i class="fas fa-undo"></i>{{ shop.pending_returns_count }} unverified return{{ shop.pending_returns_count|pluralize }}
+                                </span>
+                                {% endif %}
+                                {% if shop.needs_photo %}
+                                <span class="pending-tag photo-needed">
+                                    <i class="fas fa-camera"></i>Photo needed
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Outstanding balance -->
+                            {% if shop.total_outstanding > 0 %}
+                            <div class="outstanding-bar">
+                                <span class="label">
+                                    <i class="fas fa-exclamation-circle me-1"></i>Outstanding
+                                    {% if shop.pending_payment_amount > 0 %}
+                                    <small style="font-weight:500; opacity:.8;">(Rs. {{ shop.pending_payment_amount|floatformat:0|intcomma }} pending)</small>
+                                    {% endif %}
+                                </span>
+                                <span class="amount">Rs. {{ shop.total_outstanding|floatformat:0|intcomma }}</span>
+                            </div>
+                            {% endif %}
+
+                            <!-- Credit utilization -->
+                            {% if shop.credit_limit and shop.credit_limit > 0 %}
+                            <div class="credit-mini">
+                                <div class="d-flex justify-content-between" style="font-size:.7rem; color:var(--slate-500); margin-bottom:.2rem;">
+                                    <span>Credit: Rs. {{ shop.current_balance|floatformat:0|intcomma }} / {{ shop.credit_limit|floatformat:0|intcomma }}</span>
+                                    <span style="font-weight:700; color:{% if shop.credit_usage_pct >= 80 %}var(--rose){% elif shop.credit_usage_pct >= 50 %}var(--amber){% else %}var(--emerald){% endif %}">{{ shop.credit_usage_pct }}%</span>
+                                </div>
+                                <div class="bar-bg">
+                                    <div class="bar-fill {% if shop.credit_usage_pct >= 80 %}red{% elif shop.credit_usage_pct >= 50 %}amber{% else %}green{% endif %}" style="width:{{ shop.credit_usage_pct }}%"></div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    {% if shop.user_access_level >= 2 %}
+                    <a href="{% url 'sales:create' %}?shop={{ shop.id }}" onclick="event.stopPropagation();" class="btn btn-primary flex-grow-1">
+                        <i class="fas fa-file-invoice"></i>New Bill
+                    </a>
+                    <a href="{% url 'shops:detail' shop.pk %}" onclick="event.stopPropagation();" class="btn btn-outline-secondary">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% else %}
+                    <span class="btn btn-locked flex-grow-1">
+                        <i class="fas fa-lock"></i>View-Only Access
+                    </span>
+                    {% endif %}
+                    <a href="tel:{{ shop.phone_number }}" onclick="event.stopPropagation();" class="btn btn-outline-secondary">
+                        <i class="fas fa-phone"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <i class="fas fa-store-alt"></i>
+                <h5>No shops found</h5>
+                <p>Start building your customer network by adding your first shop</p>
+                <a href="{% url 'shops:add' %}" class="btn btn-primary" style="border-radius:10px; font-weight:600; padding:.6rem 1.5rem;">
+                    <i class="fas fa-plus me-2"></i>Add Your First Shop
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Floating Add Button (Mobile) -->
+    <a href="{% url 'shops:add' %}" class="fab d-md-none">
+        <i class="fas fa-plus"></i>
+    </a>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map = null;
+let markers = [];
+let userLocation = null;
+let nearbyMode = false;
+let currentRadius = 5;
+let currentFilter = 'all';
+let currentSort = 'default';
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', function() {
+    requestLocationAccess();
+});
+
+// ===== LOCATION =====
+function requestLocationAccess() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            updateLocationStatus(true);
+            startLocationTracking();
+            trackLocation(userLocation.lat, userLocation.lon, pos.coords.accuracy);
+        },
+        err => updateLocationStatus(false),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function startLocationTracking() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.watchPosition(
+        pos => {
+            userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            updateLocationStatus(true);
+            trackLocation(userLocation.lat, userLocation.lon, pos.coords.accuracy);
+            if (nearbyMode) loadNearbyShops();
+        },
+        err => updateLocationStatus(false),
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+    );
+}
+
+function updateLocationStatus(active) {
+    const el = document.getElementById('locationStatus');
+    const dot = el.querySelector('.loc-dot');
+    const text = el.querySelector('span:last-child');
+    if (active) {
+        el.classList.add('active');
+        dot.classList.add('active');
+        text.textContent = 'Live';
+    } else {
+        el.classList.remove('active');
+        dot.classList.remove('active');
+        text.textContent = 'Off';
+    }
+}
+
+function trackLocation(lat, lon, accuracy) {
+    fetch('/shops/api/track-location/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ latitude: lat, longitude: lon, accuracy: accuracy })
+    }).catch(e => console.log('Track error:', e));
+}
+
+// ===== VIEW SWITCH =====
+function switchView(view) {
+    if (view === 'list') {
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('mapView').style.display = 'none';
+        document.getElementById('listViewBtn').classList.add('active');
+        document.getElementById('mapViewBtn').classList.remove('active');
+    } else {
+        document.getElementById('listView').style.display = 'none';
+        document.getElementById('mapView').style.display = 'block';
+        document.getElementById('listViewBtn').classList.remove('active');
+        document.getElementById('mapViewBtn').classList.add('active');
+        if (!map) initializeMap();
+        setTimeout(() => map.invalidateSize(), 100);
+        loadShopsOnMap();
+    }
+}
+
+const markerColors = { '3': '#10b981', '2': '#0078D7', '1': '#94a3b8' };
+const lvLabels = { '3': 'Full', '2': 'Standard', '1': 'View' };
+const lvClasses = { '3': 'lv3', '2': 'lv2', '1': 'lv1' };
+let allMapBounds = [];
+
+function initializeMap() {
+    map = L.map('map', { zoomControl: false }).setView([7.8731, 80.7718], 8);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
+}
+
+function createMarkerIcon(level, hasPending, isNew) {
+    const color = markerColors[level] || '#94a3b8';
+    const lvCls = lvClasses[level] || 'lv1';
+    const pendCls = hasPending ? ' has-pending' : '';
+    const newCls = isNew ? ' is-new' : '';
+    return L.divIcon({
+        className: 'custom-marker-wrap',
+        html: `<div class="map-marker ${lvCls}${pendCls}${newCls}"><i class="fas fa-store"></i></div>`,
+        iconSize: [32, 38],
+        iconAnchor: [16, 38],
+        popupAnchor: [0, -40]
+    });
+}
+
+function buildPopup(d) {
+    const lvCls = lvClasses[d.level] || 'lv1';
+    const lvLabel = lvLabels[d.level] || 'View';
+    const hasPending = (d.pendingBills + d.pendingPayments + d.pendingReturns) > 0;
+    const outstanding = parseFloat(d.outstanding) || 0;
+
+    let pendingHtml = '';
+    if (hasPending || outstanding > 0) {
+        pendingHtml = '<div class="mp-divider"></div><div class="mp-pending">';
+        if (d.pendingBills > 0) pendingHtml += `<span class="mp-tag bills"><i class="fas fa-file-invoice"></i> ${d.pendingBills} Bill${d.pendingBills>1?'s':''}</span>`;
+        if (d.pendingPayments > 0) pendingHtml += `<span class="mp-tag payments"><i class="fas fa-clock"></i> ${d.pendingPayments} Payment${d.pendingPayments>1?'s':''}</span>`;
+        if (d.pendingReturns > 0) pendingHtml += `<span class="mp-tag returns"><i class="fas fa-undo"></i> ${d.pendingReturns} Return${d.pendingReturns>1?'s':''}</span>`;
+        if (outstanding > 0) pendingHtml += `<span class="mp-tag outstanding"><i class="fas fa-exclamation-circle"></i> Rs ${outstanding.toLocaleString()}</span>`;
+        pendingHtml += '</div>';
+    }
+
+    let visitHtml = '';
+    if (d.visitDays === 'never' || d.visitDays === 'None') {
+        visitHtml = '<div class="mp-visit"><i class="fas fa-clock" style="color:var(--slate-400)"></i>Never visited</div>';
+    } else {
+        const days = parseInt(d.visitDays);
+        const color = days > 30 ? 'var(--rose)' : days > 14 ? 'var(--amber)' : 'var(--emerald)';
+        const text = days === 0 ? 'Visited today' : days === 1 ? 'Visited yesterday' : `Visited ${days}d ago`;
+        visitHtml = `<div class="mp-visit"><i class="fas fa-walking" style="color:${color}"></i>${text}</div>`;
+    }
+
+    let newHtml = d.isNew ? ' <span class="mp-tag new-tag"><i class="fas fa-star" style="font-size:.5rem"></i> NEW</span>' : '';
+
+    const canView = parseInt(d.level) >= 2;
+    const btnHtml = canView
+        ? `<div class="mp-foot"><a href="/shops/${d.id}/" class="mp-btn"><i class="fas fa-arrow-right me-1"></i>View Shop</a></div>`
+        : `<div class="mp-foot"><span class="mp-btn disabled"><i class="fas fa-lock me-1"></i>View Only Access</span></div>`;
+
+    return `<div class="mp">
+        <div class="mp-head">
+            <div class="mp-head-row">
+                <span class="mp-name">${d.name}${newHtml}</span>
+                <span class="mp-lv ${lvCls}">${lvLabel}</span>
+            </div>
+            <div class="mp-code">${d.code} · ${d.type}</div>
+        </div>
+        <div class="mp-body">
+            <div class="mp-row"><i class="fas fa-user"></i><span>${d.owner}</span></div>
+            <div class="mp-row"><i class="fas fa-phone"></i><span>${d.phone}</span></div>
+            <div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${d.city}</span></div>
+            ${visitHtml}
+            ${pendingHtml}
+        </div>
+        ${btnHtml}
+    </div>`;
+}
+
+function loadShopsOnMap() {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+    allMapBounds = [];
+    let counts = { lv3: 0, lv2: 0, lv1: 0, pending: 0 };
+
+    // User location marker
+    if (userLocation) {
+        const pulseHtml = '<div style="position:relative"><div style="width:14px;height:14px;background:#ef4444;border:2.5px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(239,68,68,.25),0 2px 6px rgba(0,0,0,.2);"></div></div>';
+        const userIcon = L.divIcon({ className: 'user-loc-marker', html: pulseHtml, iconSize: [14, 14], iconAnchor: [7, 7] });
+        const um = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        um.bindPopup('<div class="mp"><div class="mp-head" style="padding:.5rem .75rem"><span class="mp-name" style="font-size:.8rem"><i class="fas fa-street-view me-1"></i>Your Location</span></div></div>');
+        markers.push(um);
+        allMapBounds.push([userLocation.lat, userLocation.lon]);
+
+        if (nearbyMode) {
+            const c = L.circle([userLocation.lat, userLocation.lon], {
+                radius: currentRadius * 1000,
+                fillColor: '#0078D7', color: '#0078D7', weight: 1.5, opacity: 0.35, fillOpacity: 0.06,
+                dashArray: '6 4'
+            }).addTo(map);
+            markers.push(c);
+        }
+    }
+
+    // Shop markers
+    document.querySelectorAll('.shop-item').forEach(item => {
+        if (item.style.display === 'none') return;
+        const lat = parseFloat(item.dataset.lat);
+        const lon = parseFloat(item.dataset.lon);
+        if (!lat || !lon) return;
+
+        const d = {
+            id: item.dataset.shopId,
+            name: item.dataset.name || '',
+            code: item.dataset.code || '',
+            owner: item.dataset.owner || '',
+            type: item.dataset.type || '',
+            phone: item.dataset.phone || '',
+            city: item.dataset.city || '',
+            level: item.dataset.level || '1',
+            outstanding: item.dataset.outstanding || '0',
+            visitDays: item.dataset.visitDays || 'never',
+            pendingBills: parseInt(item.dataset.pendingBills) || 0,
+            pendingPayments: parseInt(item.dataset.pendingPayments) || 0,
+            pendingReturns: parseInt(item.dataset.pendingReturns) || 0,
+            isNew: item.dataset.new === '1'
+        };
+
+        const hasPending = (d.pendingBills + d.pendingPayments + d.pendingReturns) > 0;
+        const icon = createMarkerIcon(d.level, hasPending, d.isNew);
+        const mk = L.marker([lat, lon], { icon: icon }).addTo(map);
+        mk.bindPopup(buildPopup(d), { maxWidth: 280, minWidth: 240 });
+        markers.push(mk);
+        allMapBounds.push([lat, lon]);
+
+        // Count by level
+        if (d.level === '3') counts.lv3++;
+        else if (d.level === '2') counts.lv2++;
+        else counts.lv1++;
+        if (hasPending) counts.pending++;
+    });
+
+    if (allMapBounds.length > 0) map.fitBounds(allMapBounds, { padding: [60, 60], maxZoom: 14 });
+
+    // Update map stats bar
+    const bar = document.getElementById('mapStatsBar');
+    if (bar) {
+        let html = '';
+        const total = counts.lv3 + counts.lv2 + counts.lv1;
+        html += `<div class="map-stat-chip"><i class="fas fa-store" style="font-size:.6rem;color:var(--brand)"></i>${total} shops</div>`;
+        if (counts.lv3 > 0) html += `<div class="map-stat-chip"><span class="dot emerald"></span>${counts.lv3} Full</div>`;
+        if (counts.lv2 > 0) html += `<div class="map-stat-chip"><span class="dot brand"></span>${counts.lv2} Std</div>`;
+        if (counts.lv1 > 0) html += `<div class="map-stat-chip"><span class="dot slate"></span>${counts.lv1} View</div>`;
+        if (counts.pending > 0) html += `<div class="map-stat-chip"><span class="dot amber"></span>${counts.pending} Pending</div>`;
+        bar.innerHTML = html;
+    }
+}
+
+function fitAllMarkers() {
+    if (allMapBounds.length > 0) map.fitBounds(allMapBounds, { padding: [60, 60], maxZoom: 14 });
+}
+
+function centerOnUser() {
+    if (userLocation) {
+        map.setView([userLocation.lat, userLocation.lon], 14);
+    } else {
+        requestLocationAccess();
+    }
+}
+
+function toggleLegend() {
+    const legend = document.getElementById('mapLegend');
+    legend.classList.toggle('collapsed');
+}
+
+// ===== FILTER TABS =====
+function filterShops(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const items = document.querySelectorAll('.shop-item');
+    let count = 0;
+    items.forEach(item => {
+        let show = true;
+        if (filter === 'level-1') show = item.dataset.level === '1';
+        else if (filter === 'level-2') show = item.dataset.level === '2';
+        else if (filter === 'level-3') show = item.dataset.level === '3';
+        else if (filter === 'pending') show = parseInt(item.dataset.pending) > 0;
+        else if (filter === 'new') show = item.dataset.new === '1';
+
+        // Also apply search filter
+        const search = document.getElementById('searchShop').value.toLowerCase();
+        if (search && show) {
+            show = item.textContent.toLowerCase().includes(search);
+        }
+
+        item.style.display = show ? 'block' : 'none';
+        if (show) count++;
+    });
+    document.getElementById('shopCount').textContent = `${count} shop${count !== 1 ? 's' : ''}`;
+
+    if (document.getElementById('mapView').style.display === 'block') loadShopsOnMap();
+}
+
+// ===== SORT =====
+function sortShops(sortBy) {
+    currentSort = sortBy;
+    const container = document.getElementById('shopList');
+    const items = Array.from(container.querySelectorAll('.shop-item'));
+
+    items.sort((a, b) => {
+        switch (sortBy) {
+            case 'name-asc':
+                return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+            case 'name-desc':
+                return (b.dataset.name || '').localeCompare(a.dataset.name || '');
+            case 'visit-recent': {
+                const da = a.dataset.visitDays === 'never' ? 99999 : parseInt(a.dataset.visitDays);
+                const db = b.dataset.visitDays === 'never' ? 99999 : parseInt(b.dataset.visitDays);
+                return da - db;
+            }
+            case 'visit-oldest': {
+                const da = a.dataset.visitDays === 'never' ? -1 : parseInt(a.dataset.visitDays);
+                const db = b.dataset.visitDays === 'never' ? -1 : parseInt(b.dataset.visitDays);
+                return db - da;
+            }
+            case 'never-visited': {
+                const aNever = a.dataset.visitDays === 'never' ? 0 : 1;
+                const bNever = b.dataset.visitDays === 'never' ? 0 : 1;
+                if (aNever !== bNever) return aNever - bNever;
+                if (aNever === 0) return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+                const da = parseInt(a.dataset.visitDays);
+                const db = parseInt(b.dataset.visitDays);
+                return db - da;
+            }
+            case 'outstanding-desc': {
+                const oa = parseFloat(a.dataset.outstanding) || 0;
+                const ob = parseFloat(b.dataset.outstanding) || 0;
+                return ob - oa;
+            }
+            case 'created-newest':
+                return (b.dataset.created || '').localeCompare(a.dataset.created || '');
+            case 'created-oldest':
+                return (a.dataset.created || '').localeCompare(b.dataset.created || '');
+            default:
+                return 0;
+        }
+    });
+
+    items.forEach(item => container.appendChild(item));
+    if (document.getElementById('mapView').style.display === 'block') loadShopsOnMap();
+}
+
+// ===== SEARCH =====
+document.getElementById('searchShop').addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    const items = document.querySelectorAll('.shop-item');
+    let count = 0;
+    items.forEach(item => {
+        let show = term === '' || item.textContent.toLowerCase().includes(term);
+
+        // Apply current filter
+        if (show && currentFilter !== 'all') {
+            if (currentFilter === 'level-1') show = item.dataset.level === '1';
+            else if (currentFilter === 'level-2') show = item.dataset.level === '2';
+            else if (currentFilter === 'level-3') show = item.dataset.level === '3';
+            else if (currentFilter === 'pending') show = parseInt(item.dataset.pending) > 0;
+            else if (currentFilter === 'new') show = item.dataset.new === '1';
+        }
+
+        item.style.display = show ? 'block' : 'none';
+        if (show) count++;
+    });
+    document.getElementById('shopCount').textContent = `${count} shop${count !== 1 ? 's' : ''}`;
+    if (document.getElementById('mapView').style.display === 'block') loadShopsOnMap();
+});
+
+// ===== NEARBY =====
+function toggleNearby() {
+    if (!userLocation) {
+        if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+        const btn = document.getElementById('nearbyBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>...';
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                updateLocationStatus(true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-location-arrow me-1"></i>Nearby';
+                toggleNearby();
+            },
+            err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-location-arrow me-1"></i>Nearby';
+                alert('Enable location access to use nearby feature');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+        return;
+    }
+
+    nearbyMode = !nearbyMode;
+    const btn = document.getElementById('nearbyBtn');
+    const controls = document.getElementById('nearbyControls');
+    if (nearbyMode) {
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary');
+        btn.innerHTML = '<i class="fas fa-times me-1"></i>Clear';
+        controls.style.display = 'block';
+        loadNearbyShops();
+    } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+        btn.innerHTML = '<i class="fas fa-location-arrow me-1"></i>Nearby';
+        controls.style.display = 'none';
+        showAllShops();
+    }
+}
+
+function loadNearbyShops() {
+    if (!userLocation) return;
+    fetch(`/shops/api/nearby/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=${currentRadius}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) filterAndSortShops(data.shops);
+        })
+        .catch(e => console.log('Nearby error:', e));
+}
+
+function filterAndSortShops(nearbyShops) {
+    const items = document.querySelectorAll('.shop-item');
+    const nearbyIds = new Set(nearbyShops.map(s => s.id));
+    items.forEach(item => {
+        const sid = parseInt(item.dataset.shopId);
+        const shop = nearbyShops.find(s => s.id === sid);
+        if (shop) {
+            item.style.display = 'block';
+            item.dataset.distance = shop.distance_km;
+            const badge = item.querySelector('[data-distance]');
+            badge.textContent = `${shop.distance_km.toFixed(1)} km`;
+            badge.style.display = 'inline-block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    const container = document.getElementById('shopList');
+    const visible = Array.from(items).filter(i => i.style.display !== 'none');
+    visible.sort((a, b) => parseFloat(a.dataset.distance) - parseFloat(b.dataset.distance));
+    visible.forEach(i => container.appendChild(i));
+    document.getElementById('shopCount').textContent = `${visible.length} nearby shop${visible.length !== 1 ? 's' : ''}`;
+    if (document.getElementById('mapView').style.display === 'block') loadShopsOnMap();
+}
+
+function showAllShops() {
+    document.querySelectorAll('.shop-item').forEach(item => {
+        item.style.display = 'block';
+        const badge = item.querySelector('[data-distance]');
+        if (badge) badge.style.display = 'none';
+    });
+    document.getElementById('shopCount').textContent = '{{ total_shops }} shop{{ total_shops|pluralize }}';
+    if (document.getElementById('mapView').style.display === 'block') loadShopsOnMap();
+}
+
+document.getElementById('radiusSlider').addEventListener('input', function(e) {
+    currentRadius = parseFloat(e.target.value);
+    document.getElementById('radiusValue').textContent = currentRadius;
+    if (nearbyMode) loadNearbyShops();
+});
+
+// ===== COLLAPSIBLE DATE FILTER (mobile) =====
+function toggleDateFilter() {
+    const body = document.getElementById('dateSectionBody');
+    const btn = document.getElementById('dateToggleBtn');
+    body.classList.toggle('show');
+    btn.classList.toggle('active');
+}
+
+// Auto-collapse date filter on mobile if not actively filtered
+document.addEventListener('DOMContentLoaded', function() {
+    const body = document.getElementById('dateSectionBody');
+    if (window.innerWidth <= 576) {
+        {% if is_date_filtered %}
+        body.classList.add('show');
+        document.getElementById('dateToggleBtn').classList.add('active');
+        {% else %}
+        body.classList.remove('show');
+        {% endif %}
+    }
+});
+</script>
+{% endblock %}

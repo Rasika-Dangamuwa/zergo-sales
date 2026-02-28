@@ -1,0 +1,795 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load products_extras %}
+
+{% block title %}{{ account.company.company_name }} - Account Ledger{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.8;
+    }
+    .trend-chart {
+        height: 200px;
+    }
+    .transaction-row {
+        transition: background-color 0.2s;
+    }
+    .transaction-row:hover {
+        background-color: #f8f9fa;
+    }
+    .filter-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+    }
+    .balance-indicator {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Transaction Ledger Enhancements */
+    .ledger-table {
+        font-size: 0.9rem;
+    }
+    .ledger-table thead th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        border: none;
+        padding: 12px 8px;
+    }
+    .ledger-table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .sub-transaction-row {
+        background-color: #f8f9fa !important;
+        border-left: 3px solid #6c757d;
+    }
+    .sub-transaction-row td {
+        padding: 6px 8px !important;
+        font-size: 0.85rem;
+    }
+    .transaction-type-icon {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        margin-right: 6px;
+    }
+    .amount-debit {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    .amount-credit {
+        color: #28a745;
+        font-weight: 600;
+    }
+    .balance-payable {
+        color: #fd7e14;
+        font-weight: 700;
+    }
+    .balance-receivable {
+        color: #17a2b8;
+        font-weight: 700;
+    }
+    .balance-settled {
+        color: #28a745;
+        font-weight: 700;
+    }
+    .reference-link {
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .reference-link:hover {
+        text-decoration: underline;
+        transform: translateX(3px);
+    }
+    .transaction-meta {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-building me-2 text-primary"></i>{{ account.company.company_name }}
+            </h2>
+            <p class="text-muted mb-0">
+                <i class="fas fa-chart-line me-1"></i>Account Ledger & Analytics
+                <span class="mx-2">•</span>
+                <small>Account #{{ account.id }}</small>
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'products:company_account_list' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+            <a href="{% url 'products:record_company_payment' %}?company={{ account.company.id }}" 
+               class="btn btn-success me-2">
+                <i class="fas fa-money-bill-wave me-1"></i>Record Payment
+            </a>
+            <a href="{% url 'products:export_company_ledger' account.pk %}?from_date={{ from_date }}&to_date={{ to_date }}" 
+               class="btn btn-primary">
+                <i class="fas fa-file-excel me-1"></i>Export
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics Dashboard -->
+    <div class="row g-3 mb-4">
+        <!-- Opening Balance -->
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-label text-muted mb-2">OPENING BALANCE</div>
+                    <div class="stat-number text-dark">
+                        Rs. {{ account.opening_balance|floatformat:2|intcomma }}
+                    </div>
+                    <small class="text-muted">{{ account.opening_date|date:"d M Y" }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Balance -->
+        <div class="col-md-3">
+            <div class="card stat-card h-100" style="background: linear-gradient(135deg, 
+                {% if account.current_balance > 0 %}#fa709a 0%, #fee140 100%{% elif account.current_balance < 0 %}#30cfd0 0%, #330867 100%{% else %}#667eea 0%, #764ba2 100%{% endif %}); color: white;">
+                <div class="card-body text-center">
+                    <div class="stat-label mb-2">CURRENT BALANCE</div>
+                    <div class="balance-indicator">
+                        Rs. {{ account.current_balance|floatformat:2|intcomma }}
+                    </div>
+                    <div class="mt-2">
+                        {% if account.current_balance > 0 %}
+                            <span class="badge bg-light text-danger">PAYABLE</span>
+                        {% elif account.current_balance < 0 %}
+                            <span class="badge bg-light text-success">RECEIVABLE</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">SETTLED</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outstanding GRNs -->
+        <div class="col-md-3">
+            <div class="card stat-card h-100 border-warning">
+                <div class="card-body text-center">
+                    <div class="stat-label text-muted mb-2">OUTSTANDING GRNS</div>
+                    <div class="stat-number text-warning">
+                        Rs. {{ total_outstanding_amount|floatformat:2|intcomma }}
+                    </div>
+                    <small class="text-muted">{{ outstanding_count }} unpaid invoice{{ outstanding_count|pluralize }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Payment Cycle -->
+        <div class="col-md-3">
+            <div class="card stat-card h-100 border-info">
+                <div class="card-body text-center">
+                    <div class="stat-label text-muted mb-2">AVG PAYMENT CYCLE</div>
+                    <div class="stat-number text-info">
+                        {{ avg_payment_cycle }} days
+                    </div>
+                    <small class="text-muted">{{ paid_purchases_count }} settled invoice{{ paid_purchases_count|pluralize }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aging Analysis & Trends -->
+    <div class="row g-3 mb-4">
+        <!-- Aging Report -->
+        <div class="col-lg-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Aging Analysis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">0-30 Days</span>
+                            <span class="small fw-bold text-success">Rs. {{ aging_30|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            {% if total_outstanding_amount > 0 %}
+                            <div class="progress-bar bg-success" style="width: {% widthratio aging_30 total_outstanding_amount 100 %}%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">31-60 Days</span>
+                            <span class="small fw-bold text-warning">Rs. {{ aging_60|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            {% if total_outstanding_amount > 0 %}
+                            <div class="progress-bar bg-warning" style="width: {% widthratio aging_60 total_outstanding_amount 100 %}%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">61-90 Days</span>
+                            <span class="small fw-bold text-orange">Rs. {{ aging_90|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            {% if total_outstanding_amount > 0 %}
+                            <div class="progress-bar bg-danger" style="width: {% widthratio aging_90 total_outstanding_amount 100 %}%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">90+ Days (Overdue)</span>
+                            <span class="small fw-bold text-danger">Rs. {{ aging_90_plus|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            {% if total_outstanding_amount > 0 %}
+                            <div class="progress-bar bg-dark" style="width: {% widthratio aging_90_plus total_outstanding_amount 100 %}%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6-Month Trends Chart -->
+        <div class="col-lg-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>6-Month Transaction Trends</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" class="trend-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outstanding GRNs Quick View -->
+    {% if outstanding_purchases %}
+    <div class="card stat-card mb-4">
+        <div class="card-header bg-white border-0">
+            <h6 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Unpaid GRNs - Immediate Attention Required</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>GRN Number</th>
+                            <th>Date</th>
+                            <th class="text-end">Total Amount</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Outstanding</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grn in outstanding_purchases %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'products:purchase_detail' grn.pk %}" class="text-decoration-none fw-bold">
+                                    {{ grn.grn_number }}
+                                </a>
+                            </td>
+                            <td>{{ grn.grn_date|date:"d M Y" }}</td>
+                            <td class="text-end">Rs. {{ grn.total_amount|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-success">Rs. {{ grn.total_paid|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-danger fw-bold">Rs. {{ grn.amount_outstanding|floatformat:2|intcomma }}</td>
+                            <td>
+                                <span class="badge {% if grn.days_outstanding > 90 %}bg-danger{% elif grn.days_outstanding > 60 %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ grn.days_outstanding }} days
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if grn.payment_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ grn.payment_percentage|floatformat:0 }}% Paid
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'products:record_company_payment' %}?company={{ account.company.id }}&grn={{ grn.id }}" 
+                                   class="btn btn-sm btn-success">
+                                    <i class="fas fa-money-bill-wave"></i> Pay
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Period Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card border-primary">
+                <div class="card-body text-center">
+                    <small class="text-muted d-block mb-1">TRANSACTIONS</small>
+                    <h4 class="mb-0 fw-bold text-primary">{{ transaction_count }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-warning">
+                <div class="card-body text-center">
+                    <small class="text-muted d-block mb-1">PERIOD PURCHASES</small>
+                    <h5 class="mb-0 fw-bold text-warning">Rs. {{ total_purchases|floatformat:2|intcomma }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-info">
+                <div class="card-body text-center">
+                    <small class="text-muted d-block mb-1">PERIOD RETURNS</small>
+                    <h5 class="mb-0 fw-bold text-info">Rs. {{ total_returns|floatformat:2|intcomma }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-success">
+                <div class="card-body text-center">
+                    <small class="text-muted d-block mb-1">PERIOD PAYMENTS</small>
+                    <h5 class="mb-0 fw-bold text-success">Rs. {{ total_payments|floatformat:2|intcomma }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Filters -->
+    <div class="filter-card mb-4">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label small opacity-75">FROM DATE</label>
+                <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small opacity-75">TO DATE</label>
+                <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small opacity-75">TYPE</label>
+                <select name="transaction_type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="purchase" {% if transaction_type_filter == 'purchase' %}selected{% endif %}>Purchases</option>
+                    <option value="return" {% if transaction_type_filter == 'return' %}selected{% endif %}>Returns</option>
+                    <option value="payment" {% if transaction_type_filter == 'payment' %}selected{% endif %}>Payments</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small opacity-75">SEARCH</label>
+                <input type="text" name="search" class="form-control" placeholder="Reference, description..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-light flex-fill">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+                <a href="{% url 'products:company_account_detail' account.pk %}" class="btn btn-outline-light">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transaction Ledger -->
+    <div class="card stat-card">
+        <div class="card-header bg-white border-0 pb-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2 text-primary"></i>Transaction Ledger
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+            <p class="text-muted small mb-0 mt-2">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Debit:</strong> Reduces liability (payments, returns)
+                <span class="mx-2">•</span>
+                <strong>Credit:</strong> Increases liability (purchases)
+            </p>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover ledger-table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%">Date & Time</th>
+                            <th style="width: 12%">Transaction Type</th>
+                            <th style="width: 12%">Reference</th>
+                            <th style="width: 10%">Method</th>
+                            <th style="width: 10%" class="text-end">Debit (Dr.)</th>
+                            <th style="width: 10%" class="text-end">Credit (Cr.)</th>
+                            <th style="width: 12%" class="text-end">Balance</th>
+                            <th style="width: 10%" class="text-end">GRN Status</th>
+                            <th style="width: 14%">Particulars</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Opening Balance -->
+                        <tr class="table-secondary fw-bold">
+                            <td>{{ account.opening_date|date:"d M Y" }}</td>
+                            <td>
+                                <span class="badge bg-dark px-3 py-2">
+                                    <i class="fas fa-flag-checkered me-1"></i>Opening Balance
+                                </span>
+                            </td>
+                            <td colspan="3">-</td>
+                            <td class="text-end">-</td>
+                            <td class="text-end">
+                                <span class="{% if account.opening_balance > 0 %}balance-payable{% elif account.opening_balance < 0 %}balance-receivable{% else %}balance-settled{% endif %}">
+                                    Rs. {{ account.opening_balance|floatformat:2|intcomma }}
+                                </span>
+                            </td>
+                            <td class="text-end">-</td>
+                            <td>
+                                <small class="text-muted">{{ account.opening_notes|truncatewords:8|default:"Account opened" }}</small>
+                            </td>
+                        </tr>
+                        
+                        {% for item in transactions %}
+                        <tr class="transaction-row">
+                            <!-- Date & Time -->
+                            <td>
+                                <div>{{ item.transaction.transaction_date|date:"d M Y" }}</div>
+                                <small class="transaction-meta">{{ item.transaction.transaction_date|date:"h:i A" }}</small>
+                            </td>
+                            
+                            <!-- Transaction Type with Icon -->
+                            <td>
+                                {% if item.transaction.transaction_type == 'purchase' %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="transaction-type-icon bg-warning bg-opacity-25 text-warning">
+                                            <i class="fas fa-box"></i>
+                                        </span>
+                                        <span class="badge bg-warning text-dark">Purchase/GRN</span>
+                                    </div>
+                                {% elif item.transaction.transaction_type == 'return' %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="transaction-type-icon bg-info bg-opacity-25 text-info">
+                                            <i class="fas fa-undo"></i>
+                                        </span>
+                                        <span class="badge bg-info">Return</span>
+                                    </div>
+                                {% elif item.transaction.transaction_type == 'payment' %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="transaction-type-icon bg-success bg-opacity-25 text-success">
+                                            <i class="fas fa-money-bill-wave"></i>
+                                        </span>
+                                        <span class="badge bg-success">Payment</span>
+                                    </div>
+                                {% elif item.transaction.transaction_type == 'settlement' %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="transaction-type-icon bg-primary bg-opacity-25 text-primary">
+                                            <i class="fas fa-receipt"></i>
+                                        </span>
+                                        <span class="badge bg-primary">Cash Receipt</span>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ item.transaction.get_transaction_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Reference with Link -->
+                            <td>
+                                {% if item.transaction.purchase %}
+                                    <a href="{% url 'products:purchase_detail' item.transaction.purchase.pk %}" 
+                                       class="reference-link text-decoration-none"
+                                       data-bs-toggle="tooltip" 
+                                       title="View GRN Details">
+                                        <i class="fas fa-external-link-alt me-1 small"></i>{{ item.transaction.purchase.grn_number }}
+                                    </a>
+                                {% elif item.transaction.purchase_return %}
+                                    <a href="{% url 'products:purchase_return_detail' item.transaction.purchase_return.pk %}" 
+                                       class="reference-link text-decoration-none"
+                                       data-bs-toggle="tooltip" 
+                                       title="View Return Details">
+                                        <i class="fas fa-external-link-alt me-1 small"></i>{{ item.transaction.purchase_return.pr_number }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted" data-bs-toggle="tooltip" title="Transaction ID: {{ item.transaction.id }}">
+                                        {{ item.transaction.reference_number|default:"-" }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Payment Method -->
+                            <td>
+                                {% if item.transaction.settlement_method %}
+                                    <span class="badge bg-light text-dark border">
+                                        {{ item.transaction.get_settlement_method_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- DEBIT Column (Decreases liability: payments, returns, cash receipts) -->
+                            <td class="text-end">
+                                {% if item.transaction.transaction_type == 'return' or item.transaction.transaction_type == 'payment' %}
+                                    <span class="amount-debit">
+                                        Rs. {{ item.transaction.amount|abs_value|floatformat:2|intcomma }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- CREDIT Column (Increases liability: purchases) -->
+                            <td class="text-end">
+                                {% if item.transaction.transaction_type == 'purchase' %}
+                                    <span class="amount-credit">
+                                        Rs. {{ item.transaction.amount|floatformat:2|intcomma }}
+                                    </span>
+                                {% elif item.transaction.transaction_type == 'settlement' %}
+                                    <span class="amount-debit">
+                                        Rs. {{ item.transaction.amount|floatformat:2|intcomma }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Running Balance with Interpretation -->
+                            <td class="text-end">
+                                {% if item.balance_after > 0 %}
+                                    <span class="balance-payable" data-bs-toggle="tooltip" 
+                                          title="We owe them Rs. {{ item.balance_after|floatformat:2|intcomma }}">
+                                        <i class="fas fa-arrow-up small me-1"></i>Rs. {{ item.balance_after|floatformat:2|intcomma }}
+                                    </span>
+                                {% elif item.balance_after < 0 %}
+                                    <span class="balance-receivable" data-bs-toggle="tooltip" 
+                                          title="They owe us Rs. {{ item.balance_after|abs_value|floatformat:2|intcomma }}">
+                                        <i class="fas fa-arrow-down small me-1"></i>Rs. {{ item.balance_after|floatformat:2|intcomma }}
+                                    </span>
+                                {% else %}
+                                    <span class="balance-settled" data-bs-toggle="tooltip" title="Account balanced">
+                                        <i class="fas fa-check-circle small me-1"></i>Rs. 0.00
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- GRN Outstanding Status -->
+                            <td class="text-end">
+                                {% if item.outstanding is not None %}
+                                    {% if item.outstanding > 0 %}
+                                        <span class="badge bg-warning text-dark" 
+                                              data-bs-toggle="tooltip" 
+                                              title="Unpaid for {{ item.days_outstanding }} days">
+                                            <i class="fas fa-clock me-1"></i>Rs. {{ item.outstanding|floatformat:2|intcomma }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Settled
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Particulars/Description -->
+                            <td>
+                                <div>
+                                    <small class="text-muted d-block">
+                                        {{ item.transaction.description|truncatewords:6|default:"-" }}
+                                    </small>
+                                    {% if item.transaction.created_by %}
+                                    <small class="transaction-meta">
+                                        <i class="fas fa-user-circle me-1"></i>{{ item.transaction.created_by.username }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Payment Allocations Sub-Rows -->
+                        {% if item.payment_allocations %}
+                        {% for allocation in item.payment_allocations %}
+                        <tr class="sub-transaction-row">
+                            <td></td>
+                            <td colspan="2" class="ps-4">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fas fa-level-up-alt fa-rotate-90 me-2 text-secondary"></i>
+                                    <span class="badge bg-success bg-opacity-75 me-2">Payment Applied</span>
+                                    <a href="{% url 'products:payment_detail' allocation.payment.pk %}" class="text-decoration-none">
+                                        {{ allocation.payment.payment_number }}
+                                    </a>
+                                </small>
+                            </td>
+                            <td>
+                                <small class="badge bg-success bg-opacity-50">
+                                    <i class="fas fa-money-bill me-1"></i>{{ allocation.payment.get_payment_method_display }}
+                                </small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">-</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="amount-debit">Rs. {{ allocation.allocated_amount|floatformat:2|intcomma }}</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">{{ item.balance_after|floatformat:2|intcomma }}</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">-</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ allocation.payment.payment_date|date:"d M Y" }}
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                        
+                        <!-- Settlement Details Sub-Rows -->
+                        {% if item.settlement_details %}
+                        {% for settlement in item.settlement_details %}
+                        <tr class="sub-transaction-row">
+                            <td></td>
+                            <td colspan="2" class="ps-4">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fas fa-level-up-alt fa-rotate-90 me-2 text-secondary"></i>
+                                    {% if settlement.settlement_method == 'replacement' %}
+                                        <span class="badge bg-info bg-opacity-75 me-2">
+                                            <i class="fas fa-exchange-alt me-1"></i>Replacement GRN
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-75 me-2">
+                                            <i class="fas fa-money-bill-wave me-1"></i>Cash Refund
+                                        </span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <small>
+                                    {% if settlement.replacement_grn %}
+                                        <a href="{% url 'products:purchase_detail' settlement.replacement_grn.pk %}" 
+                                           class="text-decoration-none">
+                                            {{ settlement.replacement_grn.grn_number }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">{{ settlement.refund_reference|default:"Cash" }}</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">-</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-success fw-bold">Rs. {{ settlement.settlement_amount|floatformat:2|intcomma }}</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">{{ item.balance_after|floatformat:2|intcomma }}</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-muted">-</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if settlement.settlement_method == 'replacement' %}
+                                        Offset via replacement goods
+                                    {% else %}
+                                        Cash received from supplier
+                                    {% endif %}
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="fas fa-inbox fa-4x mb-3 d-block opacity-25"></i>
+                                <h5 class="text-muted">No Transactions Found</h5>
+                                <p class="small">No transactions match the selected filters. Try adjusting your search criteria.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+{{ monthly_trends|json_script:"monthly-trends" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Trend Chart
+const ctx = document.getElementById('trendChart');
+const trendData = JSON.parse(document.getElementById('monthly-trends').textContent);
+
+if (ctx && trendData) {
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(t => t.month),
+            datasets: [{
+                label: 'Purchases',
+                data: trendData.map(t => t.purchases),
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Payments',
+                data: trendData.map(t => t.payments),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rs. ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+</script>
+{% endblock %}

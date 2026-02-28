@@ -1,0 +1,627 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}FOC Value Usage Dashboard{% endblock %}
+
+{% csrf_token %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
+        --danger-red: #ef4444;
+        --info-cyan: #0891b2;
+        --purple: #8b5cf6;
+    }
+    
+    body {
+        background: #f3f4f6;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-top: 4px solid var(--card-color, var(--primary-blue));
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card.received {
+        --card-color: var(--success-green);
+    }
+    
+    .stat-card.given {
+        --card-color: var(--warning-orange);
+    }
+    
+    .stat-card.net {
+        --card-color: var(--primary-blue);
+    }
+    
+    .stat-card.utilization {
+        --card-color: var(--purple);
+    }
+    
+    .stat-card .icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+    }
+    
+    .stat-card.received .icon {
+        background: #d1fae5;
+        color: var(--success-green);
+    }
+    
+    .stat-card.given .icon {
+        background: #fed7aa;
+        color: var(--warning-orange);
+    }
+    
+    .stat-card.net .icon {
+        background: #dbeafe;
+        color: var(--primary-blue);
+    }
+    
+    .stat-card.utilization .icon {
+        background: #ede9fe;
+        color: var(--purple);
+    }
+    
+    .stat-card h6 {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card h2 {
+        color: #111827;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+    
+    .company-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        border-left: 5px solid #e5e7eb;
+    }
+    
+    .company-card:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        transform: translateX(4px);
+        border-left-color: #667eea;
+    }
+    
+    .company-card.positive {
+        border-left-color: var(--success-green);
+    }
+    
+    .company-card.negative {
+        border-left-color: var(--danger-red);
+    }
+    
+    .company-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .company-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+    
+    .company-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    
+    .company-stat {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+    
+    .company-stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    
+    .company-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .transaction-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .transaction-header {
+        background: #f9fafb;
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .transaction-header h5 {
+        margin: 0;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .transaction-table table {
+        margin: 0;
+        width: 100%;
+    }
+    
+    .transaction-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6b7280;
+        padding: 1rem;
+    }
+    
+    .transaction-table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+    
+    .transaction-table tr:hover {
+        background: #f9fafb;
+    }
+    
+    .badge-foc-received {
+        background: #d1fae5;
+        color: #065f46;
+        font-weight: 600;
+    }
+    
+    .badge-foc-given {
+        background: #fed7aa;
+        color: #92400e;
+        font-weight: 600;
+    }
+    
+    .badge-implicit {
+        background: #fef3c7;
+        color: #78350f;
+        font-weight: 600;
+    }
+    
+    .badge-restored {
+        background: #dbeafe;
+        color: #1e40af;
+        font-weight: 600;
+    }
+    
+    .badge-adjustment {
+        background: #f3e8ff;
+        color: #6b21a8;
+        font-weight: 600;
+    }
+    
+    /* Link styling for references */
+    .transaction-table a {
+        transition: all 0.2s ease;
+    }
+    
+    .transaction-table a:hover {
+        text-decoration: underline !important;
+        opacity: 0.8;
+    }
+    
+    .transaction-table code {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    
+    .btn-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 1.75rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .company-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container-fluid">
+        <h1><i class="fas fa-gift me-3"></i>FOC Value Usage Dashboard</h1>
+        <p>Track FOC value received from companies vs FOC value given to shops</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Summary Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card received">
+            <div class="icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <h6>Total FOC Received</h6>
+            <h2>Rs. {{ total_foc_received|floatformat:2|intcomma }}</h2>
+            <small class="text-muted">From companies</small>
+        </div>
+        
+        <div class="stat-card given">
+            <div class="icon">
+                <i class="fas fa-upload"></i>
+            </div>
+            <h6>Total FOC Given</h6>
+            <h2>Rs. {{ total_foc_given|floatformat:2|intcomma }}</h2>
+            <small class="text-muted">To shops</small>
+        </div>
+        
+        <div class="stat-card net {% if net_foc_value >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="icon">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <h6>Net FOC Value</h6>
+            <h2 class="{% if net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                Rs. {{ net_foc_value|floatformat:2|intcomma }}
+            </h2>
+            <small class="text-muted">{% if net_foc_value >= 0 %}Positive balance{% else %}Negative balance{% endif %}</small>
+        </div>
+        
+        <div class="stat-card utilization">
+            <div class="icon">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+            <h6>Average Utilization</h6>
+            <h2>{{ avg_utilization|floatformat:1 }}%</h2>
+            <small class="text-muted">Given / Received</small>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'sales:foc_product_report' %}" class="btn btn-outline-primary w-100 py-3">
+                <i class="fas fa-box me-2"></i>Product Report
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'sales:foc_sales_rep_report' %}" class="btn btn-outline-success w-100 py-3">
+                <i class="fas fa-user-tie me-2"></i>Sales Rep Report
+            </a>
+        </div>
+        {% if user.user_type == 'admin' or user.user_type == 'office' %}
+        <div class="col-md-3">
+            <a href="{% url 'sales:foc_reset_list' %}" class="btn btn-outline-info w-100 py-3">
+                <i class="fas fa-history me-2"></i>Reset History
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'sales:foc_reset_confirm' %}" class="btn btn-outline-danger w-100 py-3">
+                <i class="fas fa-redo me-2"></i>Reset FOC Data
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Company-wise FOC Accounts -->
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <h4 class="fw-bold"><i class="fas fa-building me-2"></i>FOC Accounts by Company</h4>
+            </div>
+            
+            {% if accounts %}
+                {% for account in accounts %}
+                <div class="company-card {% if account.net_foc_value > 0 %}positive{% elif account.net_foc_value < 0 %}negative{% endif %}">
+                    <div class="company-header">
+                        <div>
+                            <div class="company-name">{{ account.company.company_name }}</div>
+                            <small class="text-muted">
+                                {% if account.opening_date %}
+                                    Account opened: {{ account.opening_date|date:"M d, Y" }}
+                                {% else %}
+                                    Active account
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="{% url 'sales:foc_company_detail' account.company.id %}" class="btn btn-view btn-sm">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="company-stats">
+                        <div class="company-stat">
+                            <div class="company-stat-label">FOC Received</div>
+                            <div class="company-stat-value text-success">
+                                Rs. {{ account.total_foc_received_value|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                        
+                        <div class="company-stat">
+                            <div class="company-stat-label">FOC Given</div>
+                            <div class="company-stat-value text-warning">
+                                Rs. {{ account.total_foc_given_value|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                        
+                        <div class="company-stat">
+                            <div class="company-stat-label">Net Balance</div>
+                            <div class="company-stat-value {% if account.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Rs. {{ account.net_foc_value|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                        
+                        <div class="company-stat">
+                            <div class="company-stat-label">Utilization</div>
+                            <div class="company-stat-value text-info">
+                                {{ account.foc_utilization_percentage|floatformat:1 }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No FOC accounts yet. FOC accounts are created automatically when FOC is received or given.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="transaction-card">
+                <div class="transaction-header">
+                    <h5><i class="fas fa-history me-2"></i>Recent FOC Transactions (Last 30 Days)</h5>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table transaction-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Transaction #</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Company</th>
+                                <th>Product</th>
+                                <th>FOC Qty</th>
+                                <th>FOC Value</th>
+                                <th>Shop/Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_transactions %}
+                                {% for txn in recent_transactions %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'sales:foc_company_detail' txn.foc_account.company.id %}" class="text-decoration-none">
+                                            <code class="text-dark fw-bold">{{ txn.transaction_number }}</code>
+                                        </a>
+                                    </td>
+                                    <td>{{ txn.transaction_date|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if txn.transaction_type == 'foc_received' %}
+                                            <span class="badge badge-foc-received">FOC Received</span>
+                                        {% elif txn.transaction_type == 'foc_given' %}
+                                            <span class="badge badge-foc-given">FOC Given</span>
+                                        {% elif txn.transaction_type == 'implicit_foc' %}
+                                            <span class="badge badge-implicit">Implicit FOC</span>
+                                        {% elif txn.transaction_type == 'return_foc_restored' %}
+                                            <span class="badge badge-restored">FOC Restored</span>
+                                        {% else %}
+                                            <span class="badge badge-adjustment">Adjustment</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ txn.foc_account.company.company_name }}</td>
+                                    <td>{{ txn.product.product_name }}</td>
+                                    <td>{{ txn.foc_quantity|floatformat:0 }}</td>
+                                    <td class="fw-bold">Rs. {{ txn.foc_value|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if txn.purchase_item and txn.purchase_item.purchase %}
+                                            <a href="{% url 'products:purchase_detail' txn.purchase_item.purchase.id %}" class="text-decoration-none">
+                                                <code class="text-danger fw-bold">
+                                                    <i class="fas fa-file-invoice me-1"></i>{{ txn.purchase_item.purchase.purchase_number }}
+                                                </code>
+                                            </a>
+                                        {% elif txn.bill_item and txn.bill_item.bill %}
+                                            <a href="{% url 'sales:detail' txn.bill_item.bill.id %}" class="text-primary text-decoration-none">
+                                                {% if txn.shop %}
+                                                    <i class="fas fa-store me-1"></i>{{ txn.shop.shop_name }}
+                                                {% else %}
+                                                    <i class="fas fa-user me-1"></i>{{ txn.bill_item.bill.customer_name|default:"Unregistered Customer" }}
+                                                    <span class="badge bg-secondary ms-1">Unregistered</span>
+                                                {% endif %}
+                                            </a>
+                                        {% elif txn.return_item and txn.return_item.return_ref %}
+                                            <a href="{% url 'sales:return_detail' txn.return_item.return_ref.id %}" class="text-info text-decoration-none">
+                                                {% if txn.shop %}
+                                                    <i class="fas fa-undo me-1"></i>{{ txn.shop.shop_name }}
+                                                {% else %}
+                                                    <i class="fas fa-user me-1"></i>{{ txn.return_item.return_ref.customer_name|default:"Unregistered Customer" }}
+                                                    <span class="badge bg-secondary ms-1">Unregistered</span>
+                                                {% endif %}
+                                            </a>
+                                        {% elif txn.shop %}
+                                            <i class="fas fa-store me-1 text-muted"></i>{{ txn.shop.shop_name }}
+                                        {% elif txn.reference_number %}
+                                            <code class="text-secondary">{{ txn.reference_number }}</code>
+                                        {% else %}
+                                            <em class="text-muted">-</em>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                        No transactions in the last 30 days
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 60 seconds
+setTimeout(function() {
+    location.reload();
+}, 60000);
+
+// FOC Reset Confirmation
+function confirmReset() {
+    if (confirm('⚠️ WARNING: This will archive all current FOC data and create a new reset record.\n\nThis action:\n- Archives all FOC transactions\n- Creates a snapshot of current dashboard, products, and sales rep data\n- Marks all current FOC records as archived\n- This CANNOT be undone\n\nAre you sure you want to proceed?')) {
+        processReset();
+    }
+}
+
+function processReset() {
+    // Show loading indicator
+    const btn = document.querySelector('.btn-outline-danger');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Reset...';
+    
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch('{% url "sales:process_foc_reset" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ FOC Reset Completed Successfully!\n\nReset Number: ${data.reset_number}\nTransactions Archived: ${data.transactions_archived}\n\n${data.message}`);
+            window.location.href = '{% url "sales:foc_reset_list" %}';
+        } else {
+            alert(`❌ Reset Failed: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Reset error:', error);
+        alert(`❌ Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
+</script>
+{% endblock %}

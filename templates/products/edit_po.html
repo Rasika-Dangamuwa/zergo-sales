@@ -1,0 +1,551 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sales_extras %}
+
+{% block title %}Edit Purchase Order{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .product-table thead {
+        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        color: white;
+    }
+    
+    .product-table thead th {
+        padding: 12px 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: none;
+        text-align: center;
+    }
+    
+    .product-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .product-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .product-table tbody td {
+        padding: 10px 8px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    /* Center columns */
+    .product-table tbody td:nth-child(2),
+    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(4),
+    .product-table tbody td:nth-child(5),
+    .product-table tbody td:nth-child(6),
+    .product-table tbody td:nth-child(8) {
+        text-align: center;
+    }
+    
+    /* Financial columns - headers centered, values right-aligned */
+    .product-table thead th:nth-child(7),
+    .product-table thead th:nth-child(9),
+    .product-table thead th:nth-child(10) {
+        text-align: center;
+    }
+    
+    .product-table tbody td:nth-child(7),
+    .product-table tbody td:nth-child(9),
+    .product-table tbody td:nth-child(10) {
+        padding: 0 !important;
+    }
+    
+    .product-table tbody td:nth-child(7) span,
+    .product-table tbody td:nth-child(9) span,
+    .product-table tbody td:nth-child(10) span {
+        display: block;
+        padding: 10px 8px;
+        text-align: right;
+    }
+    
+    .qty-input {
+        width: 70px;
+        padding: 5px 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    
+    .qty-input:focus {
+        border-color: #e67e22;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
+    }
+    
+    .price-input {
+        width: 90px;
+        padding: 5px 6px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 0.9rem;
+    }
+    
+    .summary-box {
+        position: sticky;
+        top: 20px;
+        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 0;
+    }
+    
+    .product-name {
+        font-weight: 500;
+        color: #2c3e50;
+        font-size: 0.9rem;
+    }
+    
+    .pack-size {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+    }
+    
+    .category-header td {
+        background: #f8f9fa;
+        padding: 8px 10px;
+        font-weight: 600;
+    }
+    
+    .category-header .badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    
+    /* Line Total Column - Left Aligned */
+    table.table.product-table thead tr th:nth-child(10),
+    table.table.product-table tbody tr.product-row td:nth-child(10) {
+        text-align: left !important;
+    }
+    
+    .foc-calc {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        border: none;
+        padding: 12px 30px;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+    }
+    
+    .form-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .section-title {
+        color: #e67e22;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e67e22;
+    }
+    
+    .edit-indicator {
+        display: inline-block;
+        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">
+                <i class="fas fa-edit me-2 text-warning"></i>
+                Edit Purchase Order: {{ po.po_number }}
+                <span class="edit-indicator">EDITING</span>
+            </h2>
+            <p class="text-muted">Modify quantities and details for this purchase order</p>
+        </div>
+    </div>
+
+    <form method="post" id="poForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- PO Header -->
+                <div class="form-section">
+                    <h5 class="section-title">Order Information</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Company <span class="text-danger">*</span></label>
+                            <select name="company" class="form-select" required>
+                                <option value="">Select Company</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}" {% if company.id == po.company.id %}selected{% endif %}>{{ company.company_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Order Date <span class="text-danger">*</span></label>
+                            <input type="date" name="order_date" class="form-control" value="{{ po.order_date|date:'Y-m-d' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Expected Delivery Date</label>
+                            <input type="date" name="expected_delivery_date" class="form-control" value="{{ po.expected_delivery_date|date:'Y-m-d'|default:'' }}">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Any special instructions or notes">{{ po.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Products Table -->
+                <div class="form-section">
+                    <h5 class="section-title">Products</h5>
+                    <div class="table-responsive">
+                        <table class="table product-table" style="table-layout: fixed;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18%">Description</th>
+                                    <th style="width: 7%">Cases</th>
+                                    <th style="width: 7%">Loose</th>
+                                    <th style="width: 8%">Qty</th>
+                                    <th style="width: 6%">FOC</th>
+                                    <th style="width: 10%">Unit Price</th>
+                                    <th style="width: 12%">Val. Be. Disc</th>
+                                    <th style="width: 8%">Disc %</th>
+                                    <th style="width: 11%">Disc Amt</th>
+                                    <th style="width: 11%">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% regroup products by size as size_list %}
+                                {% for size_group in size_list %}
+                                    {% regroup size_group.list by marked_price as price_list %}
+                                    {% for price_group in price_list %}
+                                        <tr class="table-secondary category-header" data-category="{{ size_group.grouper }}-{{ price_group.grouper }}" data-foc-buy="{{ price_group.list.0.company_foc_buy }}" data-foc-free="{{ price_group.list.0.company_foc_free }}">
+                                            <td colspan="10" class="fw-bold" style="text-align: left;">
+                                                <i class="fas fa-tag me-2"></i>
+                                                {{ size_group.grouper }} - Rs. {{ price_group.grouper }}
+                                                <span style="float: right;">
+                                                    <span class="badge bg-info me-2 category-cases" id="cat_cases_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 cases</span>
+                                                    <span class="badge bg-info me-2 category-loose" id="cat_loose_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 loose</span>
+                                                    <span class="badge bg-primary me-2 category-total-bottles" id="cat_total_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 bottles</span>
+                                                    <span class="badge bg-success category-expected-foc" id="cat_foc_{{ size_group.grouper }}_{{ price_group.grouper|floatformat:0 }}">0 FOC expected</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% for product in price_group.list %}
+                                        <tr class="product-row" data-product-id="{{ product.id }}" data-pack-size="{{ product.bottles_per_pack }}" data-foc-buy="{{ product.company_foc_buy }}" data-foc-free="{{ product.company_foc_free }}" data-category="{{ size_group.grouper }}-{{ price_group.grouper }}" data-size="{{ size_group.grouper }}" data-price="{{ price_group.grouper|floatformat:0 }}">
+                                            <!-- Description -->
+                                            <td>
+                                                <div class="product-name">{{ product.size }} {{ product.product_name }}</div>
+                                                <div class="pack-size text-muted" style="font-size: 0.75rem;">{{ product.bottles_per_pack }} btl/case</div>
+                                            </td>
+                                            <!-- Cases -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="packs_{{ product.id }}" 
+                                                       class="qty-input packs-input" 
+                                                       min="0" 
+                                                       value="{% if product.id in existing_items %}{{ existing_items|get_item:product.id|get_item:'packs' }}{% else %}0{% endif %}"
+                                                       onchange="calculateTotal({{ product.id }})">
+                                            </td>
+                                            <!-- Loose -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="loose_{{ product.id }}" 
+                                                       class="qty-input loose-input" 
+                                                       min="0" 
+                                                       value="{% if product.id in existing_items %}{{ existing_items|get_item:product.id|get_item:'loose' }}{% else %}0{% endif %}"
+                                                       onchange="calculateTotal({{ product.id }})">
+                                            </td>
+                                            <!-- Qty (total bottles calculated) -->
+                                            <td>
+                                                <span class="badge bg-secondary" id="total_{{ product.id }}">0</span>
+                                            </td>
+                                            <!-- FOC -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="foc_{{ product.id }}" 
+                                                       class="qty-input foc-input" 
+                                                       min="0" 
+                                                       value="{% if product.id in existing_items %}{{ existing_items|get_item:product.id|get_item:'foc' }}{% else %}0{% endif %}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Unit Price -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="price_{{ product.id }}" 
+                                                       class="price-input" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       value="{% if product.id in existing_items %}{{ existing_items|get_item:product.id|get_item:'price' }}{% else %}{{ product.shop_price|floatformat:2 }}{% endif %}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Value Before Discount (calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="val_before_disc_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                            <!-- Disc % -->
+                                            <td>
+                                                <input type="number" 
+                                                       name="discount_{{ product.id }}" 
+                                                       class="qty-input" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       max="100" 
+                                                       value="{% if product.id in existing_items %}{{ existing_items|get_item:product.id|get_item:'discount' }}{% else %}{{ product.company_discount_percentage|floatformat:2 }}{% endif %}"
+                                                       onchange="updateSummary()">
+                                            </td>
+                                            <!-- Disc Amount (calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="disc_amt_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                            <!-- Value (Line Total calculated) -->
+                                            <td>
+                                                <div style="text-align: right; width: 100%; float: left;"><span id="line_total_{{ product.id }}">Rs. 0.00</span></div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3">
+                <!-- Summary -->
+                <div class="summary-box">
+                    <h5 class="mb-3">Order Summary</h5>
+                    <div class="summary-item">
+                        <span>PO Number:</span>
+                        <span>{{ po.po_number }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Cases:</span>
+                        <span id="totalCases">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Loose:</span>
+                        <span id="totalLoose">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Subtotal:</span>
+                        <span>Rs. <span id="subtotal">0.00</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total Discount:</span>
+                        <span>Rs. <span id="totalDiscount">0.00</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Grand Total:</span>
+                        <span>Rs. <span id="grandTotal">0.00</span></span>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-save me-2"></i>Update Purchase Order
+                        </button>
+                        <a href="{% url 'products:po_detail' po.pk %}" class="btn btn-outline-light">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Format number with thousand separators
+function formatCurrency(amount) {
+    return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+// Calculate total bottles for a product
+function calculateTotal(productId) {
+    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+    const packs = parseInt(row.querySelector('.packs-input').value) || 0;
+    const loose = parseInt(row.querySelector('.loose-input').value) || 0;
+    const packSize = parseInt(row.dataset.packSize);
+    
+    const totalBottles = (packs * packSize) + loose;
+    
+    // Update Qty column (total bottles)
+    document.getElementById(`total_${productId}`).textContent = totalBottles;
+    
+    updateSummary();
+}
+
+// Update order summary
+function updateSummary() {
+    let totalCases = 0;
+    let totalLoose = 0;
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let grandTotal = 0;
+    
+    // Track category totals
+    let categoryTotals = {};
+    
+    document.querySelectorAll('.product-row').forEach(row => {
+        const productId = row.dataset.productId;
+        const packSize = parseInt(row.dataset.packSize);
+        const size = row.dataset.size;
+        const price = row.dataset.price;
+        const categoryKey = `${size}_${price}`;
+        
+        const packs = parseInt(row.querySelector('.packs-input').value) || 0;
+        const loose = parseInt(row.querySelector('.loose-input').value) || 0;
+        const foc = parseInt(row.querySelector(`input[name="foc_${productId}"]`).value) || 0;
+        const unitPrice = parseFloat(row.querySelector(`input[name="price_${productId}"]`).value) || 0;
+        const discount = parseFloat(row.querySelector(`input[name="discount_${productId}"]`).value) || 0;
+        
+        const bottles = (packs * packSize) + loose;
+        
+        // Calculate all financial values
+        const valueBeforeDiscount = bottles * unitPrice;
+        const discountAmount = (valueBeforeDiscount * discount) / 100;
+        const lineTotal = valueBeforeDiscount - discountAmount;
+        
+        // Update all calculated columns
+        document.getElementById(`val_before_disc_${productId}`).textContent = 'Rs. ' + formatCurrency(valueBeforeDiscount);
+        document.getElementById(`disc_amt_${productId}`).textContent = 'Rs. ' + formatCurrency(discountAmount);
+        document.getElementById(`line_total_${productId}`).textContent = 'Rs. ' + formatCurrency(lineTotal);
+        
+        // Initialize category total if needed
+        if (!categoryTotals[categoryKey]) {
+            categoryTotals[categoryKey] = {
+                cases: 0,
+                loose: 0,
+                bottles: 0,
+                foc: 0,
+                focBuy: parseInt(row.dataset.focBuy) || 0,
+                focFree: parseInt(row.dataset.focFree) || 0,
+                packSize: packSize
+            };
+        }
+        
+        // Add to category total
+        categoryTotals[categoryKey].cases += packs;
+        categoryTotals[categoryKey].loose += loose;
+        categoryTotals[categoryKey].bottles += bottles;
+        categoryTotals[categoryKey].foc += foc;
+        
+        if (bottles > 0) {
+            totalCases += packs;
+            totalLoose += loose;
+            subtotal += valueBeforeDiscount;
+            totalDiscount += discountAmount;
+            grandTotal += lineTotal;
+        }
+    });
+    
+    // Update category headers with totals and expected FOC
+    for (const [categoryKey, totals] of Object.entries(categoryTotals)) {
+        const casesElement = document.getElementById(`cat_cases_${categoryKey}`);
+        const looseElement = document.getElementById(`cat_loose_${categoryKey}`);
+        const totalBottlesElement = document.getElementById(`cat_total_${categoryKey}`);
+        const expectedFocElement = document.getElementById(`cat_foc_${categoryKey}`);
+        
+        if (casesElement && looseElement && totalBottlesElement && expectedFocElement) {
+            casesElement.textContent = `${totals.cases} cases`;
+            looseElement.textContent = `${totals.loose} loose`;
+            totalBottlesElement.textContent = `${totals.bottles} bottles`;
+            
+            // Calculate expected FOC for category
+            let expectedFoc = 0;
+            if (totals.focBuy > 0 && totals.bottles > 0) {
+                expectedFoc = Math.floor(totals.bottles / totals.focBuy) * totals.focFree;
+            }
+            
+            // Convert expected FOC to cases and loose
+            const focCases = Math.floor(expectedFoc / totals.packSize);
+            const focLoose = expectedFoc % totals.packSize;
+            
+            expectedFocElement.textContent = `${expectedFoc} (${focCases} cases ${focLoose} loose) FOC expected (${totals.foc} entered)`;
+            
+            // Highlight based on FOC validation
+            if (expectedFoc > 0 && totals.foc === expectedFoc) {
+                // FOC matches expected - GREEN
+                expectedFocElement.classList.remove('bg-warning', 'text-dark');
+                expectedFocElement.classList.add('bg-success');
+            } else if (expectedFoc > 0 && totals.foc !== expectedFoc) {
+                // FOC doesn't match expected - YELLOW/WARNING
+                expectedFocElement.classList.remove('bg-success');
+                expectedFocElement.classList.add('bg-warning', 'text-dark');
+            } else {
+                // No FOC expected - GREEN
+                expectedFocElement.classList.remove('bg-warning', 'text-dark');
+                expectedFocElement.classList.add('bg-success');
+            }
+        }
+    }
+    
+    document.getElementById('totalCases').textContent = totalCases;
+    document.getElementById('totalLoose').textContent = totalLoose;
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('totalDiscount').textContent = formatCurrency(totalDiscount);
+    document.getElementById('grandTotal').textContent = formatCurrency(grandTotal);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize totals for all products with existing values
+    document.querySelectorAll('.product-row').forEach(row => {
+        const productId = row.dataset.productId;
+        calculateTotal(productId);
+    });
+    updateSummary();
+});
+</script>
+{% endblock %}

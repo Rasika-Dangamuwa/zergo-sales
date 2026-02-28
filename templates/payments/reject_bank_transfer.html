@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reject Bank Transfer - {{ settlement.payment_number }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reject-transfer-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+        color: #000;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 5px solid #ffc107;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .amount-highlight {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #dc3545;
+        text-align: center;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border-radius: 12px;
+        margin: 1.5rem 0;
+    }
+    
+    .alert-danger-custom {
+        background: linear-gradient(135deg, #f8d7da 0%, #ffe0e3 100%);
+        border-left: 5px solid #dc3545;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-reject {
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+        border: none;
+        padding: 14px 32px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #000;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .btn-reject:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+        color: #000;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .info-label {
+            margin-bottom: 4px;
+            font-size: 0.85em;
+        }
+        
+        .amount-highlight {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="reject-transfer-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-times-circle me-2"></i>Reject Bank Transfer</h1>
+            <p class="mb-0 opacity-75">Mark bank transfer {{ settlement.reference_number }} as not received/failed</p>
+        </div>
+        
+        <!-- Danger Alert -->
+        <div class="alert-danger-custom">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Warning</h5>
+            <p class="mb-0">
+                <strong>By rejecting this bank transfer, you confirm that:</strong>
+                <ul class="mt-2 mb-0">
+                    <li>The transfer was NOT successfully deposited to our bank account</li>
+                    <li>The bill will <strong>NOT</strong> be marked as paid</li>
+                    <li>The shop will still owe the full amount</li>
+                    <li>This is a permanent action that cannot be easily reversed</li>
+                </ul>
+            </p>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Payment Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-receipt me-1"></i>Payment Number</span>
+                <span class="info-value"><strong>{{ settlement.payment_number }}</strong></span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-calendar me-1"></i>Payment Date</span>
+                <span class="info-value">{{ settlement.payment_date|date:"F d, Y - h:i A" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-store me-1"></i>Shop</span>
+                <span class="info-value">{{ settlement.shop.shop_name }}</span>
+            </div>
+            
+            {% if settlement.bill %}
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-file-invoice me-1"></i>Bill Number</span>
+                <span class="info-value">
+                    <a href="{% url 'sales:detail' settlement.bill.pk %}">{{ settlement.bill.bill_number }}</a>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Bank Transfer Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-university me-2"></i>Bank Transfer Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-hashtag me-1"></i>Reference Number</span>
+                <span class="info-value"><strong>{{ settlement.reference_number }}</strong></span>
+            </div>
+            
+            {% if settlement.bank_name %}
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-building me-1"></i>Bank Name</span>
+                <span class="info-value">{{ settlement.bank_name }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-user me-1"></i>Received By</span>
+                <span class="info-value">{{ settlement.received_by.get_full_name }}</span>
+            </div>
+        </div>
+        
+        <!-- Amount Display -->
+        <div class="amount-highlight">
+            <i class="fas fa-ban me-2"></i>Rs. {{ settlement.amount|floatformat:2|intcomma }}
+        </div>
+        
+        <!-- Reject Transfer Form -->
+        <div class="form-card">
+            <h5 class="mb-4"><i class="fas fa-exclamation-circle me-2"></i>Rejection Reason</h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="reject_reason" class="form-label">
+                        <i class="fas fa-comment-dots me-1"></i>Select Rejection Reason *
+                    </label>
+                    <select class="form-select form-select-lg" id="reject_reason" name="reject_reason" required>
+                        <option value="">-- Select Reason --</option>
+                        <option value="Transfer Not Received">Transfer Not Received</option>
+                        <option value="Incorrect Amount">Incorrect Amount</option>
+                        <option value="Wrong Account">Wrong Account</option>
+                        <option value="Transaction Failed">Transaction Failed</option>
+                        <option value="Cancelled by Customer">Cancelled by Customer</option>
+                        <option value="Verification Failed">Verification Failed</option>
+                        <option value="Duplicate Entry">Duplicate Entry</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-info-circle me-2"></i>What will happen:</h6>
+                    <ul class="mb-0">
+                        <li>Payment status: <strong>Pending → Bounced</strong></li>
+                        {% if settlement.bill %}
+                        <li>Bill paid amount: <strong>Will NOT change (Rs. {{ settlement.bill.paid_amount|floatformat:2|intcomma }})</strong></li>
+                        <li>Bill balance: <strong>Remains Rs. {{ settlement.bill.balance_amount|floatformat:2|intcomma }}</strong></li>
+                        {% endif %}
+                        <li>Shop will need to make a new payment</li>
+                    </ul>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-reject btn-lg" onclick="return confirm('Are you absolutely sure you want to reject this bank transfer? This confirms the payment was not received.')">
+                        <i class="fas fa-times-circle me-2"></i>Reject Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

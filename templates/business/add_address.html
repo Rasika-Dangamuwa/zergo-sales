@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Business Address - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .address-type-icon {
+        font-size: 3rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Add Business Address</h1>
+                <p class="mb-0 mt-2 opacity-75">Add a new location for {{ profile.business_name }}</p>
+            </div>
+            <div>
+                <a href="{% url 'business:settings' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Settings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Location Type -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-building me-2"></i>Location Type</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="address_type" class="form-label required">Address Type</label>
+                    <select class="form-select" id="address_type" name="address_type" required>
+                        <option value="">Select address type...</option>
+                        <option value="head_office">Head Office</option>
+                        <option value="branch">Branch Office</option>
+                        <option value="warehouse">Warehouse</option>
+                        <option value="showroom">Showroom</option>
+                        <option value="billing">Billing Address</option>
+                        <option value="shipping">Shipping Address</option>
+                        <option value="registered">Registered Office</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="location_name" class="form-label required">Location Name</label>
+                    <input type="text" class="form-control" id="location_name" name="location_name" required
+                           placeholder="e.g., Colombo Warehouse, Kandy Branch">
+                    <div class="form-text">Descriptive name for this location</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Details -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-map-marker-alt me-2"></i>Address Details</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="address_line1" class="form-label required">Address Line 1</label>
+                    <input type="text" class="form-control" id="address_line1" name="address_line1" required>
+                    <div class="form-text">Street address, building name, P.O. Box</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="address_line2" class="form-label">Address Line 2</label>
+                    <input type="text" class="form-control" id="address_line2" name="address_line2">
+                    <div class="form-text">Additional address information (optional)</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="city" class="form-label required">City</label>
+                    <input type="text" class="form-control" id="city" name="city" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="district" class="form-label">District</label>
+                    <input type="text" class="form-control" id="district" name="district">
+                    <div class="form-text">District/Province/State</div>
+                </div>
+                <div class="col-md-4">
+                    <label for="postal_code" class="form-label">Postal Code</label>
+                    <input type="text" class="form-control" id="postal_code" name="postal_code">
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-user me-2"></i>Contact Information (Optional)</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="contact_person" class="form-label">Contact Person</label>
+                    <input type="text" class="form-control" id="contact_person" name="contact_person"
+                           placeholder="Name of person in charge">
+                </div>
+                <div class="col-md-6">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone" name="phone"
+                           placeholder="Contact number for this location">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       placeholder="Email for this location">
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>Address Preview:</h6>
+            <div class="mt-2">
+                <strong id="preview_location_name">Location Name</strong>
+                <span class="badge bg-secondary" id="preview_type_badge">Type</span><br>
+                <span id="preview_address">Address will appear here...</span><br>
+                <span id="preview_contact" style="display:none;">
+                    <i class="fas fa-user me-1"></i><span id="preview_contact_person"></span> | 
+                    <i class="fas fa-phone me-1"></i><span id="preview_phone"></span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'business:settings' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Add Location
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live preview update
+document.addEventListener('DOMContentLoaded', function() {
+    function updatePreview() {
+        const locationName = document.getElementById('location_name').value || 'Location Name';
+        const addressType = document.getElementById('address_type');
+        const typeText = addressType.options[addressType.selectedIndex].text || 'Type';
+        
+        const address1 = document.getElementById('address_line1').value;
+        const address2 = document.getElementById('address_line2').value;
+        const city = document.getElementById('city').value;
+        const district = document.getElementById('district').value;
+        const postal = document.getElementById('postal_code').value;
+        
+        const contactPerson = document.getElementById('contact_person').value;
+        const phone = document.getElementById('phone').value;
+        
+        // Update preview
+        document.getElementById('preview_location_name').textContent = locationName;
+        document.getElementById('preview_type_badge').textContent = typeText;
+        
+        // Build address
+        let addressParts = [];
+        if (address1) addressParts.push(address1);
+        if (address2) addressParts.push(address2);
+        if (city) addressParts.push(city);
+        if (district) addressParts.push(district);
+        if (postal) addressParts.push(postal);
+        
+        document.getElementById('preview_address').textContent = 
+            addressParts.length > 0 ? addressParts.join(', ') : 'Address will appear here...';
+        
+        // Update contact
+        const contactDiv = document.getElementById('preview_contact');
+        if (contactPerson || phone) {
+            contactDiv.style.display = 'block';
+            document.getElementById('preview_contact_person').textContent = contactPerson || 'N/A';
+            document.getElementById('preview_phone').textContent = phone || 'N/A';
+        } else {
+            contactDiv.style.display = 'none';
+        }
+    }
+    
+    // Attach listeners
+    const fields = ['location_name', 'address_type', 'address_line1', 'address_line2', 
+                    'city', 'district', 'postal_code', 'contact_person', 'phone'];
+    
+    fields.forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', updatePreview);
+            field.addEventListener('change', updatePreview);
+        }
+    });
+});
+</script>
+{% endblock %}

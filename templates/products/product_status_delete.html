@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Status Adjustment{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 768px) {
+        h4 {
+            font-size: 1.25rem;
+        }
+        
+        h5 {
+            font-size: 1.125rem;
+        }
+        
+        .table {
+            font-size: 0.875rem;
+        }
+        
+        .table th {
+            width: 35% !important;
+            font-size: 0.8rem;
+        }
+        
+        main .btn-lg,
+        .card .btn-lg {
+            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+            min-height: 50px;
+        }
+        
+        main .btn,
+        .container-fluid .btn,
+        .card .btn {
+            font-size: 0.875rem;
+            padding: 0.625rem 1rem;
+            margin-bottom: 0.75rem;
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        main .btn:last-child,
+        .card .btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        .alert {
+            font-size: 0.875rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. The adjustment record will be permanently deleted.
+                    </div>
+
+                    <h5 class="mb-3">Adjustment Details:</h5>
+
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%;">Product:</th>
+                            <td>
+                                <strong>{{ adjustment.product.product_name }}</strong><br>
+                                <small class="text-muted">{{ adjustment.product.product_code }}</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Status Type:</th>
+                            <td>
+                                <span class="badge 
+                                    {% if adjustment.status_type == 'damaged' %}bg-danger
+                                    {% elif adjustment.status_type == 'expired' %}bg-warning text-dark
+                                    {% elif adjustment.status_type == 'used' %}bg-secondary
+                                    {% elif adjustment.status_type == 'lost' %}bg-dark
+                                    {% elif adjustment.status_type == 'sample' %}bg-info
+                                    {% elif adjustment.status_type == 'returned_to_company' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ adjustment.get_status_type_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Quantity:</th>
+                            <td>{{ adjustment.quantity }} units</td>
+                        </tr>
+                        <tr>
+                            <th>Reason:</th>
+                            <td>{{ adjustment.reason }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th>
+                            <td>{{ adjustment.adjustment_date|date:"F d, Y h:i A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Stock Updated:</th>
+                            <td>
+                                {% if adjustment.stock_updated %}
+                                    <i class="fas fa-check-circle text-success"></i> Yes
+                                    ({{ adjustment.previous_stock }} → {{ adjustment.new_stock }})
+                                {% else %}
+                                    <i class="fas fa-times-circle text-muted"></i> No
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Adjusted By:</th>
+                            <td>{{ adjustment.adjusted_by.get_full_name|default:adjustment.adjusted_by.username }}</td>
+                        </tr>
+                    </table>
+
+                    {% if adjustment.stock_updated %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Deleting this record will NOT restore the stock. 
+                        If you need to restore {{ adjustment.quantity }} units, you'll need to manually adjust the stock.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash me-2"></i>Yes, Delete This Record
+                            </button>
+                            <a href="{% url 'products:product_status_history' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

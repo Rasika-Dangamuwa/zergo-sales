@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Non-Resaleable Inventory{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+        h2 {
+            font-size: 1.5rem;
+        }
+        
+        main .btn,
+        .container-fluid .btn,
+        .card .btn {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-body h3 {
+            font-size: 1.75rem;
+        }
+        
+        .card-body h6 {
+            font-size: 0.875rem;
+        }
+        
+        /* Hide desktop table on mobile */
+        .desktop-table-view {
+            display: none;
+        }
+        
+        /* Show mobile cards */
+        .mobile-inventory-view {
+            display: block !important;
+        }
+    }
+    
+    /* Desktop - hide mobile cards */
+    .mobile-inventory-view {
+        display: none;
+    }
+    
+    /* Mobile Card Styling */
+    .mobile-inventory-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .mobile-inventory-card .card-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .mobile-inventory-card .product-name {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mobile-inventory-card .stock-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-inventory-card .stock-item {
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.25rem;
+        text-align: center;
+    }
+    
+    .mobile-inventory-card .stock-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mobile-inventory-card .stock-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .mobile-inventory-card .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .mobile-inventory-card .action-buttons .btn {
+        flex: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 col-md-8 mb-2 mb-md-0">
+            <h2><i class="fas fa-exclamation-triangle text-warning"></i> Non-Resaleable Inventory</h2>
+            <p class="text-muted d-none d-md-block">Damaged, expired, or quarantined stock not available for sale</p>
+        </div>
+        <div class="col-12 col-md-4 text-md-end">
+            {% if user.user_type in 'admin,office' %}
+            <a href="{% url 'products:dispose_non_resaleable_stock' %}" class="btn btn-danger w-100 w-md-auto mb-2 me-md-2">
+                <i class="fas fa-trash-alt"></i> Dispose Stock
+            </a>
+            {% endif %}
+            <a href="{% url 'products:list' %}" class="btn btn-secondary w-100 w-md-auto mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Products
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-muted">Products with Non-Resaleable Stock</h6>
+                    <h3 class="text-warning">{{ products.count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Non-Resaleable Units</h6>
+                    <h3 class="text-danger">{{ total_non_resaleable_qty }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h6 class="text-muted">Estimated Value (Company Cost)</h6>
+                    <h3 class="text-info">Rs. {{ total_non_resaleable_value|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Non-Resaleable Stock by Product</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if products %}
+            <!-- Desktop Table View -->
+            <div class="table-responsive desktop-table-view">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">Order</th>
+                            <th>Product Code</th>
+                            <th>Product Name</th>
+                            <th>Company</th>
+                            <th>Size</th>
+                            <th class="text-center">Resaleable</th>
+                            <th class="text-center">Non-Resaleable</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Total Value</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark">{{ product.display_order }}</span>
+                            </td>
+                            <td>{{ product.product_code }}</td>
+                            <td>
+                                <strong>{{ product.product_name }}</strong>
+                            </td>
+                            <td>{{ product.company.company_name }}</td>
+                            <td><span class="badge bg-secondary">{{ product.size }}</span></td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ product.quantity_in_stock }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-danger">{{ product.non_resaleable_stock }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-dark">{{ product.total_stock }}</span>
+                            </td>
+                            <td class="text-end">Rs. {{ product.company_price|floatformat:2 }}</td>
+                            <td class="text-end">
+                                <strong>Rs. {{ product.non_resaleable_value|floatformat:2 }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'products:detail' product.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if user.user_type in 'admin,office' %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="showDisposeModal({{ product.id }}, '{{ product.product_name }}', {{ product.non_resaleable_stock }})"
+                                        title="Dispose">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="6" class="text-end">TOTALS:</th>
+                            <th class="text-center"><span class="badge bg-danger">{{ total_non_resaleable_qty }}</span></th>
+                            <th colspan="2"></th>
+                            <th class="text-end"><strong>Rs. {{ total_non_resaleable_value|floatformat:2 }}</strong></th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <!-- Mobile Card View -->
+            <div class="mobile-inventory-view p-2">
+                {% for product in products %}
+                <div class="mobile-inventory-card">
+                    <div class="card-header-section">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-light text-dark">{{ product.display_order }}</span>
+                                <div class="product-name">{{ product.product_name }}</div>
+                            </div>
+                            <div class="text-muted small">{{ product.product_code }}</div>
+                            <span class="badge bg-secondary mt-1">{{ product.size }}</span>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">{{ product.company.company_name }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-grid">
+                        <div class="stock-item">
+                            <span class="stock-label">Resaleable</span>
+                            <span class="stock-value text-success">{{ product.quantity_in_stock }}</span>
+                        </div>
+                        <div class="stock-item">
+                            <span class="stock-label">Non-Resaleable</span>
+                            <span class="stock-value text-danger">{{ product.non_resaleable_stock }}</span>
+                        </div>
+                        <div class="stock-item">
+                            <span class="stock-label">Total Stock</span>
+                            <span class="stock-value text-dark">{{ product.total_stock }}</span>
+                        </div>
+                        <div class="stock-item">
+                            <span class="stock-label">Value</span>
+                            <span class="stock-value text-info" style="font-size: 1rem;">Rs. {{ product.non_resaleable_value|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="{% url 'products:detail' product.id %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        {% if user.user_type in 'admin,office' %}
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="showDisposeModal({{ product.id }}, '{{ product.product_name }}', {{ product.non_resaleable_stock }})">
+                            <i class="fas fa-trash"></i> Dispose
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">
+                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                <h5>No Non-Resaleable Stock</h5>
+                <p>All stock is currently resaleable. Great job!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Dispose Modal -->
+<div class="modal fade" id="disposeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'products:dispose_non_resaleable_stock' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-trash-alt"></i> Dispose Non-Resaleable Stock</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="product_id" id="dispose_product_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Product:</label>
+                        <p id="dispose_product_name" class="form-control-plaintext"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Available Non-Resaleable:</label>
+                        <p id="dispose_available" class="form-control-plaintext text-danger"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dispose_quantity" class="form-label fw-bold">Quantity to Dispose <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="quantity" id="dispose_quantity" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="disposal_reason" class="form-label fw-bold">Disposal Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="disposal_reason" id="disposal_reason" rows="3" required
+                                  placeholder="e.g., Expired - disposed as per company policy"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This action is permanent. Disposed stock cannot be recovered.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Dispose Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDisposeModal(productId, productName, available) {
+    document.getElementById('dispose_product_id').value = productId;
+    document.getElementById('dispose_product_name').textContent = productName;
+    document.getElementById('dispose_available').textContent = available + ' units';
+    document.getElementById('dispose_quantity').max = available;
+    document.getElementById('dispose_quantity').value = '';
+    document.getElementById('disposal_reason').value = '';
+    
+    var modal = new bootstrap.Modal(document.getElementById('disposeModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

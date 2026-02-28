@@ -1,0 +1,1164 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Shops — Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===== TOKENS ===== */
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981; --emerald-bg: #d1fae5;
+    --amber: #f59e0b; --amber-bg: #fef3c7;
+    --rose: #ef4444; --rose-bg: #fee2e2;
+    --violet: #8b5cf6; --violet-bg: #ede9fe;
+    --cyan: #06b6d4; --cyan-bg: #cffafe;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155;
+    --s800: #1e293b; --s900: #0f172a;
+    --r: 14px; --rs: 10px;
+    --sh1: 0 1px 3px rgba(0,0,0,.06);
+    --sh2: 0 4px 14px rgba(0,0,0,.08);
+    --sh3: 0 10px 30px rgba(0,0,0,.12);
+}
+* { box-sizing: border-box; }
+.shop-container { max-width: 920px; margin: 0 auto; }
+
+/* ===== HEADER ===== */
+.hdr {
+    background: var(--brand-gradient);
+    border-radius: var(--r);
+    padding: .9rem 1.15rem;
+    color: #fff;
+    margin-bottom: .65rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+.hdr::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -8%;
+    width: 180px; height: 180px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+}
+.hdr-l { position: relative; z-index: 1; }
+.hdr-t { font-size: 1.25rem; font-weight: 800; margin: 0; line-height: 1.15; }
+.hdr-s { font-size: .72rem; opacity: .85; margin: .1rem 0 0; }
+.hdr-r { position: relative; z-index: 1; display: flex; gap: .35rem; }
+.hdr-r .btn {
+    border-radius: var(--rs); padding: .4rem .8rem; font-weight: 600;
+    font-size: .72rem; border: 2px solid rgba(255,255,255,.25);
+    color: #fff; background: rgba(255,255,255,.1); transition: all .2s; white-space: nowrap;
+}
+.hdr-r .btn:hover { background: rgba(255,255,255,.22); color: #fff; }
+.hdr-r .btn-w { background: #fff; color: var(--brand); border: none; font-weight: 700; }
+.hdr-r .btn-w:hover { background: #e3f2fd; color: var(--brand-dark); }
+
+/* ===== STATS STRIP ===== */
+.sstrip {
+    display: flex; gap: .4rem; margin-bottom: .6rem;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+}
+.sc {
+    flex-shrink: 0; background: #fff; border-radius: var(--rs);
+    padding: .45rem .7rem; display: flex; align-items: center; gap: .45rem;
+    box-shadow: var(--sh1);
+}
+.sc-i {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .68rem; flex-shrink: 0;
+}
+.sc-i.bl { background: var(--brand-light); color: var(--brand); }
+.sc-i.gn { background: var(--emerald-bg); color: var(--emerald); }
+.sc-i.am { background: var(--amber-bg); color: var(--amber); }
+.sc-i.rs { background: var(--rose-bg); color: var(--rose); }
+.sc-v { font-size: .95rem; font-weight: 800; color: var(--s900); line-height: 1; }
+.sc-l { font-size: .56rem; font-weight: 600; color: var(--s500); text-transform: uppercase; letter-spacing: .3px; }
+
+/* ===== ALERTS ===== */
+.alstrip {
+    display: flex; gap: .35rem; margin-bottom: .6rem;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.ach {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: .3rem;
+    padding: .3rem .6rem; border-radius: 16px; font-size: .68rem;
+    font-weight: 600; white-space: nowrap;
+}
+.ach.w { background: var(--amber-bg); color: #92400e; }
+.ach.d { background: var(--rose-bg); color: #991b1b; }
+.ach.i { background: var(--violet-bg); color: #5b21b6; }
+.ach.c { background: var(--cyan-bg); color: #155e75; }
+
+/* ===== CONTROLS ===== */
+.cbar {
+    background: #fff; border-radius: var(--r); padding: .65rem;
+    margin-bottom: .6rem; box-shadow: var(--sh1);
+}
+.cb-row1 {
+    display: flex; gap: .3rem; align-items: center; margin-bottom: .5rem; flex-wrap: wrap;
+}
+.ptabs {
+    display: flex; gap: .2rem; background: var(--s100); padding: .15rem;
+    border-radius: 7px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex: 1;
+}
+.pt {
+    padding: .3rem .55rem; border: none; background: transparent;
+    border-radius: 5px; cursor: pointer; font-weight: 600; font-size: .68rem;
+    color: var(--s500); transition: all .15s; white-space: nowrap;
+    display: flex; align-items: center; gap: .25rem;
+}
+.pt.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.07); color: var(--brand); }
+.pt .n { font-size: .55rem; padding: .07rem .28rem; border-radius: 6px; font-weight: 700; background: var(--s200); color: var(--s600); }
+.pt.on .n { background: var(--brand-light); color: var(--brand); }
+
+.vsw {
+    display: flex; gap: .15rem; background: var(--s100); padding: .15rem;
+    border-radius: 7px; flex-shrink: 0;
+}
+.vsw button {
+    padding: .3rem .55rem; border: none; background: transparent;
+    border-radius: 5px; cursor: pointer; font-weight: 600; font-size: .68rem;
+    color: var(--s500); transition: all .15s;
+}
+.vsw button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.07); color: var(--brand); }
+
+/* Search */
+.cb-srch { display: flex; gap: .35rem; align-items: center; }
+.srch-w { flex: 1; position: relative; }
+.srch-w i { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: var(--s400); font-size: .75rem; }
+.srch-w input {
+    width: 100%; padding: .5rem .65rem .5rem 2rem; border: 2px solid var(--s200);
+    border-radius: var(--rs); font-size: .8rem; outline: none; transition: border .2s;
+}
+.srch-w input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,120,215,.08); }
+
+.lp {
+    display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .55rem;
+    background: var(--s100); border-radius: 16px; font-size: .68rem;
+    font-weight: 600; color: var(--s500); flex-shrink: 0;
+}
+.lp.on { background: var(--emerald-bg); color: #065f46; }
+.ldot { width: 6px; height: 6px; border-radius: 50%; background: var(--s400); }
+.ldot.on { background: var(--emerald); animation: lpulse 2s infinite; box-shadow: 0 0 4px rgba(16,185,129,.4); }
+@keyframes lpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.nbtn {
+    border-radius: 16px; font-size: .68rem; font-weight: 600;
+    padding: .3rem .6rem; flex-shrink: 0;
+}
+
+.nctrl { display: none; padding: .5rem; background: var(--s50); border-radius: 7px; margin-top: .4rem; }
+
+/* Date */
+.dsec { margin-top: .4rem; padding-top: .4rem; border-top: 1px solid var(--s100); }
+.dtog {
+    display: none; align-items: center; gap: .3rem; background: none;
+    border: 1.5px solid var(--s200); border-radius: 7px; padding: .28rem .6rem;
+    font-size: .68rem; font-weight: 600; color: var(--s600); cursor: pointer;
+    width: 100%; justify-content: center; transition: all .2s;
+}
+.dtog:hover, .dtog.on { border-color: var(--brand); color: var(--brand); }
+.dtog i.chev { margin-left: auto; font-size: .5rem; transition: transform .2s; }
+.dtog.on i.chev { transform: rotate(180deg); }
+.dbody { display: block; }
+.dbar { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.dp {
+    padding: .28rem .55rem; border: 1.5px solid var(--s200); background: #fff;
+    border-radius: 6px; font-size: .68rem; font-weight: 600; color: var(--s600);
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.dp:hover { border-color: var(--brand); color: var(--brand); }
+.dp.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.di {
+    border: 1.5px solid var(--s200); border-radius: 6px; padding: .28rem .45rem;
+    font-size: .72rem; font-weight: 500; color: var(--s700); outline: none;
+    transition: border .2s; max-width: 120px;
+}
+.di:focus { border-color: var(--brand); }
+.dabg {
+    display: inline-flex; align-items: center; gap: .25rem; padding: .2rem .5rem;
+    border-radius: 14px; font-size: .66rem; font-weight: 600;
+    background: var(--brand-light); color: var(--brand-dark);
+}
+.dabg .x { background: none; border: none; color: var(--brand-dark); cursor: pointer; padding: 0; font-size: .75rem; opacity: .7; }
+.dabg .x:hover { opacity: 1; }
+
+/* ===== COUNT + SORT ===== */
+.csbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: .4rem; padding: 0 .1rem;
+}
+.csbar-c { font-size: .78rem; color: var(--s500); font-weight: 600; }
+.ssel {
+    appearance: none; -webkit-appearance: none;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E") no-repeat right .45rem center;
+    border: 1.5px solid var(--s200); border-radius: 7px;
+    padding: .28rem 1.4rem .28rem .5rem; font-size: .68rem; font-weight: 600;
+    color: var(--s700); cursor: pointer; outline: none;
+}
+.ssel:focus { border-color: var(--brand); }
+
+/* ===== MAP ===== */
+#map { height: 420px; border-radius: var(--r); z-index: 0; }
+.mwrap { position: relative; z-index: 1; border-radius: var(--r); overflow: hidden; box-shadow: var(--sh2); margin-bottom: .65rem; }
+.custom-marker-wrap { background: none !important; border: none !important; }
+.user-loc-marker { background: none !important; border: none !important; }
+.map-marker {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.map-marker i { transform: rotate(45deg); font-size: .7rem; color: #fff; }
+.map-marker.lv3 { background: var(--emerald); }
+.map-marker.lv2 { background: var(--brand); }
+.map-marker.lv1 { background: var(--s400); }
+.map-marker.has-pending { box-shadow: 0 0 0 3px rgba(245,158,11,.6), 0 2px 8px rgba(0,0,0,.25); }
+.map-marker.is-new::after {
+    content: '★'; position: absolute; top: -8px; right: -8px;
+    transform: rotate(45deg); font-size: .6rem; color: #facc15;
+}
+
+/* Popup */
+.leaflet-popup-content-wrapper { border-radius: 14px !important; padding: 0 !important; box-shadow: 0 8px 30px rgba(0,0,0,.15) !important; overflow: hidden; }
+.leaflet-popup-content { margin: 0 !important; width: 260px !important; }
+.mp { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.mp-h { background: var(--brand-gradient); color: #fff; padding: .65rem .85rem; }
+.mp-hr { display: flex; justify-content: space-between; align-items: flex-start; gap: .4rem; }
+.mp-nm { font-weight: 700; font-size: .85rem; line-height: 1.2; }
+.mp-lv { flex-shrink:0; font-size:.55rem; font-weight:700; padding:.12rem .4rem; border-radius:4px; text-transform:uppercase; }
+.mp-lv.lv3 { background:rgba(16,185,129,.85); }
+.mp-lv.lv2 { background:rgba(14,165,233,.85); }
+.mp-lv.lv1 { background:rgba(148,163,184,.85); }
+.mp-cd { font-size:.66rem; opacity:.8; margin-top:.1rem; }
+.mp-bd { padding:.55rem .85rem; font-size:.72rem; color:var(--s700); }
+.mp-rw { display:flex; align-items:center; gap:.35rem; padding:.15rem 0; }
+.mp-rw i { width:13px; text-align:center; color:var(--brand); font-size:.65rem; }
+.mp-dv { height:1px; background:var(--s100); margin:.35rem 0; }
+.mp-pg { display:flex; flex-wrap:wrap; gap:.25rem; padding:.1rem 0; }
+.mp-tg { font-size:.6rem; font-weight:600; padding:.12rem .35rem; border-radius:4px; }
+.mp-tg.bills { background:#fef3c7; color:#92400e; }
+.mp-tg.payments { background:#dbeafe; color:#1e40af; }
+.mp-tg.returns { background:#fce7f3; color:#9d174d; }
+.mp-tg.outstanding { background:#fee2e2; color:#991b1b; }
+.mp-tg.new-tag { background:#d1fae5; color:#065f46; }
+.mp-vs { font-size:.66rem; color:var(--s500); padding:.15rem 0; }
+.mp-vs i { font-size:.55rem; margin-right:.15rem; }
+.mp-ft { padding:.4rem .85rem .6rem; text-align:center; }
+.mp-bt { display:inline-block; width:100%; padding:.35rem .65rem; background:var(--brand-gradient); color:#fff; font-size:.72rem; font-weight:600; border-radius:7px; text-decoration:none; }
+.mp-bt:hover { opacity:.88; color:#fff; }
+.mp-bt.dis { background:var(--s200); color:var(--s400); pointer-events:none; }
+
+/* Map overlays */
+.mlg {
+    position:absolute; bottom:10px; left:10px; z-index:1000;
+    background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+    border-radius:10px; padding:.5rem .7rem; box-shadow:0 3px 12px rgba(0,0,0,.1);
+    font-size:.66rem; max-width:160px;
+}
+.mlg.col .lgbd { display:none; }
+.mlg.col { padding:.35rem .55rem; }
+.lgtg { display:flex; align-items:center; justify-content:space-between; gap:.4rem; cursor:pointer; font-weight:700; color:var(--s700); font-size:.68rem; user-select:none; }
+.lgtg i { font-size:.55rem; color:var(--s400); transition:transform .2s; }
+.mlg.col .lgtg i { transform:rotate(180deg); }
+.lgbd { margin-top:.35rem; }
+.lgi { display:flex; align-items:center; gap:.4rem; padding:.15rem 0; color:var(--s600); }
+.lgd { width:9px; height:9px; border-radius:50%; flex-shrink:0; border:1.5px solid #fff; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+.lgd.lv3 { background:var(--emerald); }
+.lgd.lv2 { background:var(--brand); }
+.lgd.lv1 { background:var(--s400); }
+.lgd.usr { background:var(--rose); }
+.lgr { width:9px; height:9px; border-radius:50%; flex-shrink:0; border:2px solid var(--amber); background:transparent; }
+.mtb { position:absolute; top:10px; right:10px; z-index:1000; display:flex; flex-direction:column; gap:.3rem; }
+.mtbb {
+    width:32px; height:32px; border-radius:7px; background:rgba(255,255,255,.92);
+    backdrop-filter:blur(8px); border:none; box-shadow:0 2px 6px rgba(0,0,0,.1);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--s700); font-size:.75rem;
+}
+.mtbb:hover, .mtbb.on { background:var(--brand); color:#fff; }
+.msb { position:absolute; top:10px; left:10px; z-index:1000; display:flex; gap:.25rem; flex-wrap:wrap; }
+.msc {
+    background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+    padding:.2rem .5rem; border-radius:7px; font-size:.62rem; font-weight:600;
+    box-shadow:0 2px 6px rgba(0,0,0,.08); color:var(--s700);
+    display:flex; align-items:center; gap:.25rem;
+}
+.msc .dt { width:6px; height:6px; border-radius:50%; }
+.msc .dt.gn { background:var(--emerald); }
+.msc .dt.bl { background:var(--brand); }
+.msc .dt.sl { background:var(--s400); }
+.msc .dt.am { background:var(--amber); }
+
+/* ===== PHOTO-FIRST SHOP CARDS ===== */
+.scard {
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: .55rem;
+    box-shadow: var(--sh1);
+    overflow: hidden;
+    transition: all .2s;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.scard:hover { box-shadow: var(--sh2); transform: translateY(-1px); }
+.scard:active { transform: scale(.998); }
+
+/* Top color strip */
+.sc-bar { height: 3px; }
+.sc-bar.lv3 { background: var(--emerald); }
+.sc-bar.lv2 { background: var(--cyan); }
+.sc-bar.lv1 { background: var(--s300); }
+.sc-bar.pend { background: var(--amber); }
+
+/* Horizontal: Photo | Info */
+.sc-main { display: flex; }
+
+/* === LARGE PHOTO === */
+.sc-photo {
+    width: 130px;
+    min-height: 130px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    background: var(--s100);
+}
+.sc-photo img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+}
+.sc-ph-empty {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--brand-gradient);
+    color: #fff; font-size: 2.6rem; font-weight: 800;
+}
+
+/* Overlays on photo */
+.sc-new {
+    position: absolute; top: .35rem; left: .35rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff; font-size: .5rem; font-weight: 800;
+    padding: .12rem .4rem; border-radius: 4px;
+    letter-spacing: .4px; text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(16,185,129,.4);
+    z-index: 2;
+    animation: npulse 2.5s ease-in-out infinite;
+}
+@keyframes npulse {
+    0%,100% { box-shadow: 0 2px 6px rgba(16,185,129,.35); }
+    50% { box-shadow: 0 2px 14px rgba(16,185,129,.6); }
+}
+.sc-lv {
+    position: absolute; top: .35rem; right: .35rem;
+    font-size: .5rem; font-weight: 700;
+    padding: .12rem .38rem; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .2px; z-index: 2;
+}
+.sc-lv.lv3 { background: rgba(16,185,129,.9); color: #fff; }
+.sc-lv.lv2 { background: rgba(6,182,212,.9); color: #fff; }
+.sc-lv.lv1 { background: rgba(148,163,184,.85); color: #fff; }
+.sc-dist {
+    position: absolute; bottom: .3rem; left: .3rem;
+    background: rgba(239,68,68,.9); color: #fff;
+    font-size: .58rem; font-weight: 700;
+    padding: .12rem .35rem; border-radius: 4px;
+    display: none; z-index: 2;
+}
+
+/* === INFO SIDE === */
+.sc-info {
+    flex: 1; min-width: 0;
+    padding: .6rem .7rem;
+    display: flex; flex-direction: column;
+    justify-content: center;
+}
+/* sc-main must grow so action bar sticks to bottom */
+.sc-main { flex: 1; }
+.si-name {
+    font-weight: 700; font-size: .88rem; color: var(--s900);
+    margin: 0; line-height: 1.15;
+    display: -webkit-box; -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+.si-owner {
+    font-size: .68rem; color: var(--s500); margin-top: .1rem;
+    display: flex; align-items: center; gap: .25rem; flex-wrap: wrap;
+}
+.si-owner .sep { color: var(--s300); }
+.si-type {
+    display: inline-block; font-size: .52rem; font-weight: 700;
+    padding: .08rem .35rem; border-radius: 3px;
+    background: var(--brand-light); color: var(--brand-dark);
+    text-transform: uppercase; letter-spacing: .3px; margin-top: .25rem;
+}
+
+/* Meta row */
+.si-meta {
+    display: flex; flex-wrap: wrap; gap: .12rem .45rem;
+    margin-top: .35rem; font-size: .68rem; color: var(--s600);
+}
+.si-meta span {
+    display: inline-flex; align-items: center; gap: .15rem; white-space: nowrap;
+}
+.si-meta i { font-size: .58rem; }
+
+/* Date highlight */
+.si-dhl {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    padding: .1rem .35rem; border-radius: 4px;
+    border: 1px solid #fbbf24; font-weight: 600; color: var(--s800);
+}
+
+/* Pending */
+.si-pend { display: flex; flex-wrap: wrap; gap: .2rem; margin-top: .3rem; }
+.si-pt {
+    font-size: .58rem; padding: .1rem .35rem; border-radius: 4px;
+    font-weight: 600; display: inline-flex; align-items: center; gap: .15rem;
+}
+.si-pt.bills { background: var(--rose-bg); color: #991b1b; }
+.si-pt.pays { background: var(--amber-bg); color: #92400e; }
+.si-pt.rets { background: var(--violet-bg); color: #5b21b6; }
+.si-pt.photo { background: #fce7f3; color: #9d174d; }
+
+/* Outstanding */
+.si-out {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #fef3c7; border-radius: 4px;
+    padding: .12rem .35rem; margin-top: .22rem; font-size: .52rem; line-height: 1.2;
+}
+.si-out .l { font-weight: 500; color: #92400e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.si-out .l small { font-size: .82em; opacity: .65; }
+.si-out .l i { font-size: .45rem; }
+.si-out .a { font-weight: 600; color: #b45309; font-size: .52rem; white-space: nowrap; flex-shrink: 0; margin-left: .25rem; }
+
+/* Credit */
+.si-cr { margin-top: .25rem; }
+.si-cr-info { display: flex; justify-content: space-between; font-size: .58rem; color: var(--s500); margin-bottom: .1rem; }
+.si-cr-bar { height: 3px; background: var(--s200); border-radius: 2px; overflow: hidden; }
+.si-cr-fill { height: 100%; border-radius: 2px; }
+.si-cr-fill.g { background: var(--emerald); }
+.si-cr-fill.a { background: var(--amber); }
+.si-cr-fill.r { background: var(--rose); }
+
+/* Action bar */
+.sc-act {
+    display: flex; gap: .25rem; padding: .4rem .6rem;
+    border-top: 1px solid var(--s100); background: var(--s50);
+    margin-top: auto;
+}
+.sc-act .btn {
+    border-radius: 6px; padding: .3rem .55rem; font-size: .68rem;
+    font-weight: 600; min-height: 30px; display: inline-flex;
+    align-items: center; gap: .2rem; transition: all .15s;
+}
+.sc-act .btn-p { background: var(--brand-gradient); border: none; color: #fff; }
+.sc-act .btn-o { border: 1.5px solid var(--s200); color: var(--s600); background: #fff; }
+.sc-act .btn-o:hover { background: var(--s100); }
+.sc-act .btn-lk { border: 1.5px solid var(--s200); color: var(--s400); background: var(--s50); cursor: not-allowed; }
+
+/* ===== FAB ===== */
+.fab {
+    position: fixed; bottom: 76px; right: 16px;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: var(--brand-gradient); color: #fff; border: none;
+    box-shadow: 0 6px 20px rgba(0,120,215,.4);
+    z-index: 100; display: none;
+    align-items: center; justify-content: center;
+    font-size: 1.1rem; text-decoration: none;
+}
+.fab:hover { transform: scale(1.08); color: #fff; }
+
+/* ===== EMPTY ===== */
+.empty { text-align: center; padding: 2.5rem 1rem; }
+.empty i { font-size: 2.5rem; color: var(--s300); margin-bottom: .75rem; display: block; }
+.empty h5 { font-weight: 700; color: var(--s700); margin-bottom: .4rem; }
+.empty p { color: var(--s500); margin-bottom: .75rem; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .sstrip { gap: .3rem; }
+    .sc { padding: .4rem .55rem; }
+    .sc-v { font-size: .85rem; }
+    .sc-i { width: 26px; height: 26px; font-size: .62rem; }
+    #map { height: 340px; }
+}
+
+@media (max-width: 576px) {
+    .container-fluid { padding-left: .35rem; padding-right: .35rem; padding-top: .3rem !important; }
+    .hdr { padding: .65rem .85rem; border-radius: 11px; margin-bottom: .45rem; }
+    .hdr-t { font-size: 1.1rem; }
+    .hdr-s { font-size: .66rem; }
+    .hdr-r .btn-add-desktop { display: none; }
+    .hdr-r .btn { padding: .32rem .55rem; font-size: .66rem; }
+    .sstrip { gap: .25rem; margin-bottom: .45rem; }
+    .sc { padding: .35rem .5rem; border-radius: 8px; }
+    .sc-v { font-size: .8rem; }
+    .sc-l { font-size: .5rem; }
+    .sc-i { width: 24px; height: 24px; font-size: .58rem; border-radius: 6px; }
+    .alstrip { gap: .25rem; margin-bottom: .45rem; }
+    .ach { font-size: .62rem; padding: .22rem .5rem; }
+    .cbar { padding: .5rem; border-radius: 10px; margin-bottom: .45rem; }
+    .pt { padding: .25rem .42rem; font-size: .62rem; }
+    .pt .n { font-size: .5rem; }
+    .vsw button { padding: .25rem .42rem; font-size: .62rem; }
+    .srch-w input { padding: .42rem .55rem .42rem 1.7rem; font-size: .75rem; }
+    .srch-w i { left: .55rem; font-size: .68rem; }
+    .lp { font-size: .62rem; padding: .25rem .45rem; }
+    .nbtn { font-size: .62rem; padding: .25rem .5rem; }
+    .dtog { display: flex; }
+    .dbody:not(.show) { display: none; }
+    .dsec { margin-top: .3rem; padding-top: .3rem; }
+    .dp { font-size: .62rem; padding: .22rem .4rem; }
+    .di { font-size: .64rem; max-width: 100px; padding: .22rem .35rem; }
+    .ssel { font-size: .62rem; padding: .22rem 1.2rem .22rem .4rem; }
+
+    /* Cards – photo stays big on mobile! */
+    .scard { margin-bottom: .4rem; border-radius: 10px; }
+    .sc-photo { width: 110px; min-height: 110px; }
+    .sc-ph-empty { font-size: 2.2rem; }
+    .sc-info { padding: .5rem .55rem; }
+    .si-name { font-size: .82rem; }
+    .si-owner { font-size: .62rem; }
+    .si-type { font-size: .48rem; }
+    .si-meta { font-size: .62rem; gap: .1rem .35rem; margin-top: .25rem; }
+    .si-meta i { font-size: .52rem; }
+    .si-pend { gap: .15rem; margin-top: .22rem; }
+    .si-pt { font-size: .52rem; padding: .08rem .3rem; }
+    .si-out { font-size: .48rem; padding: .1rem .3rem; margin-top: .15rem; }
+    .si-out .l i { font-size: .4rem; }
+    .si-out .a { font-size: .48rem; font-weight: 600; }
+    .sc-act { padding: .35rem .5rem; gap: .2rem; }
+    .sc-act .btn { font-size: .62rem; padding: .25rem .45rem; min-height: 28px; }
+    .sc-new { font-size: .45rem; padding: .1rem .32rem; }
+    .sc-lv { font-size: .45rem; padding: .1rem .32rem; }
+    .fab { display: flex; bottom: 66px; right: 12px; width: 46px; height: 46px; font-size: 1rem; }
+
+    .leaflet-popup-content { width: 220px !important; }
+    .mp-h { padding: .55rem .7rem; }
+    .mp-nm { font-size: .78rem; }
+    .mp-bd { padding: .45rem .7rem; font-size: .66rem; }
+}
+
+@media (max-width: 400px) {
+    .container-fluid { padding-left: .2rem; padding-right: .2rem; }
+    .hdr { padding: .5rem .7rem; }
+    .hdr-t { font-size: .95rem; }
+    .sstrip { gap: .2rem; }
+    .sc { padding: .3rem .4rem; }
+    .sc-v { font-size: .72rem; }
+    .sc-i { width: 22px; height: 22px; font-size: .55rem; }
+    .cbar { padding: .4rem; }
+    .pt { font-size: .58rem; padding: .2rem .35rem; }
+    .sc-photo { width: 95px; min-height: 95px; }
+    .sc-ph-empty { font-size: 1.8rem; }
+    .sc-info { padding: .4rem .45rem; }
+    .si-name { font-size: .75rem; }
+    .si-meta { font-size: .58rem; }
+    .si-out { font-size: .58rem; }
+    .sc-act .btn { font-size: .58rem; padding: .2rem .38rem; min-height: 26px; }
+    .ssel { font-size: .58rem; }
+    .dp { font-size: .58rem; }
+}
+
+/* ===== DESKTOP ENHANCEMENTS ===== */
+
+/* Tablet+ (769px+): 2-column card grid, wider layout */
+@media (min-width: 769px) {
+    .shop-container { max-width: 1100px; padding-top: 1rem !important; }
+    .hdr { padding: 1.1rem 1.5rem; border-radius: 16px; margin-bottom: .85rem; }
+    .hdr-t { font-size: 1.4rem; }
+    .hdr-s { font-size: .8rem; }
+    .hdr-r .btn { padding: .45rem 1rem; font-size: .78rem; border-radius: 10px; }
+
+    /* Stats row: spread evenly, no scroll */
+    .sstrip { overflow: visible; gap: .55rem; margin-bottom: .85rem; }
+    .sc { flex: 1; min-width: 0; padding: .6rem .85rem; border-radius: 12px; gap: .55rem; }
+    .sc-i { width: 34px; height: 34px; border-radius: 8px; font-size: .75rem; }
+    .sc-v { font-size: 1.1rem; }
+    .sc-l { font-size: .62rem; letter-spacing: .4px; }
+
+    /* Alerts wrap */
+    .alstrip { flex-wrap: wrap; overflow: visible; gap: .4rem; margin-bottom: .85rem; }
+    .ach { font-size: .72rem; padding: .35rem .65rem; }
+
+    /* Controls */
+    .cbar { padding: .85rem; border-radius: 14px; margin-bottom: .85rem; }
+    .cb-row1 { margin-bottom: .6rem; }
+    .pt { padding: .38rem .7rem; font-size: .75rem; }
+    .pt .n { font-size: .6rem; padding: .1rem .35rem; }
+    .vsw button { padding: .38rem .7rem; font-size: .75rem; }
+    .srch-w input { padding: .55rem .75rem .55rem 2.2rem; font-size: .85rem; border-radius: 10px; }
+    .srch-w i { left: .75rem; font-size: .8rem; }
+    .lp { font-size: .72rem; padding: .35rem .6rem; }
+    .nbtn { font-size: .72rem; padding: .35rem .7rem; }
+    .dp { font-size: .72rem; padding: .35rem .65rem; }
+    .di { font-size: .78rem; padding: .35rem .55rem; max-width: 140px; }
+    .ssel { font-size: .72rem; padding: .35rem 1.6rem .35rem .6rem; }
+    .csbar { margin-bottom: .6rem; }
+    .csbar-c { font-size: .85rem; }
+
+    /* Map taller */
+    #map { height: 520px; }
+
+    /* CARD GRID: 2 columns */
+    #shopList {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .65rem;
+    }
+    .scard { margin-bottom: 0; border-radius: 14px; }
+    .sc-bar { height: 3.5px; }
+    .sc-main { display: flex; flex-direction: row; flex: 1; }
+    .sc-photo { width: 150px; min-height: 0; height: auto; align-self: stretch; }
+    .sc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sc-ph-empty { font-size: 2.8rem; min-height: 130px; }
+    .sc-info { padding: .7rem .85rem; justify-content: flex-start; }
+    .si-name { font-size: .92rem; }
+    .si-owner { font-size: .72rem; }
+    .si-type { font-size: .55rem; margin-top: .3rem; }
+    .si-meta { font-size: .72rem; gap: .15rem .55rem; margin-top: .4rem; }
+    .si-meta i { font-size: .62rem; }
+    .si-pend { gap: .25rem; margin-top: .35rem; }
+    .si-pt { font-size: .62rem; padding: .12rem .4rem; }
+    .si-out { font-size: .62rem; padding: .15rem .45rem; margin-top: .25rem; }
+    .si-out .a { font-size: .62rem; }
+    .si-cr { margin-top: .3rem; }
+    .si-cr-info { font-size: .62rem; }
+    .sc-act { padding: .5rem .7rem; gap: .3rem; }
+    .sc-act .btn { font-size: .72rem; padding: .35rem .65rem; min-height: 34px; border-radius: 8px; }
+
+    .sc-new { font-size: .55rem; padding: .15rem .45rem; }
+    .sc-lv { font-size: .55rem; padding: .15rem .42rem; }
+    .sc-dist { font-size: .62rem; }
+
+    /* Popup wider */
+    .leaflet-popup-content { width: 290px !important; }
+
+    /* Empty state bigger */
+    .empty { padding: 3.5rem 2rem; grid-column: 1 / -1; }
+    .empty i { font-size: 3rem; }
+    .empty h5 { font-size: 1.1rem; }
+    .empty p { font-size: .9rem; }
+
+    /* FAB hidden on desktop, header Add button visible */
+    .fab { display: none !important; }
+}
+
+/* Large desktop (1200px+): 3-column grid, even wider */
+@media (min-width: 1200px) {
+    .shop-container { max-width: 1440px; padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+    .hdr { padding: 1.2rem 1.8rem; }
+    .hdr-t { font-size: 1.55rem; }
+    .hdr-s { font-size: .85rem; }
+    .hdr-r .btn { padding: .5rem 1.15rem; font-size: .82rem; }
+
+    .sstrip { gap: .65rem; }
+    .sc { padding: .7rem 1rem; border-radius: 13px; }
+    .sc-i { width: 38px; height: 38px; font-size: .8rem; }
+    .sc-v { font-size: 1.2rem; }
+    .sc-l { font-size: .65rem; }
+
+    .cbar { padding: 1rem 1.1rem; border-radius: 16px; }
+    .pt { padding: .42rem .85rem; font-size: .78rem; }
+    .vsw button { padding: .42rem .85rem; font-size: .78rem; }
+    .srch-w input { padding: .6rem .85rem .6rem 2.4rem; font-size: .88rem; }
+    .ssel { font-size: .75rem; }
+    .csbar-c { font-size: .9rem; }
+
+    #map { height: 600px; }
+
+    /* 3-column grid */
+    #shopList {
+        grid-template-columns: repeat(3, 1fr);
+        gap: .75rem;
+    }
+    .scard { border-radius: 16px; }
+
+    /* Card layout: stack photo on top for 3-col */
+    .sc-main { flex-direction: column; }
+    .sc-photo { width: 100%; height: 150px; min-height: 0; max-height: 150px; flex-shrink: 0; }
+    .sc-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .sc-ph-empty { min-height: 150px; font-size: 2.8rem; }
+    .sc-info { padding: .75rem .9rem; flex: 1; justify-content: flex-start; }
+    .si-name { font-size: .95rem; -webkit-line-clamp: 1; }
+    .si-owner { font-size: .74rem; }
+    .si-type { font-size: .56rem; }
+    .si-meta { font-size: .72rem; gap: .12rem .4rem; }
+    .si-meta i { font-size: .6rem; }
+    .si-pend { gap: .25rem; }
+    .si-pt { font-size: .62rem; }
+    .si-out { font-size: .62rem; padding: .12rem .4rem; }
+    .si-out .a { font-size: .62rem; }
+    .si-cr-info { font-size: .6rem; }
+    .sc-act { padding: .45rem .7rem; gap: .3rem; }
+    .sc-act .btn { font-size: .72rem; padding: .35rem .65rem; min-height: 34px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid shop-container" style="padding-top:.65rem;">
+
+    <!-- HEADER -->
+    <div class="hdr">
+        <div class="hdr-l">
+            <h1 class="hdr-t"><i class="fas fa-store me-2"></i>My Shops</h1>
+            <p class="hdr-s">{{ total_all_shops }} shop{{ total_all_shops|pluralize }}{% if new_shops_today %} · <strong>{{ new_shops_today }} new today</strong>{% endif %}{% if is_date_filtered %} · <i class="fas fa-filter" style="font-size:.6rem"></i> {{ total_shops }} filtered{% endif %}</p>
+        </div>
+        <div class="hdr-r">
+            <a href="{% url 'shops:map' %}" class="btn"><i class="fas fa-globe me-1"></i>Map</a>
+            <a href="{% url 'shops:add' %}" class="btn btn-w btn-add-desktop"><i class="fas fa-plus me-1"></i>Add</a>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="sstrip">
+        <div class="sc">
+            <div class="sc-i bl"><i class="fas fa-store"></i></div>
+            <div><div class="sc-v">{{ total_shops }}</div><div class="sc-l">{% if is_date_filtered %}Filtered{% else %}Shops{% endif %}</div></div>
+        </div>
+        <div class="sc">
+            <div class="sc-i gn"><i class="fas fa-star"></i></div>
+            <div><div class="sc-v" style="color:var(--emerald)">{{ new_shops_7d }}</div><div class="sc-l">New 7d</div></div>
+        </div>
+        <div class="sc">
+            <div class="sc-i am"><i class="fas fa-clock"></i></div>
+            <div><div class="sc-v" style="color:var(--amber)">{{ total_all_pending }}</div><div class="sc-l">Pending</div></div>
+        </div>
+        <div class="sc">
+            <div class="sc-i rs"><i class="fas fa-receipt"></i></div>
+            <div><div class="sc-v" style="color:var(--rose)">{{ grand_outstanding|floatformat:0|intcomma }}</div><div class="sc-l">Outstanding</div></div>
+        </div>
+    </div>
+
+    <!-- ALERTS -->
+    {% if shops_with_pending or shops_no_visit_30d or shops_need_photo or shops_over_credit %}
+    <div class="alstrip">
+        {% if shops_with_pending %}<span class="ach w"><i class="fas fa-exclamation-triangle"></i>{{ shops_with_pending }} with pending</span>{% endif %}
+        {% if shops_no_visit_30d %}<span class="ach d"><i class="fas fa-calendar-times"></i>{{ shops_no_visit_30d }} not visited 30d+</span>{% endif %}
+        {% if shops_need_photo %}<span class="ach i"><i class="fas fa-camera"></i>{{ shops_need_photo }} need photo</span>{% endif %}
+        {% if shops_over_credit %}<span class="ach c"><i class="fas fa-credit-card"></i>{{ shops_over_credit }} near limit</span>{% endif %}
+    </div>
+    {% endif %}
+
+    <!-- CONTROLS -->
+    <div class="cbar">
+        {% if not user.is_sales_rep %}
+        <div class="d-flex gap-2 mb-2">
+            <a href="?status=active" class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                <i class="fas fa-check-circle me-1"></i>Active
+            </a>
+            <a href="?status=inactive" class="btn btn-sm {% if status_filter == 'inactive' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+                <i class="fas fa-ban me-1"></i>Inactive
+            </a>
+            <a href="?status=all" class="btn btn-sm {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+                All
+            </a>
+        </div>
+        {% endif %}
+        <div class="cb-row1">
+            <div class="ptabs" id="filterTabs">
+                <button class="pt on" onclick="doFilter('all',this)">All <span class="n">{{ total_shops }}</span></button>
+                {% if new_shops_7d %}<button class="pt" onclick="doFilter('new',this)"><i class="fas fa-sparkles"></i>New <span class="n">{{ new_shops_7d }}</span></button>{% endif %}
+                {% if level_3_count %}<button class="pt" onclick="doFilter('level-3',this)">Full <span class="n">{{ level_3_count }}</span></button>{% endif %}
+                {% if level_2_count %}<button class="pt" onclick="doFilter('level-2',this)">Std <span class="n">{{ level_2_count }}</span></button>{% endif %}
+                {% if level_1_count %}<button class="pt" onclick="doFilter('level-1',this)">View <span class="n">{{ level_1_count }}</span></button>{% endif %}
+                {% if shops_with_pending %}<button class="pt" onclick="doFilter('pending',this)"><i class="fas fa-bell"></i>Pend <span class="n">{{ shops_with_pending }}</span></button>{% endif %}
+            </div>
+            <div class="vsw">
+                <button id="listViewBtn" class="on" onclick="switchView('list')"><i class="fas fa-list me-1"></i>List</button>
+                <button id="mapViewBtn" onclick="switchView('map')"><i class="fas fa-map me-1"></i>Map</button>
+            </div>
+        </div>
+        <div class="cb-srch">
+            <div class="srch-w"><i class="fas fa-search"></i><input type="text" id="searchShop" placeholder="Search name, owner, city..."></div>
+            <span class="lp" id="locationStatus"><span class="ldot"></span><span>Off</span></span>
+            <button class="btn btn-sm btn-outline-primary nbtn" id="nearbyBtn" onclick="toggleNearby()"><i class="fas fa-location-arrow me-1"></i>Nearby</button>
+        </div>
+        <div class="nctrl" id="nearbyControls">
+            <label class="form-label small mb-1" style="font-weight:600;">Radius: <strong id="radiusValue">5</strong> km</label>
+            <input type="range" class="form-range" id="radiusSlider" min="1" max="20" value="5" step="0.5">
+        </div>
+        <div class="dsec">
+            <button class="dtog{% if is_date_filtered %} on{% endif %}" id="dateToggleBtn" onclick="toggleDateFilter()">
+                <i class="fas fa-calendar-alt" style="color:var(--brand)"></i>
+                <span>Reg. Date{% if is_date_filtered %}: <strong>{% if date_preset == 'today' %}Today{% elif date_preset == '7d' %}7d{% elif date_preset == '30d' %}30d{% elif date_preset == '90d' %}90d{% else %}Custom{% endif %}</strong>{% endif %}</span>
+                <i class="fas fa-chevron-down chev"></i>
+            </button>
+            <div class="dbody" id="dateSectionBody">
+                {% if is_date_filtered %}
+                <div class="d-flex align-items-center gap-2 mb-2 mt-2">
+                    <span class="dabg">
+                        <i class="fas fa-filter"></i>
+                        {% if date_preset == 'today' %}Today{% elif date_preset == '7d' %}Last 7 Days{% elif date_preset == '30d' %}Last 30 Days{% elif date_preset == '90d' %}Last 90 Days{% else %}{{ date_from }} — {{ date_to }}{% endif %}
+                        ({{ total_shops }})
+                        <a href="{% url 'shops:list' %}" class="x">&times;</a>
+                    </span>
+                </div>
+                {% endif %}
+                <form method="get" action="{% url 'shops:list' %}" class="dbar" style="margin-top:.35rem;">
+                    <button type="submit" name="date_preset" value="today" class="dp{% if date_preset == 'today' %} on{% endif %}">Today{% if new_shops_today %} <span style="background:var(--emerald);color:#fff;border-radius:4px;padding:.06rem .25rem;font-size:.55rem;margin-left:.15rem;">{{ new_shops_today }}</span>{% endif %}</button>
+                    <button type="submit" name="date_preset" value="7d" class="dp{% if date_preset == '7d' %} on{% endif %}">7d</button>
+                    <button type="submit" name="date_preset" value="30d" class="dp{% if date_preset == '30d' %} on{% endif %}">30d</button>
+                    <button type="submit" name="date_preset" value="90d" class="dp{% if date_preset == '90d' %} on{% endif %}">90d</button>
+                    <span style="color:var(--s300);font-size:.7rem;">|</span>
+                    <input type="date" name="date_from" value="{{ date_from }}" class="di" title="From">
+                    <span style="font-size:.65rem;color:var(--s400)">to</span>
+                    <input type="date" name="date_to" value="{{ date_to }}" class="di" title="To">
+                    <button type="submit" class="dp" style="background:var(--brand);color:#fff;border-color:var(--brand);"><i class="fas fa-search"></i></button>
+                    {% if is_date_filtered %}<a href="{% url 'shops:list' %}" class="dp" style="color:var(--rose);border-color:var(--rose);"><i class="fas fa-times"></i></a>{% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- COUNT + SORT -->
+    <div class="csbar">
+        <span class="csbar-c" id="shopCount">{{ total_shops }} shop{{ total_shops|pluralize }}</span>
+        <select class="ssel" id="sortSelect" onchange="sortShops(this.value)">
+            <option value="default">Sort: Default</option>
+            <option value="name-asc">Name A→Z</option>
+            <option value="name-desc">Name Z→A</option>
+            <option value="visit-recent">Visit: Recent</option>
+            <option value="visit-oldest">Visit: Longest</option>
+            <option value="never-visited">Never Visited</option>
+            <option value="outstanding-desc">Outstanding ↓</option>
+            <option value="created-newest">Newest First</option>
+            <option value="created-oldest">Oldest First</option>
+        </select>
+    </div>
+
+    <!-- MAP VIEW -->
+    <div id="mapView" style="display:none;">
+        <div class="mwrap">
+            <div id="map"></div>
+            <div class="msb" id="mapStatsBar"></div>
+            <div class="mtb">
+                <button class="mtbb" onclick="fitAll()" title="Fit all"><i class="fas fa-expand-arrows-alt"></i></button>
+                <button class="mtbb" onclick="centerMe()" title="My location"><i class="fas fa-crosshairs"></i></button>
+                <button class="mtbb" onclick="togLeg()" title="Legend"><i class="fas fa-layer-group"></i></button>
+            </div>
+            <div class="mlg" id="mapLegend">
+                <div class="lgtg" onclick="togLeg()"><span><i class="fas fa-layer-group me-1"></i>Legend</span><i class="fas fa-chevron-down"></i></div>
+                <div class="lgbd">
+                    <div class="lgi"><span class="lgd lv3"></span>Full Access</div>
+                    <div class="lgi"><span class="lgd lv2"></span>Standard</div>
+                    <div class="lgi"><span class="lgd lv1"></span>View Only</div>
+                    <div class="lgi"><span class="lgr"></span>Has Pending</div>
+                    <div class="lgi"><span class="lgd usr"></span>You</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="listView">
+        <div id="shopList">
+            {% for shop in shops %}
+            <div class="scard shop-item"
+                 data-shop-id="{{ shop.id }}" data-lat="{{ shop.latitude }}" data-lon="{{ shop.longitude }}"
+                 data-level="{{ shop.user_access_level }}" data-pending="{{ shop.total_pending }}"
+                 data-new="{% if shop.is_new %}1{% else %}0{% endif %}" data-created="{{ shop.created_at|date:'Y-m-d' }}"
+                 data-name="{{ shop.shop_name }}" data-code="{{ shop.shop_code }}" data-owner="{{ shop.owner_name }}"
+                 data-type="{{ shop.get_shop_type_display }}" data-phone="{{ shop.phone_number }}"
+                 data-city="{{ shop.city }}{% if shop.district %}, {{ shop.district }}{% endif %}"
+                 data-outstanding="{{ shop.total_outstanding }}"
+                 data-visit-days="{{ shop.days_since_visit|default_if_none:'never' }}"
+                 data-pending-bills="{{ shop.pending_bills_count }}" data-pending-payments="{{ shop.pending_payments_count }}"
+                 data-pending-returns="{{ shop.pending_returns_count }}"
+                 {% if shop.user_access_level >= 2 %}onclick="window.location.href='{% url 'shops:detail' shop.pk %}'"{% endif %}>
+
+                <div class="sc-bar {% if shop.total_pending > 0 %}pend{% elif shop.user_access_level == 3 %}lv3{% elif shop.user_access_level == 2 %}lv2{% else %}lv1{% endif %}"></div>
+
+                <div class="sc-main">
+                    <!-- BIG PHOTO -->
+                    <div class="sc-photo">
+                        {% if shop.shop_photo %}
+                        <img src="{{ shop.shop_photo.url }}" alt="{{ shop.shop_name }}" loading="lazy">
+                        {% else %}
+                        <div class="sc-ph-empty">{{ shop.shop_name|first|upper }}</div>
+                        {% endif %}
+                        {% if shop.is_new %}<span class="sc-new"><i class="fas fa-star" style="font-size:.4rem;margin-right:.1rem;"></i>NEW</span>{% endif %}
+                        <span class="sc-lv {% if shop.user_access_level == 3 %}lv3{% elif shop.user_access_level == 2 %}lv2{% else %}lv1{% endif %}">{% if shop.user_access_level == 3 %}Full{% elif shop.user_access_level == 2 %}Std{% else %}View{% endif %}</span>
+                        <span class="sc-dist" data-distance></span>
+                    </div>
+
+                    <!-- INFO -->
+                    <div class="sc-info">
+                        <h6 class="si-name">{{ shop.shop_name }}</h6>
+                        <div class="si-owner">
+                            <span><i class="fas fa-user" style="font-size:.55rem;color:var(--s400);margin-right:.1rem;"></i>{{ shop.owner_name }}</span>
+                            <span class="sep">·</span>
+                            <span style="color:var(--s400);">{{ shop.shop_code }}</span>
+                        </div>
+                        <span class="si-type">{{ shop.get_shop_type_display }}</span>
+
+                        <div class="si-meta">
+                            <span><i class="fas fa-phone" style="color:var(--brand)"></i><a href="tel:{{ shop.phone_number }}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">{{ shop.phone_number }}</a></span>
+                            <span><i class="fas fa-map-marker-alt" style="color:var(--brand)"></i>{{ shop.city }}{% if shop.district %}, {{ shop.district }}{% endif %}</span>
+                            <span{% if is_date_filtered %} class="si-dhl"{% endif %}>
+                                <i class="fas fa-calendar-{% if is_date_filtered %}check{% else %}plus{% endif %}" style="color:{% if is_date_filtered %}var(--amber){% elif shop.is_new %}var(--emerald){% else %}var(--s400){% endif %}"></i>
+                                {% if is_date_filtered %}Reg: {% endif %}{{ shop.created_at|date:'M d, Y' }}
+                            </span>
+                            {% if shop.last_visit_date %}
+                            <span><i class="fas fa-walking" style="color:{% if shop.days_since_visit > 30 %}var(--rose){% elif shop.days_since_visit > 14 %}var(--amber){% else %}var(--emerald){% endif %}"></i>{% if shop.days_since_visit == 0 %}Today{% elif shop.days_since_visit == 1 %}Yesterday{% else %}{{ shop.days_since_visit }}d ago{% endif %}</span>
+                            {% else %}
+                            <span style="color:var(--s400);"><i class="fas fa-clock"></i>Never visited</span>
+                            {% endif %}
+                        </div>
+
+                        {% if shop.total_pending > 0 or shop.needs_photo %}
+                        <div class="si-pend">
+                            {% if shop.pending_bills_count > 0 %}<span class="si-pt bills"><i class="fas fa-file-invoice-dollar"></i>{{ shop.pending_bills_count }} bill{{ shop.pending_bills_count|pluralize }}</span>{% endif %}
+                            {% if shop.pending_payments_count > 0 %}<span class="si-pt pays"><i class="fas fa-hourglass-half"></i>{{ shop.pending_payments_count }} verify</span>{% endif %}
+                            {% if shop.pending_returns_count > 0 %}<span class="si-pt rets"><i class="fas fa-undo"></i>{{ shop.pending_returns_count }} return{{ shop.pending_returns_count|pluralize }}</span>{% endif %}
+                            {% if shop.needs_photo %}<span class="si-pt photo"><i class="fas fa-camera"></i>Photo</span>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if shop.total_outstanding > 0 %}
+                        <div class="si-out">
+                            <span class="l"><i class="fas fa-exclamation-circle me-1"></i>Outstanding{% if shop.pending_payment_amount > 0 %} ({{ shop.pending_payment_amount|floatformat:0|intcomma }} pend.){% endif %}</span>
+                            <span class="a">Rs. {{ shop.total_outstanding|floatformat:0|intcomma }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if shop.credit_limit and shop.credit_limit > 0 %}
+                        <div class="si-cr">
+                            <div class="si-cr-info">
+                                <span>Credit: Rs. {{ shop.total_outstanding|floatformat:0|intcomma }}/{{ shop.credit_limit|floatformat:0|intcomma }}</span>
+                                <span style="font-weight:700;color:{% if shop.credit_usage_pct >= 100 %}var(--rose){% elif shop.credit_usage_pct >= 80 %}var(--rose){% elif shop.credit_usage_pct >= 50 %}var(--amber){% else %}var(--emerald){% endif %}">{{ shop.credit_usage_pct }}%</span>
+                            </div>
+                            <div class="si-cr-bar"><div class="si-cr-fill {% if shop.credit_usage_pct >= 80 %}r{% elif shop.credit_usage_pct >= 50 %}a{% else %}g{% endif %}" style="width:{{ shop.credit_bar_pct }}%"></div></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="sc-act">
+                    {% if shop.user_access_level >= 2 %}
+                    <a href="{% url 'sales:create' %}?shop={{ shop.id }}" onclick="event.stopPropagation();" class="btn btn-p flex-grow-1"><i class="fas fa-file-invoice"></i>New Bill</a>
+                    <a href="{% url 'shops:detail' shop.pk %}" onclick="event.stopPropagation();" class="btn btn-o"><i class="fas fa-eye"></i></a>
+                    {% else %}
+                    <span class="btn btn-lk flex-grow-1"><i class="fas fa-lock"></i>View Only</span>
+                    {% endif %}
+                    <a href="tel:{{ shop.phone_number }}" onclick="event.stopPropagation();" class="btn btn-o"><i class="fas fa-phone"></i></a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty">
+                <i class="fas fa-store-alt"></i>
+                <h5>No shops found</h5>
+                <p>Add your first shop to get started</p>
+                <a href="{% url 'shops:add' %}" class="btn btn-primary" style="border-radius:10px;font-weight:600;padding:.5rem 1.2rem;"><i class="fas fa-plus me-2"></i>Add Shop</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <a href="{% url 'shops:add' %}" class="fab d-md-none"><i class="fas fa-plus"></i></a>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map=null, markers=[], userLocation=null, nearbyMode=false, currentRadius=5, currentFilter='all', currentSort='default', allMapBounds=[];
+const mColors={'3':'#10b981','2':'#0078D7','1':'#94a3b8'};
+const lvL={'3':'Full','2':'Standard','1':'View'};
+const lvC={'3':'lv3','2':'lv2','1':'lv1'};
+
+document.addEventListener('DOMContentLoaded',function(){
+    requestLocationAccess();
+    if(window.innerWidth<=576){
+        const b=document.getElementById('dateSectionBody');
+        {% if is_date_filtered %}b.classList.add('show');document.getElementById('dateToggleBtn').classList.add('on');{% else %}b.classList.remove('show');{% endif %}
+    }
+});
+
+function requestLocationAccess(){
+    if(!navigator.geolocation)return;
+    navigator.geolocation.getCurrentPosition(
+        p=>{userLocation={lat:p.coords.latitude,lon:p.coords.longitude};updateLoc(true);startTracking();trackLoc(userLocation.lat,userLocation.lon,p.coords.accuracy);},
+        e=>updateLoc(false),{enableHighAccuracy:true,timeout:10000,maximumAge:0}
+    );
+}
+function startTracking(){
+    if(!navigator.geolocation)return;
+    navigator.geolocation.watchPosition(
+        p=>{userLocation={lat:p.coords.latitude,lon:p.coords.longitude};updateLoc(true);trackLoc(userLocation.lat,userLocation.lon,p.coords.accuracy);if(nearbyMode)loadNearby();},
+        e=>updateLoc(false),{enableHighAccuracy:true,maximumAge:30000,timeout:27000}
+    );
+}
+function updateLoc(on){
+    const el=document.getElementById('locationStatus'),dot=el.querySelector('.ldot'),txt=el.querySelector('span:last-child');
+    if(on){el.classList.add('on');dot.classList.add('on');txt.textContent='Live';}
+    else{el.classList.remove('on');dot.classList.remove('on');txt.textContent='Off';}
+}
+function trackLoc(lat,lon,acc){
+    fetch('/shops/api/track-location/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify({latitude:lat,longitude:lon,accuracy:acc})}).catch(e=>{});
+}
+
+function switchView(v){
+    if(v==='list'){document.getElementById('listView').style.display='block';document.getElementById('mapView').style.display='none';document.getElementById('listViewBtn').classList.add('on');document.getElementById('mapViewBtn').classList.remove('on');}
+    else{document.getElementById('listView').style.display='none';document.getElementById('mapView').style.display='block';document.getElementById('listViewBtn').classList.remove('on');document.getElementById('mapViewBtn').classList.add('on');if(!map)initMap();setTimeout(()=>map.invalidateSize(),100);loadMapShops();}
+}
+
+function initMap(){
+    map=L.map('map',{zoomControl:false}).setView([7.8731,80.7718],8);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
+}
+function mkIcon(lv,pend,nw){
+    const c=lvC[lv]||'lv1',pc=pend?' has-pending':'',nc=nw?' is-new':'';
+    return L.divIcon({className:'custom-marker-wrap',html:`<div class="map-marker ${c}${pc}${nc}"><i class="fas fa-store"></i></div>`,iconSize:[32,38],iconAnchor:[16,38],popupAnchor:[0,-40]});
+}
+function mkPopup(d){
+    const lc=lvC[d.level]||'lv1',ll=lvL[d.level]||'View';
+    const hp=(d.pb+d.pp+d.pr)>0,os=parseFloat(d.os)||0;
+    let ph='';
+    if(hp||os>0){ph='<div class="mp-dv"></div><div class="mp-pg">';if(d.pb>0)ph+=`<span class="mp-tg bills">${d.pb} Bill${d.pb>1?'s':''}</span>`;if(d.pp>0)ph+=`<span class="mp-tg payments">${d.pp} Pay</span>`;if(d.pr>0)ph+=`<span class="mp-tg returns">${d.pr} Ret</span>`;if(os>0)ph+=`<span class="mp-tg outstanding">Rs ${os.toLocaleString()}</span>`;ph+='</div>';}
+    let vh='';
+    if(d.vd==='never'||d.vd==='None')vh='<div class="mp-vs"><i class="fas fa-clock" style="color:var(--s400)"></i>Never visited</div>';
+    else{const dd=parseInt(d.vd),cl=dd>30?'var(--rose)':dd>14?'var(--amber)':'var(--emerald)',tx=dd===0?'Today':dd===1?'Yesterday':`${dd}d ago`;vh=`<div class="mp-vs"><i class="fas fa-walking" style="color:${cl}"></i>${tx}</div>`;}
+    const nwh=d.nw?' <span class="mp-tg new-tag">NEW</span>':'';
+    const cv=parseInt(d.level)>=2;
+    const bh=cv?`<div class="mp-ft"><a href="/shops/${d.id}/" class="mp-bt"><i class="fas fa-arrow-right me-1"></i>View</a></div>`:`<div class="mp-ft"><span class="mp-bt dis"><i class="fas fa-lock me-1"></i>View Only</span></div>`;
+    return `<div class="mp"><div class="mp-h"><div class="mp-hr"><span class="mp-nm">${d.nm}${nwh}</span><span class="mp-lv ${lc}">${ll}</span></div><div class="mp-cd">${d.cd} · ${d.tp}</div></div><div class="mp-bd"><div class="mp-rw"><i class="fas fa-user"></i>${d.ow}</div><div class="mp-rw"><i class="fas fa-phone"></i>${d.ph}</div><div class="mp-rw"><i class="fas fa-map-marker-alt"></i>${d.ct}</div>${vh}${ph}</div>${bh}</div>`;
+}
+function loadMapShops(){
+    markers.forEach(m=>map.removeLayer(m));markers=[];allMapBounds=[];
+    let cn={lv3:0,lv2:0,lv1:0,pn:0};
+    if(userLocation){
+        const ui=L.divIcon({className:'user-loc-marker',html:'<div style="position:relative"><div style="width:14px;height:14px;background:#ef4444;border:2.5px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(239,68,68,.25)"></div></div>',iconSize:[14,14],iconAnchor:[7,7]});
+        const um=L.marker([userLocation.lat,userLocation.lon],{icon:ui,zIndexOffset:1000}).addTo(map);
+        um.bindPopup('<div class="mp"><div class="mp-h" style="padding:.4rem .65rem"><span class="mp-nm" style="font-size:.75rem"><i class="fas fa-street-view me-1"></i>You</span></div></div>');
+        markers.push(um);allMapBounds.push([userLocation.lat,userLocation.lon]);
+        if(nearbyMode){const c=L.circle([userLocation.lat,userLocation.lon],{radius:currentRadius*1000,fillColor:'#0078D7',color:'#0078D7',weight:1.5,opacity:.35,fillOpacity:.06,dashArray:'6 4'}).addTo(map);markers.push(c);}
+    }
+    document.querySelectorAll('.shop-item').forEach(it=>{
+        if(it.style.display==='none')return;
+        const la=parseFloat(it.dataset.lat),lo=parseFloat(it.dataset.lon);if(!la||!lo)return;
+        const d={id:it.dataset.shopId,nm:it.dataset.name||'',cd:it.dataset.code||'',ow:it.dataset.owner||'',tp:it.dataset.type||'',ph:it.dataset.phone||'',ct:it.dataset.city||'',level:it.dataset.level||'1',os:it.dataset.outstanding||'0',vd:it.dataset.visitDays||'never',pb:parseInt(it.dataset.pendingBills)||0,pp:parseInt(it.dataset.pendingPayments)||0,pr:parseInt(it.dataset.pendingReturns)||0,nw:it.dataset.new==='1'};
+        const hp=(d.pb+d.pp+d.pr)>0;
+        const mk=L.marker([la,lo],{icon:mkIcon(d.level,hp,d.nw)}).addTo(map);
+        mk.bindPopup(mkPopup(d),{maxWidth:280,minWidth:240});
+        markers.push(mk);allMapBounds.push([la,lo]);
+        if(d.level==='3')cn.lv3++;else if(d.level==='2')cn.lv2++;else cn.lv1++;
+        if(hp)cn.pn++;
+    });
+    if(allMapBounds.length>0)map.fitBounds(allMapBounds,{padding:[50,50],maxZoom:14});
+    const bar=document.getElementById('mapStatsBar');
+    if(bar){let h='';const t=cn.lv3+cn.lv2+cn.lv1;h+=`<div class="msc"><i class="fas fa-store" style="font-size:.55rem;color:var(--brand)"></i>${t}</div>`;if(cn.lv3>0)h+=`<div class="msc"><span class="dt gn"></span>${cn.lv3}</div>`;if(cn.lv2>0)h+=`<div class="msc"><span class="dt bl"></span>${cn.lv2}</div>`;if(cn.lv1>0)h+=`<div class="msc"><span class="dt sl"></span>${cn.lv1}</div>`;if(cn.pn>0)h+=`<div class="msc"><span class="dt am"></span>${cn.pn}⚠</div>`;bar.innerHTML=h;}
+}
+function fitAll(){if(allMapBounds.length>0)map.fitBounds(allMapBounds,{padding:[50,50],maxZoom:14});}
+function centerMe(){if(userLocation)map.setView([userLocation.lat,userLocation.lon],14);else requestLocationAccess();}
+function togLeg(){document.getElementById('mapLegend').classList.toggle('col');}
+
+function doFilter(f,btn){
+    currentFilter=f;
+    document.querySelectorAll('.pt').forEach(t=>t.classList.remove('on'));btn.classList.add('on');
+    const items=document.querySelectorAll('.shop-item');let c=0;
+    items.forEach(it=>{
+        let s=true;
+        if(f==='level-1')s=it.dataset.level==='1';
+        else if(f==='level-2')s=it.dataset.level==='2';
+        else if(f==='level-3')s=it.dataset.level==='3';
+        else if(f==='pending')s=parseInt(it.dataset.pending)>0;
+        else if(f==='new')s=it.dataset.new==='1';
+        const q=document.getElementById('searchShop').value.toLowerCase();
+        if(q&&s)s=it.textContent.toLowerCase().includes(q);
+        it.style.display=s?'':'none';if(s)c++;
+    });
+    document.getElementById('shopCount').textContent=`${c} shop${c!==1?'s':''}`;
+    if(document.getElementById('mapView').style.display==='block')loadMapShops();
+}
+
+function sortShops(by){
+    currentSort=by;const con=document.getElementById('shopList');
+    const items=Array.from(con.querySelectorAll('.shop-item'));
+    items.sort((a,b)=>{
+        switch(by){
+            case 'name-asc':return(a.dataset.name||'').localeCompare(b.dataset.name||'');
+            case 'name-desc':return(b.dataset.name||'').localeCompare(a.dataset.name||'');
+            case 'visit-recent':{const da=a.dataset.visitDays==='never'?99999:parseInt(a.dataset.visitDays),db=b.dataset.visitDays==='never'?99999:parseInt(b.dataset.visitDays);return da-db;}
+            case 'visit-oldest':{const da=a.dataset.visitDays==='never'?-1:parseInt(a.dataset.visitDays),db=b.dataset.visitDays==='never'?-1:parseInt(b.dataset.visitDays);return db-da;}
+            case 'never-visited':{const aN=a.dataset.visitDays==='never'?0:1,bN=b.dataset.visitDays==='never'?0:1;if(aN!==bN)return aN-bN;return aN===0?(a.dataset.name||'').localeCompare(b.dataset.name||''):parseInt(b.dataset.visitDays)-parseInt(a.dataset.visitDays);}
+            case 'outstanding-desc':return(parseFloat(b.dataset.outstanding)||0)-(parseFloat(a.dataset.outstanding)||0);
+            case 'created-newest':return(b.dataset.created||'').localeCompare(a.dataset.created||'');
+            case 'created-oldest':return(a.dataset.created||'').localeCompare(b.dataset.created||'');
+            default:return 0;
+        }
+    });
+    items.forEach(it=>con.appendChild(it));
+    if(document.getElementById('mapView').style.display==='block')loadMapShops();
+}
+
+document.getElementById('searchShop').addEventListener('input',function(e){
+    const t=e.target.value.toLowerCase();const items=document.querySelectorAll('.shop-item');let c=0;
+    items.forEach(it=>{
+        let s=t===''||it.textContent.toLowerCase().includes(t);
+        if(s&&currentFilter!=='all'){
+            if(currentFilter==='level-1')s=it.dataset.level==='1';
+            else if(currentFilter==='level-2')s=it.dataset.level==='2';
+            else if(currentFilter==='level-3')s=it.dataset.level==='3';
+            else if(currentFilter==='pending')s=parseInt(it.dataset.pending)>0;
+            else if(currentFilter==='new')s=it.dataset.new==='1';
+        }
+        it.style.display=s?'':'none';if(s)c++;
+    });
+    document.getElementById('shopCount').textContent=`${c} shop${c!==1?'s':''}`;
+    if(document.getElementById('mapView').style.display==='block')loadMapShops();
+});
+
+function toggleNearby(){
+    if(!userLocation){
+        if(!navigator.geolocation){alert('Geolocation not supported');return;}
+        const btn=document.getElementById('nearbyBtn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>...';
+        navigator.geolocation.getCurrentPosition(p=>{userLocation={lat:p.coords.latitude,lon:p.coords.longitude};updateLoc(true);btn.disabled=false;btn.innerHTML='<i class="fas fa-location-arrow me-1"></i>Nearby';toggleNearby();},e=>{btn.disabled=false;btn.innerHTML='<i class="fas fa-location-arrow me-1"></i>Nearby';alert('Enable location');},{enableHighAccuracy:true,timeout:10000,maximumAge:0});
+        return;
+    }
+    nearbyMode=!nearbyMode;
+    const btn=document.getElementById('nearbyBtn'),ctrl=document.getElementById('nearbyControls');
+    if(nearbyMode){btn.classList.remove('btn-outline-primary');btn.classList.add('btn-primary');btn.innerHTML='<i class="fas fa-times me-1"></i>Clear';ctrl.style.display='block';loadNearby();}
+    else{btn.classList.remove('btn-primary');btn.classList.add('btn-outline-primary');btn.innerHTML='<i class="fas fa-location-arrow me-1"></i>Nearby';ctrl.style.display='none';showAll();}
+}
+function loadNearby(){
+    if(!userLocation)return;
+    fetch(`/shops/api/nearby/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=${currentRadius}`)
+    .then(r=>r.json()).then(d=>{if(d.success)applyNearby(d.shops);}).catch(e=>{});
+}
+function applyNearby(ns){
+    const items=document.querySelectorAll('.shop-item');
+    items.forEach(it=>{
+        const sid=parseInt(it.dataset.shopId),sh=ns.find(s=>s.id===sid);
+        if(sh){it.style.display='';it.dataset.distance=sh.distance_km;const b=it.querySelector('[data-distance]');b.textContent=`${sh.distance_km.toFixed(1)} km`;b.style.display='inline-block';}
+        else{it.style.display='none';}
+    });
+    const con=document.getElementById('shopList'),vis=Array.from(items).filter(i=>i.style.display!=='none');
+    vis.sort((a,b)=>parseFloat(a.dataset.distance)-parseFloat(b.dataset.distance));
+    vis.forEach(i=>con.appendChild(i));
+    document.getElementById('shopCount').textContent=`${vis.length} nearby shop${vis.length!==1?'s':''}`;
+    if(document.getElementById('mapView').style.display==='block')loadMapShops();
+}
+function showAll(){
+    document.querySelectorAll('.shop-item').forEach(it=>{it.style.display='';const b=it.querySelector('[data-distance]');if(b)b.style.display='none';});
+    document.getElementById('shopCount').textContent='{{ total_shops }} shop{{ total_shops|pluralize }}';
+    if(document.getElementById('mapView').style.display==='block')loadMapShops();
+}
+document.getElementById('radiusSlider').addEventListener('input',function(e){currentRadius=parseFloat(e.target.value);document.getElementById('radiusValue').textContent=currentRadius;if(nearbyMode)loadNearby();});
+
+function toggleDateFilter(){const b=document.getElementById('dateSectionBody'),btn=document.getElementById('dateToggleBtn');b.classList.toggle('show');btn.classList.toggle('on');}
+</script>
+{% endblock %}

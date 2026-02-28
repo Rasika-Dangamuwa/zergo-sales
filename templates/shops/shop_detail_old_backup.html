@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ shop.shop_name }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .shop-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .shop-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+    
+    .shop-header-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .shop-photo-large {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .shop-photo-placeholder-large {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 3rem;
+        font-weight: bold;
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s;
+    }
+    
+    .info-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .section-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .section-title i {
+        color: #667eea;
+        font-size: 1.1rem;
+    }
+    
+    .info-row {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .info-icon i {
+        color: #667eea;
+        font-size: 1.1rem;
+    }
+    
+    .info-content {
+        flex-grow: 1;
+    }
+    
+    .info-label {
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        color: #1e293b;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .badge-type {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .balance-card {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #fbbf24;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .balance-card.success {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-color: #34d399;
+    }
+    
+    .action-btn {
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: block;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    .action-btn i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    #detailMap {
+        height: 350px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 1rem;
+    }
+    
+    .stat-box {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-top: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+        .shop-header {
+            padding: 1.5rem;
+        }
+        
+        .shop-photo-large,
+        .shop-photo-placeholder-large {
+            width: 90px;
+            height: 90px;
+            font-size: 2rem;
+        }
+        
+        .info-card {
+            padding: 1rem;
+        }
+        
+        #detailMap {
+            height: 280px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <a href="{% url 'shops:list' %}" class="btn btn-link text-primary p-0">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+        <a href="{% url 'shops:edit' shop.pk %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-edit me-1"></i>Edit
+        </a>
+    </div>
+    
+    <!-- Shop Header Card -->
+    <div class="shop-header">
+        <div class="shop-header-content">
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <!-- Shop Photo -->
+                {% if shop.shop_photo %}
+                    <img src="{{ shop.shop_photo.url }}" alt="{{ shop.shop_name }}" class="shop-photo-large">
+                {% else %}
+                    <div class="shop-photo-placeholder-large">
+                        {{ shop.shop_name|first|upper }}
+                    </div>
+                {% endif %}
+                
+                <!-- Shop Info -->
+                <div class="flex-grow-1">
+                    <h3 class="fw-bold mb-2">{{ shop.shop_name }}</h3>
+                    <p class="mb-2 opacity-90">
+                        <i class="fas fa-user me-2"></i>{{ shop.owner_name }}
+                    </p>
+                    <span class="badge-type">{{ shop.get_shop_type_display }}</span>
+                </div>
+            </div>
+            
+            <div class="text-white-50 small">
+                <i class="fas fa-barcode me-2"></i>{{ shop.shop_code }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Balance Alert -->
+    {% if shop.current_balance > 0 %}
+    <div class="balance-card">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                <strong class="text-warning">Outstanding Balance</strong>
+            </div>
+            <div class="text-end">
+                <h3 class="mb-0 fw-bold text-warning">Rs. {{ shop.current_balance|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="balance-card success">
+        <div class="text-center">
+            <i class="fas fa-check-circle me-2 text-success"></i>
+            <strong class="text-success">No Outstanding Balance</strong>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Actions -->
+    <div class="row g-2 mb-3">
+        <div class="col-6">
+            <a href="{% url 'sales:create' %}?shop={{ shop.id }}" class="btn btn-primary action-btn w-100">
+                <i class="fas fa-file-invoice"></i>
+                <span class="d-block small">Create Bill</span>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="tel:{{ shop.phone_number }}" class="btn btn-success action-btn w-100">
+                <i class="fas fa-phone"></i>
+                <span class="d-block small">Call Shop</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Contact Information -->
+    <div class="info-card">
+        <div class="section-title">
+            <i class="fas fa-address-book"></i>
+            <span>Contact Information</span>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-phone"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">Primary Phone</div>
+                <div class="info-value">
+                    <a href="tel:{{ shop.phone_number }}" class="text-decoration-none text-primary">
+                        {{ shop.phone_number }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        {% if shop.alternate_phone %}
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-phone-alt"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">Alternate Phone</div>
+                <div class="info-value">
+                    <a href="tel:{{ shop.alternate_phone }}" class="text-decoration-none text-primary">
+                        {{ shop.alternate_phone }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if shop.email %}
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">Email Address</div>
+                <div class="info-value">
+                    <a href="mailto:{{ shop.email }}" class="text-decoration-none text-primary">
+                        {{ shop.email }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Address & Location -->
+    <div class="info-card">
+        <div class="section-title">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Address & Location</span>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">Street Address</div>
+                <div class="info-value">
+                    {{ shop.address_line1 }}
+                    {% if shop.address_line2 %}<br>{{ shop.address_line2 }}{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-city"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">City & District</div>
+                <div class="info-value">{{ shop.city }}, {{ shop.district }}</div>
+            </div>
+        </div>
+        
+        {% if shop.postal_code %}
+        <div class="info-row">
+            <div class="info-icon">
+                <i class="fas fa-mail-bulk"></i>
+            </div>
+            <div class="info-content">
+                <div class="info-label">Postal Code</div>
+                <div class="info-value">{{ shop.postal_code }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if shop.latitude and shop.longitude %}
+        <div class="mt-3">
+            <div id="detailMap"></div>
+            <a href="https://www.google.com/maps?q={{ shop.latitude }},{{ shop.longitude }}" 
+               target="_blank" class="btn btn-outline-primary w-100 mt-2">
+                <i class="fas fa-directions me-2"></i>Get Directions
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Credit Information -->
+    <div class="info-card">
+        <div class="section-title">
+            <i class="fas fa-credit-card"></i>
+            <span>Credit Information</span>
+        </div>
+        
+        <div class="row g-2">
+            <div class="col-4">
+                <div class="stat-box">
+                    <div class="stat-label">Credit Limit</div>
+                    <div class="stat-value text-primary">{{ shop.credit_limit|floatformat:0 }}</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="stat-box">
+                    <div class="stat-label">Balance</div>
+                    <div class="stat-value {% if shop.current_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ shop.current_balance|floatformat:0 }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="stat-box">
+                    <div class="stat-label">Available</div>
+                    <div class="stat-value text-success">{{ shop.available_credit|floatformat:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+{% if shop.latitude and shop.longitude %}
+// Initialize map
+const map = L.map('detailMap').setView([{{ shop.latitude }}, {{ shop.longitude }}], 15);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+}).addTo(map);
+
+// Add marker
+const marker = L.marker([{{ shop.latitude }}, {{ shop.longitude }}]).addTo(map);
+marker.bindPopup('<strong>{{ shop.shop_name }}</strong>').openPopup();
+{% endif %}
+</script>
+{% endblock %}

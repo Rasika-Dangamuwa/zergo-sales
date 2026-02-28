@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dispose Non-Resaleable Stock{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+        }
+        
+        .form-select, .form-control {
+            font-size: 16px !important; /* Prevent zoom on iOS */
+            min-height: 50px;
+        }
+        
+        textarea.form-control {
+            min-height: 100px;
+        }
+        
+        main .btn,
+        .container-fluid .btn,
+        .card .btn {
+            font-size: 0.875rem;
+            padding: 0.625rem 1rem;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        main .btn:last-child,
+        .card .btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        .alert ul {
+            font-size: 0.875rem;
+            padding-left: 1.25rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .row.g-3 {
+            row-gap: 1.25rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12 col-md-8 mb-2 mb-md-0">
+            <h2><i class="fas fa-trash-alt text-danger"></i> Dispose Non-Resaleable Stock</h2>
+            <p class="text-muted d-none d-md-block">Permanently remove damaged/expired items from inventory</p>
+        </div>
+        <div class="col-12 col-md-4 text-md-end">
+            <a href="{% url 'products:non_resaleable_inventory_list' %}" class="btn btn-secondary w-100 w-md-auto">
+                <i class="fas fa-arrow-left"></i> Back to Inventory
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Disposal Form</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="product_id" class="form-label fw-bold">Select Product <span class="text-danger">*</span></label>
+                        <select name="product_id" id="product_id" class="form-select" required onchange="updateProductInfo()">
+                            <option value="">-- Select Product --</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" 
+                                    data-non-resaleable="{{ product.non_resaleable_stock }}"
+                                    data-name="{{ product.product_name }}"
+                                    data-code="{{ product.product_code }}"
+                                    data-size="{{ product.size }}"
+                                    data-order="{{ product.display_order }}">
+                                [{{ product.display_order }}] {{ product.product_code }} - {{ product.product_name }} ({{ product.size }}) - {{ product.non_resaleable_stock }} units
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="quantity" class="form-label fw-bold">Quantity to Dispose <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="quantity" id="quantity" min="1" required>
+                        <small class="text-muted">Available: <span id="available_qty">-</span> units</small>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="disposal_reason" class="form-label fw-bold">Disposal Reason <span class="text-danger">*</span></label>
+                        <textarea name="disposal_reason" id="disposal_reason" class="form-control" rows="4" required
+                                  placeholder="Provide detailed reason for disposal (e.g., Expired on 2026-01-05, disposed as per company policy)"></textarea>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Important Notes:</h6>
+                            <ul class="mb-0">
+                                <li>Disposal is <strong>permanent</strong> and cannot be undone</li>
+                                <li>A stock movement record will be created for audit trail</li>
+                                <li>Disposal reference number will be auto-generated</li>
+                                <li>Ensure proper physical disposal as per company policy</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-end">
+                    <a href="{% url 'products:non_resaleable_inventory_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to dispose this stock? This action is PERMANENT.')">
+                        <i class="fas fa-trash-alt"></i> Dispose Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Selected Product Info -->
+    <div id="product_info_card" class="card mt-4" style="display: none;">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0">Selected Product Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Product Code:</strong>
+                    <p id="info_code">-</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Product Name:</strong>
+                    <p id="info_name">-</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Size:</strong>
+                    <p id="info_size">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateProductInfo() {
+    const select = document.getElementById('product_id');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (select.value) {
+        const nonResaleable = selectedOption.getAttribute('data-non-resaleable');
+        const name = selectedOption.getAttribute('data-name');
+        const code = selectedOption.getAttribute('data-code');
+        const size = selectedOption.getAttribute('data-size');
+        
+        document.getElementById('available_qty').textContent = nonResaleable;
+        document.getElementById('quantity').max = nonResaleable;
+        document.getElementById('quantity').value = '';
+        
+        document.getElementById('info_code').textContent = code;
+        document.getElementById('info_name').textContent = name;
+        document.getElementById('info_size').textContent = size;
+        document.getElementById('product_info_card').style.display = 'block';
+    } else {
+        document.getElementById('available_qty').textContent = '-';
+        document.getElementById('quantity').max = '';
+        document.getElementById('quantity').value = '';
+        document.getElementById('product_info_card').style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

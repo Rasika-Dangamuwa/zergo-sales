@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Confirm FOC Reset{% endblock %}
+
+{% block extra_css %}
+{% csrf_token %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .warning-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-left: 6px solid #ef4444;
+    }
+    
+    .warning-icon {
+        font-size: 4rem;
+        color: #ef4444;
+        margin-bottom: 1rem;
+    }
+    
+    .warning-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #dc2626;
+        margin-bottom: 1rem;
+    }
+    
+    .warning-message {
+        font-size: 1.1rem;
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+    
+    .stat-box {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        border: 2px solid #e5e7eb;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .consequence-list {
+        background: #fef2f2;
+        border: 2px solid #fecaca;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .consequence-list h5 {
+        color: #dc2626;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .consequence-list ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .consequence-list li {
+        color: #991b1b;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn-confirm {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        flex: 1;
+    }
+    
+    .btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        color: white;
+    }
+    
+    .btn-cancel {
+        background: white;
+        color: #374151;
+        border: 2px solid #d1d5db;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        flex: 1;
+    }
+    
+    .btn-cancel:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container-fluid">
+        <h1><i class="fas fa-exclamation-triangle me-3"></i>Confirm FOC Data Reset</h1>
+        <p>Review the information below before proceeding</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="warning-card">
+        <div class="text-center">
+            <i class="fas fa-exclamation-circle warning-icon"></i>
+            <div class="warning-title">⚠️ WARNING: This action will archive all current FOC data</div>
+            <div class="warning-message">
+                You are about to reset the entire FOC (Free of Charge) system. This will create a permanent
+                archive of all current data and mark all existing FOC transactions as historical records.
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value">{{ stats.total_transactions|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">FOC Received</div>
+                <div class="stat-value text-success">Rs. {{ stats.total_foc_received|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">FOC Given</div>
+                <div class="stat-value text-warning">Rs. {{ stats.total_foc_given|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">FOC Returned</div>
+                <div class="stat-value text-info">Rs. {{ stats.total_foc_returned|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Products</div>
+                <div class="stat-value">{{ stats.total_products }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Sales Reps</div>
+                <div class="stat-value">{{ stats.total_sales_reps }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Companies</div>
+                <div class="stat-value">{{ stats.total_companies }}</div>
+            </div>
+        </div>
+        
+        <div class="consequence-list">
+            <h5><i class="fas fa-info-circle me-2"></i>What will happen:</h5>
+            <ul>
+                <li><strong>All {{ stats.total_transactions|intcomma }} FOC transactions</strong> will be marked as archived</li>
+                <li>A new reset record will be created with snapshots of:
+                    <ul>
+                        <li>Company accounts summary ({{ stats.total_companies }} companies)</li>
+                        <li>Product-wise FOC usage ({{ stats.total_products }} products)</li>
+                        <li>Sales representative FOC distribution ({{ stats.total_sales_reps }} sales reps)</li>
+                        <li>Transaction type breakdown</li>
+                    </ul>
+                </li>
+                <li>FOC account balances will be <strong>reset to zero</strong></li>
+                <li>Historical data will remain accessible in the <strong>Reset History</strong> page</li>
+                <li><strong style="color: #dc2626;">This action CANNOT be undone</strong></li>
+            </ul>
+        </div>
+        
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Important:</strong> Make sure you have reviewed all current FOC data and exported any necessary
+            reports before proceeding. Once reset, active transactions will only be viewable through the archived
+            reset records.
+        </div>
+        
+        <div class="action-buttons">
+            <a href="{% url 'sales:foc_dashboard' %}" class="btn-cancel">
+                <i class="fas fa-times me-2"></i>Cancel - Go Back
+            </a>
+            <button type="button" class="btn-confirm" onclick="executeReset()">
+                <i class="fas fa-check me-2"></i>Yes, Reset FOC Data
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function executeReset() {
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    
+    // Disable button and show loading
+    const btn = event.target;
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Reset...';
+    
+    fetch('{% url "sales:process_foc_reset" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ FOC Reset Completed Successfully!\n\nReset Number: ${data.reset_number}\nTransactions Archived: ${data.transactions_archived}\n\n${data.message}`);
+            window.location.href = '{% url "sales:foc_reset_list" %}';
+        } else {
+            alert(`❌ Reset Failed: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Reset error:', error);
+        alert(`❌ Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
+</script>
+{% endblock %}

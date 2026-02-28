@@ -1,0 +1,710 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .bill-info-card {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .bill-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+    }
+    
+    .balance-highlight {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        text-align: center;
+    }
+    
+    .balance-amount {
+        font-size: 2em;
+        font-weight: 700;
+        margin-top: 5px;
+    }
+    
+    .payment-form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-section {
+        margin-bottom: 25px;
+    }
+    
+    .form-section h5 {
+        color: #0d6efd;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .payment-type-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .payment-type-btn {
+        padding: 15px;
+        border: 2px solid #dee2e6;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+    
+    .payment-type-btn:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+    
+    .payment-type-btn.active {
+        border-color: #0d6efd;
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+    }
+    
+    .payment-type-btn i {
+        font-size: 1.5em;
+        display: block;
+        margin-bottom: 8px;
+    }
+    
+    .payment-details {
+        display: none;
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .payment-details.active {
+        display: block;
+    }
+    
+    .image-preview {
+        max-width: 100%;
+        max-height: 200px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 5px;
+        background: white;
+    }
+    
+    .preview-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .remove-preview {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(220, 53, 69, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+    }
+    
+    .remove-preview:hover {
+        background: rgba(220, 53, 69, 1);
+    }
+    
+    /* Return Selection Cards */
+    .return-card {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .return-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.2);
+    }
+    
+    .return-card.selected {
+        border-color: #0d6efd;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.1) 0%, rgba(10, 88, 202, 0.05) 100%);
+    }
+    
+    .return-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .return-number {
+        font-weight: 700;
+        color: #0d6efd;
+        font-size: 1.1em;
+    }
+    
+    .return-amount-badge {
+        background: #28a745;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 1.1em;
+    }
+    
+    .return-card-body {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        font-size: 0.9em;
+    }
+    
+    .return-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .return-info-label {
+        color: #6c757d;
+        font-size: 0.85em;
+        margin-bottom: 2px;
+    }
+    
+    .return-info-value {
+        font-weight: 600;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    
+    .status-badge.pending {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffc107;
+    }
+    
+    .status-badge.approved {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #28a745;
+    }
+    
+    .pending-warning-card {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .pending-warning-card i {
+        color: #856404;
+    }
+
+    @media (max-width: 767px) {
+        .payment-container {
+            padding: 10px;
+        }
+        
+        .payment-type-buttons {
+            grid-template-columns: 1fr;
+        }
+        
+        .balance-amount {
+            font-size: 1.5em;
+        }
+        
+        .return-card-body {
+            grid-template-columns: 1fr;
+        }
+        
+        .payment-type-btn {
+            padding: 12px;
+        }
+        
+        .payment-type-btn i {
+            font-size: 1.3em;
+        }
+        
+        .image-preview {
+            max-height: 150px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <!-- Bill Information -->
+    <div class="bill-info-card">
+        <h4><i class="fas fa-file-invoice me-2"></i>{{ bill.bill_number }}</h4>
+        <div class="bill-info-row">
+            <span>Shop:</span>
+            <span class="fw-bold">{{ bill.shop.shop_name }}</span>
+        </div>
+        <div class="bill-info-row">
+            <span>Date:</span>
+            <span>{{ bill.bill_date|date:"d M Y" }}</span>
+        </div>
+        <div class="bill-info-row">
+            <span>Total Amount:</span>
+            <span class="fw-bold">Rs. {{ bill.total_amount|floatformat:2 }}</span>
+        </div>
+        {% if bill.paid_amount > 0 %}
+        <div class="bill-info-row">
+            <span>Paid Amount (Confirmed):</span>
+            <span class="text-success fw-bold">Rs. {{ bill.paid_amount|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+        {% if total_payments > 0 %}
+        <div class="bill-info-row">
+            <span>Total Payments (Including Pending):</span>
+            <span class="text-warning fw-bold">Rs. {{ total_payments|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="balance-highlight">
+            <div>Remaining Balance</div>
+            <div class="balance-amount">Rs. {{ actual_balance|floatformat:2 }}</div>
+            {% if actual_balance != balance_amount %}
+            <small style="opacity: 0.8;">Official balance (confirmed payments only): Rs. {{ balance_amount|floatformat:2 }}</small>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payment Form -->
+    <div class="payment-form-card">
+        <form method="post" id="paymentForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="submission_token" value="{{ submission_token }}">
+            
+            <!-- Payment Type Selection -->
+            <div class="form-section">
+                <h5><i class="fas fa-money-check-alt me-2"></i>Select Payment Method</h5>
+                <div class="payment-type-buttons">
+                    <div class="payment-type-btn active" onclick="selectPaymentType('cash')">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <div class="fw-bold">Cash</div>
+                        <small>Immediate Collection</small>
+                    </div>
+                    <div class="payment-type-btn" onclick="selectPaymentType('cheque')">
+                        <i class="fas fa-money-check"></i>
+                        <div class="fw-bold">Cheque</div>
+                        <small>Pending Clearance</small>
+                    </div>
+                    <div class="payment-type-btn" onclick="selectPaymentType('bank_transfer')">
+                        <i class="fas fa-university"></i>
+                        <div class="fw-bold">Bank Transfer</div>
+                        <small>Online/NEFT</small>
+                    </div>
+                    <div class="payment-type-btn" onclick="selectPaymentType('return_adjustment')">
+                        <i class="fas fa-undo-alt"></i>
+                        <div class="fw-bold">Return Adjustment</div>
+                        <small>Apply Return Credit</small>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-2">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small><strong>Note:</strong> Credit collection from customer. Bill remains on credit until payment is collected.</small>
+                </div>
+                <input type="hidden" name="payment_type" id="payment_type" value="cash" required>
+            </div>
+
+            <!-- Payment Amount -->
+            <div class="form-section">
+                <h5><i class="fas fa-calculator me-2"></i>Payment Amount</h5>
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">Amount (Rs.)</label>
+                        <input type="number" name="amount" class="form-control form-control-lg" 
+                               step="0.01" min="0.01" max="{{ actual_balance }}" 
+                               placeholder="Enter amount" required>
+                        <small class="text-muted">Maximum: Rs. {{ actual_balance|floatformat:2 }}</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-secondary w-100" 
+                                onclick="document.querySelector('input[name=amount]').value = {{ actual_balance }}">
+                            <i class="fas fa-fill me-2"></i>Full Amount
+                        </button>
+                            Full Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cheque Details -->
+            <div id="cheque_details" class="payment-details">
+                <h6 class="mb-3"><i class="fas fa-money-check me-2"></i>Cheque Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cheque Number *</label>
+                        <input type="text" name="cheque_number" class="form-control" placeholder="Enter cheque number">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cheque Date *</label>
+                        <input type="date" name="cheque_date" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Bank Name *</label>
+                        <input type="text" name="cheque_bank_name" class="form-control" placeholder="Enter bank name">
+                    </div>
+                    
+                    <!-- Cheque Image Uploads -->
+                    <div class="col-md-6">
+                        <label class="form-label">Cheque Front Image</label>
+                        <input type="file" name="cheque_front" class="form-control" accept="image/*" 
+                               onchange="previewImage(this, 'cheque_front_preview')">
+                        <div id="cheque_front_preview" class="mt-2"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cheque Back Image</label>
+                        <input type="file" name="cheque_back" class="form-control" accept="image/*"
+                               onchange="previewImage(this, 'cheque_back_preview')">
+                        <div id="cheque_back_preview" class="mt-2"></div>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>Cheque payments will be marked as "Pending Collection" until the cheque clears. Upload photos of both sides of the cheque for verification.</small>
+                </div>
+            </div>
+
+            <!-- Bank Transfer Details -->
+            <div id="bank_transfer_details" class="payment-details">
+                <h6 class="mb-3"><i class="fas fa-university me-2"></i>Bank Transfer Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Reference/Transaction Number *</label>
+                        <input type="text" name="reference_number" class="form-control" placeholder="Enter reference number">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Bank Name</label>
+                        <input type="text" name="transfer_bank_name" class="form-control" placeholder="Enter bank name">
+                    </div>
+                    
+                    <!-- Bank Receipt Upload -->
+                    <div class="col-12">
+                        <label class="form-label">Bank Transfer Receipt/Screenshot</label>
+                        <input type="file" name="bank_receipt" class="form-control" accept="image/*"
+                               onchange="previewImage(this, 'bank_receipt_preview')">
+                        <div id="bank_receipt_preview" class="mt-2"></div>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>Bank transfer payments will be marked as "Pending" until confirmed by office. Upload a screenshot or photo of the transfer receipt.</small>
+                </div>
+            </div>
+
+            <!-- Return Adjustment Details -->
+            <div id="return_adjustment_details" class="payment-details">
+                <h6 class="mb-3"><i class="fas fa-undo-alt me-2"></i>Select Return to Apply</h6>
+                {% if available_returns %}
+                
+                <!-- Hidden traditional select for form submission -->
+                <input type="hidden" name="return_id" id="return_id_hidden">
+                
+                <!-- Mobile-friendly return cards -->
+                <div id="return_cards_container">
+                    {% for return in available_returns %}
+                    <div class="return-card" 
+                         data-return-id="{{ return.id }}"
+                         data-amount="{{ return.available_amount }}"
+                         data-total="{{ return.total_amount }}"
+                         data-applied="{{ return.applied_amount }}"
+                         data-number="{{ return.return_number }}"
+                         onclick="selectReturn(this)">
+                        
+                        <div class="return-card-header">
+                            <div>
+                                <div class="return-number">{{ return.return_number }}</div>
+                                <small class="text-muted">{{ return.return_date|date:"d M Y" }}</small>
+                            </div>
+                            <div class="return-amount-badge">
+                                Rs. {{ return.available_amount|floatformat:2 }}
+                            </div>
+                        </div>
+                        
+                        <div class="return-card-body">
+                            <div class="return-info-item">
+                                <span class="return-info-label">Settlement</span>
+                                <span class="return-info-value">
+                                    <span class="badge bg-info">
+                                        {{ return.get_settlement_status_display }}
+                                    </span>
+                                </span>
+                            </div>
+                            
+                            <div class="return-info-item">
+                                <span class="return-info-label">Total Return</span>
+                                <span class="return-info-value">Rs. {{ return.total_amount|floatformat:2 }}</span>
+                            </div>
+                            
+                            <div class="return-info-item">
+                                <span class="return-info-label">Already Applied</span>
+                                <span class="return-info-value">Rs. {{ return.applied_amount|floatformat:2 }}</span>
+                            </div>
+                            
+                            <div class="return-info-item">
+                                <span class="return-info-label">Available</span>
+                                <span class="return-info-value text-success">
+                                    Rs. {{ return.available_amount|floatformat:2 }}
+                                </span>
+                            </div>
+                        </div>
+                        
+
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No returns available for this shop.
+                </div>
+                {% endif %}
+            </div>
+
+
+            <!-- Notes -->
+            <div class="form-section">
+                <h5><i class="fas fa-sticky-note me-2"></i>Notes (Optional)</h5>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Add any additional notes about this payment..."></textarea>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-check-circle me-2"></i>Record Payment
+                </button>
+                <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Select return card
+function selectReturn(card) {
+    // Remove selection from all cards
+    document.querySelectorAll('.return-card').forEach(c => {
+        c.classList.remove('selected');
+        const warning = c.querySelector('.pending-warning-card');
+        if (warning) warning.style.display = 'none';
+    });
+    
+    // Select this card
+    card.classList.add('selected');
+    
+    // Get return data
+    const returnId = card.dataset.returnId;
+    const availableAmount = parseFloat(card.dataset.amount);
+    const returnStatus = card.dataset.status;
+    
+    // Update hidden input for form submission
+    document.getElementById('return_id_hidden').value = returnId;
+    
+    // Update payment amount
+    const amountInput = document.querySelector('input[name="amount"]');
+    amountInput.value = availableAmount.toFixed(2);
+    amountInput.max = availableAmount;
+    
+    // Show pending warning if applicable
+    if (returnStatus === 'pending') {
+        const warning = card.querySelector('.pending-warning-card');
+        if (warning) warning.style.display = 'block';
+    }
+}
+
+function selectPaymentType(type) {
+    // Update hidden input
+    document.getElementById('payment_type').value = type;
+    
+    // Update button states
+    document.querySelectorAll('.payment-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    // Hide all payment details and remove required attributes
+    document.querySelectorAll('.payment-details').forEach(details => {
+        details.classList.remove('active');
+        // Remove required from all fields in hidden sections
+        details.querySelectorAll('input[required]').forEach(input => {
+            input.removeAttribute('required');
+        });
+    });
+    
+    // Show relevant payment details and add required attributes
+    if (type === 'cheque') {
+        const chequeDetails = document.getElementById('cheque_details');
+        chequeDetails.classList.add('active');
+        chequeDetails.querySelector('input[name="cheque_number"]').setAttribute('required', 'required');
+        chequeDetails.querySelector('input[name="cheque_date"]').setAttribute('required', 'required');
+        chequeDetails.querySelector('input[name="cheque_bank_name"]').setAttribute('required', 'required');
+    } else if (type === 'bank_transfer') {
+        const transferDetails = document.getElementById('bank_transfer_details');
+        transferDetails.classList.add('active');
+        transferDetails.querySelector('input[name="reference_number"]').setAttribute('required', 'required');
+    } else if (type === 'return_adjustment') {
+        document.getElementById('return_adjustment_details').classList.add('active');
+    }
+}
+
+// Update amount when return is selected
+function updateReturnAmount() {
+    const select = document.getElementById('return_select');
+    const selectedOption = select.options[select.selectedIndex];
+    const amountInput = document.querySelector('input[name="amount"]');
+    const returnDetails = document.getElementById('return_details');
+    const returnDetailsAlert = document.getElementById('return_details_alert');
+    const pendingWarning = document.getElementById('pending_warning');
+    
+    if (selectedOption.value) {
+        const availableAmount = parseFloat(selectedOption.dataset.amount);
+        const totalAmount = parseFloat(selectedOption.dataset.total);
+        const appliedAmount = parseFloat(selectedOption.dataset.applied);
+        const returnNumber = selectedOption.dataset.number;
+        const returnStatus = selectedOption.dataset.status;
+        
+        // Set amount to available return amount
+        amountInput.value = availableAmount.toFixed(2);
+        amountInput.max = availableAmount;
+        
+        // Show return details
+        document.getElementById('return_number').textContent = returnNumber;
+        document.getElementById('return_total').textContent = totalAmount.toFixed(2);
+        document.getElementById('return_applied').textContent = appliedAmount.toFixed(2);
+        document.getElementById('return_available').textContent = availableAmount.toFixed(2);
+        
+        // All returns are auto-accepted
+        document.getElementById('return_status_display').innerHTML = '';
+        returnDetailsAlert.className = 'alert alert-success';
+        
+        returnDetails.style.display = 'block';
+    } else {
+        // Reset to bill balance
+        returnDetails.style.display = 'none';
+        amountInput.value = {{ actual_balance }};
+        amountInput.max = {{ actual_balance }};
+    }
+}
+
+// Image preview function
+function previewImage(input, previewId) {
+    const previewDiv = document.getElementById(previewId);
+    previewDiv.innerHTML = '';
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const container = document.createElement('div');
+            container.className = 'preview-container';
+            
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'image-preview';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-preview';
+            removeBtn.innerHTML = '×';
+            removeBtn.onclick = function() {
+                input.value = '';
+                previewDiv.innerHTML = '';
+            };
+            
+            container.appendChild(img);
+            container.appendChild(removeBtn);
+            previewDiv.appendChild(container);
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Prevent duplicate submissions
+let isSubmitting = false;
+
+// Form validation
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    if (isSubmitting) {
+        e.preventDefault();
+        return false;
+    }
+
+    const paymentType = document.getElementById('payment_type').value;
+    
+    if (paymentType === 'cheque') {
+        const chequeNumber = document.querySelector('input[name="cheque_number"]').value;
+        const chequeDate = document.querySelector('input[name="cheque_date"]').value;
+        const bankName = document.querySelector('input[name="cheque_bank_name"]').value;
+        
+        if (!chequeNumber || !chequeDate || !bankName) {
+            e.preventDefault();
+            alert('Please fill in all required cheque details.');
+            return false;
+        }
+    } else if (paymentType === 'bank_transfer') {
+        const referenceNumber = document.querySelector('input[name="reference_number"]').value;
+        
+        if (!referenceNumber) {
+            e.preventDefault();
+            alert('Please enter the reference/transaction number.');
+            return false;
+        }
+    } else if (paymentType === 'return_adjustment') {
+        const returnId = document.querySelector('select[name="return_id"]').value;
+        
+        if (!returnId) {
+            e.preventDefault();
+            alert('Please select a return to apply.');
+            return false;
+        }
+    }
+
+    // All validations passed — lock submission
+    isSubmitting = true;
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Recording Payment...';
+});
+</script>
+{% endblock %}

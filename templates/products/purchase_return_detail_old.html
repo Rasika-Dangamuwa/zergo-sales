@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Purchase Return {{ purchase_return.pr_number }} - Zergo Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-undo"></i> {{ purchase_return.pr_number }}</h2>
+            <p class="text-muted mb-0">Purchase Return Details</p>
+        </div>
+        <a href="{% url 'products:purchase_return_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Return Details -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Return Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Company</strong>
+                            <span>{{ purchase_return.company.company_name }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Return Date</strong>
+                            <span>{{ purchase_return.return_date|date:"d M Y, h:i A" }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Return Reason</strong>
+                            <span class="badge bg-warning">{{ purchase_return.get_return_reason_display }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Status</strong>
+                            <span class="badge badge-{{ purchase_return.status }}">{{ purchase_return.get_status_display }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Settlement Type</strong>
+                            <span>{{ purchase_return.get_settlement_type_display }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Sent Date</strong>
+                            <span>{{ purchase_return.sent_date|date:"d M Y"|default:"-" }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Created By</strong>
+                            <span>{{ purchase_return.created_by.get_full_name }}</span>
+                        </div>
+                        {% if purchase_return.approved_by %}
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Approved By</strong>
+                            <span>{{ purchase_return.approved_by.get_full_name }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-12 mb-3">
+                            <strong class="text-muted d-block">Detailed Reason</strong>
+                            <p class="mb-0">{{ purchase_return.detailed_reason }}</p>
+                        </div>
+                        {% if purchase_return.credit_note_number %}
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Credit Note Number</strong>
+                            <span class="badge bg-success">{{ purchase_return.credit_note_number }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-muted d-block">Credit Amount</strong>
+                            <span>Rs. {{ purchase_return.credit_amount }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Returned Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.product.product_name }}</strong><br>
+                                        <small class="text-muted">{{ item.product.size }}</small>
+                                        {% if item.batch_number %}
+                                        <br><small class="badge bg-secondary">Batch: {{ item.batch_number }}</small>
+                                        {% endif %}
+                                        {% if item.expiry_date %}
+                                        <br><small class="badge bg-warning">Exp: {{ item.expiry_date|date:"M Y" }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center"><strong>{{ item.quantity }}</strong></td>
+                                    <td class="text-end">Rs. {{ item.unit_price }}</td>
+                                    <td class="text-end"><strong>Rs. {{ item.line_total }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-danger">
+                                    <th colspan="3" class="text-end">Total Return Amount:</th>
+                                    <th class="text-end">Rs. {{ purchase_return.total_amount }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if purchase_return.status == 'pending' %}
+                    <a href="{% url 'products:approve_purchase_return' purchase_return.pk %}" 
+                       class="btn btn-success w-100 mb-3"
+                       onclick="return confirm('Approve this return and reduce stock?')">
+                        <i class="fas fa-check"></i> Approve & Update Stock
+                    </a>
+                    {% endif %}
+                    
+                    {% if purchase_return.stock_updated %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Stock has been updated
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Stock not yet updated
+                    </div>
+                    {% endif %}
+                    
+                    {% if purchase_return.status == 'approved' %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Return approved, pending shipment to supplier
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Items:</span>
+                        <strong>{{ items.count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Status:</span>
+                        <strong>{{ purchase_return.get_status_display }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total Amount:</strong></span>
+                        <strong class="text-danger">Rs. {{ purchase_return.total_amount }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1539 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Business Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== Page Header ===== */
+.settings-header {
+    background: linear-gradient(135deg, {{ profile.primary_color|default:"#667eea" }} 0%, {{ profile.secondary_color|default:"#764ba2" }} 100%);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.settings-header::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+}
+.settings-header h1 { font-size: 1.6rem; font-weight: 700; }
+
+/* ===== Progress Ring ===== */
+.progress-ring-wrap { position: relative; width: 70px; height: 70px; }
+.progress-ring-wrap svg { transform: rotate(-90deg); }
+.progress-ring__bg { stroke: rgba(255,255,255,0.25); }
+.progress-ring__fill { stroke: #fff; transition: stroke-dashoffset .6s ease; }
+.progress-ring-pct {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 1rem; color: #fff;
+}
+
+/* ===== Vertical Tab Nav ===== */
+.settings-nav .nav-link {
+    color: #495057; border-radius: 8px; padding: .65rem 1rem; margin-bottom: 4px;
+    font-weight: 500; font-size: .9rem; display: flex; align-items: center;
+    transition: all .2s;
+}
+.settings-nav .nav-link:hover { background: #f0f0ff; color: #667eea; }
+.settings-nav .nav-link.active {
+    background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+    box-shadow: 0 2px 8px rgba(102,126,234,.35);
+}
+.settings-nav .nav-link .nav-icon { width: 22px; text-align: center; margin-right: 10px; }
+.settings-nav .nav-link .nav-pct {
+    margin-left: auto; font-size: .75rem; opacity: .7;
+}
+.settings-nav .nav-link.active .nav-pct { opacity: 1; }
+
+/* ===== Tab Pane Cards ===== */
+.section-card {
+    background: #fff; border-radius: 12px; padding: 1.75rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07); margin-bottom: 1rem;
+}
+.section-card .section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.25rem; padding-bottom: .75rem; border-bottom: 2px solid #f0f0f0;
+}
+.section-card .section-head h5 { font-weight: 700; color: #333; margin: 0; }
+.section-card .section-head .badge { font-size: .72rem; }
+
+/* ===== Form Controls ===== */
+.settings-form .form-label { font-weight: 600; color: #495057; font-size: .88rem; margin-bottom: .35rem; }
+.settings-form .form-text { font-size: .8rem; }
+.settings-form .form-control, .settings-form .form-select {
+    border-radius: 8px; border-color: #dee2e6; font-size: .9rem;
+}
+.settings-form .form-control:focus, .settings-form .form-select:focus {
+    border-color: #667eea; box-shadow: 0 0 0 .2rem rgba(102,126,234,.15);
+}
+.required-star::after { content: " *"; color: #dc3545; }
+
+/* ===== Save Button ===== */
+.btn-save-section {
+    background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+    border: none; padding: .55rem 1.5rem; border-radius: 8px;
+    font-weight: 600; transition: all .2s;
+}
+.btn-save-section:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,.35); color: #fff; }
+.btn-save-section:disabled { opacity: .6; transform: none; }
+.btn-save-section .spinner-border { width: 1rem; height: 1rem; border-width: 2px; }
+
+/* ===== Toast ===== */
+.save-toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    padding: .75rem 1.5rem; border-radius: 10px; color: #fff;
+    font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    transform: translateY(100px); opacity: 0; transition: all .4s ease;
+}
+.save-toast.show { transform: translateY(0); opacity: 1; }
+.save-toast.success { background: linear-gradient(135deg, #28a745, #20c997); }
+.save-toast.error { background: linear-gradient(135deg, #dc3545, #e74c3c); }
+
+/* ===== Color Swatch ===== */
+.color-swatch {
+    display: inline-block; width: 38px; height: 38px; border-radius: 8px;
+    border: 2px solid #dee2e6; cursor: pointer; transition: transform .15s;
+}
+.color-swatch:hover { transform: scale(1.12); }
+
+/* ===== Branding Preview ===== */
+.brand-preview {
+    background: #f8f9fa; border-radius: 10px; padding: 1.5rem; text-align: center;
+    border: 1px dashed #dee2e6;
+}
+.brand-preview .preview-header {
+    padding: 1rem; border-radius: 8px; color: #fff; margin-bottom: 1rem;
+}
+.brand-preview .preview-name { font-size: 1.25rem; font-weight: 700; }
+.brand-preview .preview-tagline { font-size: .85rem; opacity: .85; }
+
+/* ===== Logo Preview ===== */
+.logo-thumb {
+    max-width: 200px; max-height: 100px; border: 2px solid #e0e0e0;
+    border-radius: 8px; padding: 6px; background: #fff;
+}
+
+/* ===== Bank/Address cards ===== */
+.entity-card {
+    border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem 1.25rem;
+    transition: box-shadow .2s; margin-bottom: .75rem;
+}
+.entity-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.entity-card .entity-title { font-weight: 600; color: #333; }
+.entity-card .entity-meta { font-size: .85rem; color: #6c757d; }
+
+/* ===== Toggle Switches ===== */
+.form-switch .form-check-input { width: 3em; height: 1.5em; cursor: pointer; }
+
+/* ===== Responsive ===== */
+@media (max-width: 991px) {
+    .settings-nav { display: flex; overflow-x: auto; flex-wrap: nowrap; gap: 4px; margin-bottom: 1rem; }
+    .settings-nav .nav-link { white-space: nowrap; font-size: .82rem; padding: .5rem .75rem; }
+    .settings-nav .nav-link .nav-pct { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- ===== HEADER + PROGRESS ===== -->
+    <div class="settings-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="mb-1"><i class="fas fa-cog me-2"></i>Business Settings</h1>
+                <p class="mb-0 opacity-75" style="font-size:.95rem">{{ profile.business_name }} &mdash; manage your distributor profile</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Progress Ring -->
+                <div class="progress-ring-wrap" title="Profile {{ completion }}% complete">
+                    <svg width="70" height="70">
+                        <circle class="progress-ring__bg" cx="35" cy="35" r="30" fill="none" stroke-width="5"/>
+                        <circle class="progress-ring__fill" id="progressRing" cx="35" cy="35" r="30" fill="none"
+                                stroke-width="5" stroke-linecap="round"
+                                stroke-dasharray="188.5" stroke-dashoffset="{{ completion|default:0 }}"/>
+                    </svg>
+                    <span class="progress-ring-pct" id="progressPct">{{ completion }}%</span>
+                </div>
+                <div class="d-none d-md-block">
+                    <div style="font-size:.85rem;opacity:.8">Profile Completion</div>
+                    <div style="font-weight:700;font-size:1.1rem">{{ completion }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- ===== LEFT: TAB NAV ===== -->
+        <div class="col-lg-3 col-xl-2 mb-3">
+            <nav class="settings-nav nav flex-lg-column" id="settingsTabs" role="tablist">
+                <a class="nav-link active" data-bs-toggle="pill" href="#tab-basic" role="tab">
+                    <span class="nav-icon"><i class="fas fa-info-circle"></i></span>
+                    Basic Info
+                    <span class="nav-pct">{{ section_stats.basic.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-registration" role="tab">
+                    <span class="nav-icon"><i class="fas fa-file-contract"></i></span>
+                    Registration
+                    <span class="nav-pct">{{ section_stats.registration.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-contact" role="tab">
+                    <span class="nav-icon"><i class="fas fa-phone-alt"></i></span>
+                    Contact
+                    <span class="nav-pct">{{ section_stats.contact.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-address" role="tab">
+                    <span class="nav-icon"><i class="fas fa-map-marker-alt"></i></span>
+                    Address
+                    <span class="nav-pct">{{ section_stats.address.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-social" role="tab">
+                    <span class="nav-icon"><i class="fas fa-share-alt"></i></span>
+                    Social
+                    <span class="nav-pct">{{ section_stats.social.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-branding" role="tab">
+                    <span class="nav-icon"><i class="fas fa-palette"></i></span>
+                    Branding
+                    <span class="nav-pct">{{ section_stats.branding.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-operational" role="tab">
+                    <span class="nav-icon"><i class="fas fa-sliders-h"></i></span>
+                    Operations
+                    <span class="nav-pct">{{ section_stats.operational.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-receipt" role="tab">
+                    <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                    Receipt
+                    <span class="nav-pct">{{ section_stats.receipt.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-display" role="tab">
+                    <span class="nav-icon"><i class="fas fa-eye"></i></span>
+                    Display
+                    <span class="nav-pct">{{ section_stats.display.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-appearance" role="tab">
+                    <span class="nav-icon"><i class="fas fa-magic"></i></span>
+                    Appearance
+                    <span class="nav-pct">{{ section_stats.appearance.pct }}%</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-banking" role="tab">
+                    <span class="nav-icon"><i class="fas fa-university"></i></span>
+                    Banking
+                    <span class="nav-pct badge bg-light text-dark">{{ bank_accounts.count }}</span>
+                </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-locations" role="tab">
+                    <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span>
+                    Locations
+                    <span class="nav-pct badge bg-light text-dark">{{ addresses.count }}</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- ===== RIGHT: TAB CONTENT ===== -->
+        <div class="col-lg-9 col-xl-10">
+            <div class="tab-content" id="settingsContent">
+
+                <!-- ============================================================ -->
+                <!-- TAB: Basic Information -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade show active" id="tab-basic" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-info-circle me-2 text-primary"></i>Basic Information</h5>
+                            <span class="badge bg-primary">{{ section_stats.basic.filled }}/{{ section_stats.basic.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="basic">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required-star">Business Name</label>
+                                    <input type="text" class="form-control" name="business_name" value="{{ profile.business_name }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Trade Name</label>
+                                    <input type="text" class="form-control" name="trade_name" value="{{ profile.trade_name|default:'' }}">
+                                    <div class="form-text">If different from business name</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tagline / Slogan</label>
+                                    <input type="text" class="form-control" name="tagline" value="{{ profile.tagline|default:'' }}" placeholder="Quality Products, Trusted Service">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Business Type</label>
+                                    <select class="form-select" name="business_type">
+                                        {% for val, label in business_types %}
+                                        <option value="{{ val }}" {% if profile.business_type == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Established Date</label>
+                                    <input type="date" class="form-control" name="established_date" value="{{ profile.established_date|date:'Y-m-d' }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" rows="3" placeholder="Brief business description for reports">{{ profile.description|default:'' }}</textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Basic Info
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Registration -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-registration" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-file-contract me-2 text-warning"></i>Registration & Legal</h5>
+                            <span class="badge bg-warning text-dark">{{ section_stats.registration.filled }}/{{ section_stats.registration.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="registration">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Business Registration (BR)</label>
+                                    <input type="text" class="form-control" name="business_registration_number" value="{{ profile.business_registration_number|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tax ID (TIN)</label>
+                                    <input type="text" class="form-control" name="tax_id" value="{{ profile.tax_id|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">VAT Number</label>
+                                    <input type="text" class="form-control" name="vat_number" value="{{ profile.vat_number|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">SVAT Number</label>
+                                    <input type="text" class="form-control" name="svat_number" value="{{ profile.svat_number|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Trade License Number</label>
+                                    <input type="text" class="form-control" name="trade_license_number" value="{{ profile.trade_license_number|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Import/Export License</label>
+                                    <input type="text" class="form-control" name="import_export_license" value="{{ profile.import_export_license|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Registration
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Contact -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-contact" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-phone-alt me-2 text-success"></i>Contact Information</h5>
+                            <span class="badge bg-success">{{ section_stats.contact.filled }}/{{ section_stats.contact.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="contact">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label required-star">Primary Phone</label>
+                                    <input type="tel" class="form-control" name="primary_phone" value="{{ profile.primary_phone }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Secondary Phone</label>
+                                    <input type="tel" class="form-control" name="secondary_phone" value="{{ profile.secondary_phone|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Mobile Phone</label>
+                                    <input type="tel" class="form-control" name="mobile_phone" value="{{ profile.mobile_phone|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Fax Number</label>
+                                    <input type="tel" class="form-control" name="fax_number" value="{{ profile.fax_number|default:'' }}">
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required-star">Primary Email</label>
+                                    <input type="email" class="form-control" name="primary_email" value="{{ profile.primary_email }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Secondary Email</label>
+                                    <input type="email" class="form-control" name="secondary_email" value="{{ profile.secondary_email|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Support Email</label>
+                                    <input type="email" class="form-control" name="support_email" value="{{ profile.support_email|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Accounts Email</label>
+                                    <input type="email" class="form-control" name="accounts_email" value="{{ profile.accounts_email|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Website</label>
+                                    <input type="url" class="form-control" name="website" value="{{ profile.website|default:'' }}" placeholder="https://www.example.com">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Contact
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Address -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-address" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-map-marker-alt me-2 text-danger"></i>Primary Address</h5>
+                            <span class="badge bg-danger">{{ section_stats.address.filled }}/{{ section_stats.address.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="address">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required-star">Address Line 1</label>
+                                    <input type="text" class="form-control" name="address_line1" value="{{ profile.address_line1 }}" required>
+                                    <div class="form-text">Street address, building name, P.O. Box</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address Line 2</label>
+                                    <input type="text" class="form-control" name="address_line2" value="{{ profile.address_line2|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label required-star">City</label>
+                                    <input type="text" class="form-control" name="city" value="{{ profile.city }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">District</label>
+                                    <input type="text" class="form-control" name="district" value="{{ profile.district|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Postal Code</label>
+                                    <input type="text" class="form-control" name="postal_code" value="{{ profile.postal_code|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Country</label>
+                                    <input type="text" class="form-control" name="country" value="{{ profile.country|default:'Sri Lanka' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="0.0000001" class="form-control" name="latitude" value="{{ profile.latitude|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="0.0000001" class="form-control" name="longitude" value="{{ profile.longitude|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Address
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Social Media -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-social" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-share-alt me-2 text-info"></i>Social Media & Online</h5>
+                            <span class="badge bg-info text-dark">{{ section_stats.social.filled }}/{{ section_stats.social.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="social">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fab fa-facebook text-primary me-1"></i>Facebook</label>
+                                    <input type="url" class="form-control" name="facebook_url" value="{{ profile.facebook_url|default:'' }}" placeholder="https://facebook.com/your-page">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fab fa-instagram text-danger me-1"></i>Instagram</label>
+                                    <input type="url" class="form-control" name="instagram_url" value="{{ profile.instagram_url|default:'' }}" placeholder="https://instagram.com/your-page">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fab fa-twitter text-info me-1"></i>Twitter / X</label>
+                                    <input type="url" class="form-control" name="twitter_url" value="{{ profile.twitter_url|default:'' }}" placeholder="https://x.com/your-handle">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fab fa-linkedin text-primary me-1"></i>LinkedIn</label>
+                                    <input type="url" class="form-control" name="linkedin_url" value="{{ profile.linkedin_url|default:'' }}" placeholder="https://linkedin.com/company/your-company">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="fab fa-whatsapp text-success me-1"></i>WhatsApp</label>
+                                    <input type="tel" class="form-control" name="whatsapp_number" value="{{ profile.whatsapp_number|default:'' }}" placeholder="+94 77 123 4567">
+                                    <div class="form-text">Include country code</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Social
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Branding -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-branding" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-palette me-2" style="color:#e74c3c"></i>Branding & Visual Identity</h5>
+                            <span class="badge bg-danger">{{ section_stats.branding.filled }}/{{ section_stats.branding.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="branding" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Logos -->
+                            <h6 class="fw-bold text-muted mb-3">Logos</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Primary Logo</label>
+                                    <input type="file" class="form-control" name="logo" accept="image/*">
+                                    <div class="form-text">PNG/JPEG, recommended 500x200px</div>
+                                    {% if profile.logo %}
+                                    <div class="mt-2"><img src="{{ profile.logo.url }}" alt="Logo" class="logo-thumb"></div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Receipt Logo</label>
+                                    <input type="file" class="form-control" name="logo_receipt" accept="image/*">
+                                    <div class="form-text">Black & white, 200x80px for thermal printer</div>
+                                    {% if profile.logo_receipt %}
+                                    <div class="mt-2"><img src="{{ profile.logo_receipt.url }}" alt="Receipt Logo" class="logo-thumb"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Document Logo</label>
+                                    <input type="file" class="form-control" name="logo_document" accept="image/*">
+                                    <div class="form-text">High-res for PDF reports, 800x320px</div>
+                                    {% if profile.logo_document %}
+                                    <div class="mt-2"><img src="{{ profile.logo_document.url }}" alt="Document Logo" class="logo-thumb"></div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Favicon</label>
+                                    <input type="file" class="form-control" name="favicon" accept="image/*">
+                                    <div class="form-text">32x32px or 64x64px for browser tab</div>
+                                    {% if profile.favicon %}
+                                    <div class="mt-2"><img src="{{ profile.favicon.url }}" alt="Favicon" style="width:32px;height:32px;border-radius:4px;"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Colors -->
+                            <h6 class="fw-bold text-muted mb-3">Brand Colors</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Primary Color</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="color" class="form-control form-control-color" name="primary_color"
+                                               id="brandPrimary" value="{{ profile.primary_color|default:'#667eea' }}" style="width:50px">
+                                        <input type="text" class="form-control" id="brandPrimaryHex"
+                                               value="{{ profile.primary_color|default:'#667eea' }}" maxlength="7" style="width:100px">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Secondary Color</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="color" class="form-control form-control-color" name="secondary_color"
+                                               id="brandSecondary" value="{{ profile.secondary_color|default:'#764ba2' }}" style="width:50px">
+                                        <input type="text" class="form-control" id="brandSecondaryHex"
+                                               value="{{ profile.secondary_color|default:'#764ba2' }}" maxlength="7" style="width:100px">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Accent Color</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="color" class="form-control form-control-color" name="accent_color"
+                                               id="brandAccent" value="{{ profile.accent_color|default:'#f093fb' }}" style="width:50px">
+                                        <input type="text" class="form-control" id="brandAccentHex"
+                                               value="{{ profile.accent_color|default:'#f093fb' }}" maxlength="7" style="width:100px">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Preview -->
+                            <h6 class="fw-bold text-muted mb-3">Live Preview</h6>
+                            <div class="brand-preview mb-3" id="brandPreview">
+                                <div class="preview-header" id="previewHeader"
+                                     style="background:linear-gradient(135deg, {{ profile.primary_color|default:'#667eea' }}, {{ profile.secondary_color|default:'#764ba2' }})">
+                                    <div class="preview-name" id="previewName">{{ profile.business_name }}</div>
+                                    <div class="preview-tagline" id="previewTagline">{{ profile.tagline|default:"Your tagline here" }}</div>
+                                </div>
+                                <div class="d-flex justify-content-center gap-3">
+                                    <div><small class="text-muted">Primary</small><div class="color-swatch mt-1" id="swatchPrimary" style="background:{{ profile.primary_color|default:'#667eea' }}"></div></div>
+                                    <div><small class="text-muted">Secondary</small><div class="color-swatch mt-1" id="swatchSecondary" style="background:{{ profile.secondary_color|default:'#764ba2' }}"></div></div>
+                                    <div><small class="text-muted">Accent</small><div class="color-swatch mt-1" id="swatchAccent" style="background:{{ profile.accent_color|default:'#f093fb' }}"></div></div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Branding
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Operational Settings -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-operational" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-sliders-h me-2 text-secondary"></i>Operational Settings</h5>
+                            <span class="badge bg-secondary">{{ section_stats.operational.filled }}/{{ section_stats.operational.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="operational">
+                            {% csrf_token %}
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Currency Code</label>
+                                    <input type="text" class="form-control" name="currency_code" value="{{ profile.currency_code|default:'LKR' }}" maxlength="3">
+                                    <div class="form-text">ISO 4217 (LKR, USD, EUR)</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Currency Symbol</label>
+                                    <input type="text" class="form-control" name="currency_symbol" value="{{ profile.currency_symbol|default:'Rs.' }}">
+                                    <div class="form-text">Rs., $, €</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Fiscal Year Start</label>
+                                    <select class="form-select" name="fiscal_year_start_month">
+                                        {% for val, label in fiscal_months %}
+                                        <option value="{{ val }}" {% if profile.fiscal_year_start_month == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Payment Terms (days)</label>
+                                    <input type="number" class="form-control" name="default_payment_terms_days" value="{{ profile.default_payment_terms_days|default:30 }}" min="0">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Business Hours</label>
+                                    <input type="text" class="form-control" name="business_hours" value="{{ profile.business_hours|default:'' }}" placeholder="Mon-Sat: 8:00 AM - 6:00 PM">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Operational
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Receipt Settings -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-receipt" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-receipt me-2" style="color:#e67e22"></i>Receipt & Invoice Settings</h5>
+                            <span class="badge" style="background:#e67e22;color:#fff">{{ section_stats.receipt.filled }}/{{ section_stats.receipt.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="receipt">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Receipt Footer Line 1</label>
+                                <input type="text" class="form-control" name="receipt_footer_line1" value="{{ profile.receipt_footer_line1|default:'Thank you for your business!' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Receipt Footer Line 2</label>
+                                <input type="text" class="form-control" name="receipt_footer_line2" value="{{ profile.receipt_footer_line2|default:'' }}">
+                                <div class="form-text">e.g., warranty info, return policy</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Receipt Footer Line 3</label>
+                                <input type="text" class="form-control" name="receipt_footer_line3" value="{{ profile.receipt_footer_line3|default:'' }}">
+                                <div class="form-text">e.g., social media, website</div>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label class="form-label">Terms & Conditions</label>
+                                <textarea class="form-control" name="terms_and_conditions" rows="3">{{ profile.terms_and_conditions|default:'' }}</textarea>
+                                <div class="form-text">Printed on invoices</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Return Policy</label>
+                                <textarea class="form-control" name="return_policy" rows="3">{{ profile.return_policy|default:'' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Warranty Info</label>
+                                <textarea class="form-control" name="warranty_info" rows="2">{{ profile.warranty_info|default:'' }}</textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Receipt
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Display Preferences -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-display" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-eye me-2 text-primary"></i>Display Preferences</h5>
+                        </div>
+                        <form class="settings-form" data-section="display">
+                            {% csrf_token %}
+                            <p class="text-muted mb-3">Control what information appears on printed receipts and invoices.</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_logo_on_receipts" id="sw_logo"
+                                               {% if profile.show_logo_on_receipts %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_logo">Show logo on receipts</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_tagline" id="sw_tag"
+                                               {% if profile.show_tagline %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_tag">Show tagline</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_address_on_receipts" id="sw_addr"
+                                               {% if profile.show_address_on_receipts %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_addr">Show address on receipts</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_contact_on_receipts" id="sw_contact"
+                                               {% if profile.show_contact_on_receipts %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_contact">Show contact info on receipts</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_social_media" id="sw_social"
+                                               {% if profile.show_social_media %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_social">Show social media</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="show_tax_info" id="sw_tax"
+                                               {% if profile.show_tax_info %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="sw_tax">Show tax information</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end mt-3">
+                                <button type="submit" class="btn btn-save-section">
+                                    <i class="fas fa-save me-1"></i>Save Display
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Appearance -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-appearance" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-magic me-2" style="color:#8b5cf6"></i>Appearance Customization</h5>
+                            <span class="badge" style="background:#8b5cf6">{{ section_stats.appearance.filled }}/{{ section_stats.appearance.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="appearance" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Navbar Settings -->
+                            <h6 class="fw-bold text-muted mb-3"><i class="fas fa-bars me-1"></i>Navigation Bar</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Navbar Title</label>
+                                    <input type="text" class="form-control" name="navbar_title" id="id_navbar_title"
+                                           value="{{ profile.navbar_title|default:'' }}" maxlength="30"
+                                           placeholder="Short name (defaults to business name)">
+                                    <div class="form-text">Short brand name for the top bar (max 30 chars)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Navbar Style</label>
+                                    <select class="form-select" name="navbar_style" id="id_navbar_style">
+                                        {% for val, label in navbar_styles %}
+                                        <option value="{{ val }}" {% if profile.navbar_style == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Visual style for the top navigation bar</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Brand Display</label>
+                                    <select class="form-select" name="navbar_brand_type" id="id_navbar_brand_type">
+                                        <option value="logo" {% if profile.navbar_brand_type == 'logo' %}selected{% endif %}>Company Logo</option>
+                                        <option value="icon" {% if profile.navbar_brand_type == 'icon' %}selected{% endif %}>FontAwesome Icon</option>
+                                    </select>
+                                    <div class="form-text">Show logo or icon next to the title</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Navbar Icon</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="navIconPreview"><i class="{{ profile.navbar_icon|default:'fas fa-store' }}"></i></span>
+                                        <input type="text" class="form-control" name="navbar_icon" id="id_navbar_icon"
+                                               value="{{ profile.navbar_icon|default:'fas fa-store' }}"
+                                               placeholder="fas fa-store">
+                                    </div>
+                                    <div class="form-text">FontAwesome icon class (e.g., <code>fas fa-store</code>, <code>fas fa-truck</code>, <code>fas fa-shopping-cart</code>)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Navbar Preview</label>
+                                    <div class="rounded-2 p-2 d-flex align-items-center gap-2" id="navbarPreviewBar"
+                                         style="{% if profile.navbar_style == 'solid' %}background:{{ profile.primary_color|default:'#667eea' }}{% elif profile.navbar_style == 'dark' %}background:#1f2937{% else %}background:linear-gradient(135deg, {{ profile.primary_color|default:'#667eea' }}, {{ profile.secondary_color|default:'#764ba2' }}){% endif %};color:#fff;min-height:42px">
+                                        {% if profile.navbar_brand_type == 'logo' and profile.logo %}
+                                        <img src="{{ profile.logo.url }}" alt="Logo" id="navPreviewLogo" style="max-height:28px;max-width:36px;object-fit:contain">
+                                        {% endif %}
+                                        <i class="{{ profile.navbar_icon|default:'fas fa-store' }}" id="navPreviewIcon" style="font-size:1.1rem;{% if profile.navbar_brand_type == 'logo' and profile.logo %}display:none{% endif %}"></i>
+                                        <span class="fw-bold" id="navPreviewTitle" style="font-size:.9rem">{{ profile.navbar_title|default:profile.business_name }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Login Page Settings -->
+                            <h6 class="fw-bold text-muted mb-3"><i class="fas fa-sign-in-alt me-1"></i>Login Page</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Login Subtitle</label>
+                                    <input type="text" class="form-control" name="login_subtitle" id="id_login_subtitle"
+                                           value="{{ profile.login_subtitle|default:'Sales Management System' }}"
+                                           placeholder="Sales Management System" maxlength="200">
+                                    <div class="form-text">Shown below the business name on the login page</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Login Brand Display</label>
+                                    <select class="form-select" name="login_brand_type" id="id_login_brand_type">
+                                        <option value="logo" {% if profile.login_brand_type == 'logo' %}selected{% endif %}>Company Logo</option>
+                                        <option value="icon" {% if profile.login_brand_type == 'icon' %}selected{% endif %}>FontAwesome Icon</option>
+                                    </select>
+                                    <div class="form-text">Show logo or icon on the login page</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Background Style</label>
+                                    <select class="form-select" name="login_bg_style" id="id_login_bg_style">
+                                        {% for val, label in login_bg_styles %}
+                                        <option value="{{ val }}" {% if profile.login_bg_style == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Background appearance of the login page</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6" id="loginBgImageGroup">
+                                    <label class="form-label">Login Background Image</label>
+                                    <input type="file" class="form-control" name="login_bg_image" accept="image/*">
+                                    <div class="form-text">Recommended 1920x1080px. Used when background style is "Background Image"</div>
+                                    {% if profile.login_bg_image %}
+                                    <div class="mt-2 position-relative d-inline-block">
+                                        <img src="{{ profile.login_bg_image.url }}" alt="Login BG"
+                                             style="max-width:200px;max-height:120px;border-radius:8px;object-fit:cover;border:2px solid #e5e7eb">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Login Page Preview</label>
+                                    <div class="rounded-3 position-relative overflow-hidden" id="loginPreviewCard"
+                                         style="height:140px;{% if profile.login_bg_style == 'solid' %}background:{{ profile.primary_color|default:'#667eea' }}{% elif profile.login_bg_style == 'image' and profile.login_bg_image %}background:url('{{ profile.login_bg_image.url }}') center/cover{% else %}background:linear-gradient(135deg, {{ profile.primary_color|default:'#667eea' }}, {{ profile.secondary_color|default:'#764ba2' }}){% endif %}">
+                                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-white">
+                                            {% if profile.login_brand_type == 'logo' and profile.logo %}
+                                            <img src="{{ profile.logo.url }}" alt="Logo" id="loginPreviewLogo" style="max-height:36px;max-width:80px;object-fit:contain" class="mb-1">
+                                            {% endif %}
+                                            <i class="{{ profile.navbar_icon|default:'fas fa-store' }} mb-1" id="loginPreviewIcon" style="font-size:1.5rem;{% if profile.login_brand_type == 'logo' and profile.logo %}display:none{% endif %}"></i>
+                                            <div class="fw-bold" style="font-size:.85rem" id="loginPreviewName">{{ profile.business_name }}</div>
+                                            <div style="font-size:.7rem;opacity:.85" id="loginPreviewSub">{{ profile.login_subtitle|default:'Sales Management System' }}</div>
+                                            <div class="bg-white rounded-2 mt-2" style="width:100px;height:22px;opacity:.3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Sidebar Settings -->
+                            <h6 class="fw-bold text-muted mb-3"><i class="fas fa-columns me-1"></i>Sidebar</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Active Menu Style</label>
+                                    <select class="form-select" name="sidebar_active_style" id="id_sidebar_style">
+                                        {% for val, label in sidebar_styles %}
+                                        <option value="{{ val }}" {% if profile.sidebar_active_style == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">How the currently active menu item is highlighted</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sidebar Preview</label>
+                                    <div class="bg-white border rounded-2 p-2" id="sidebarPreview" style="max-width:220px">
+                                        <div class="d-flex align-items-center gap-2 px-2 py-1 text-muted" style="font-size:.8rem">
+                                            <i class="fas fa-tachometer-alt" style="width:16px"></i> Dashboard
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 px-2 py-1 sidebar-preview-active" id="sidebarPreviewActive"
+                                             style="font-size:.8rem;font-weight:600;
+                                             {% if profile.sidebar_active_style == 'fill' %}background:{{ profile.primary_color|default:'#667eea' }}22;color:{{ profile.primary_color|default:'#667eea' }};border-radius:6px
+                                             {% elif profile.sidebar_active_style == 'pill' %}background:{{ profile.primary_color|default:'#667eea' }}15;color:{{ profile.primary_color|default:'#667eea' }};border-radius:20px
+                                             {% else %}border-left:3px solid {{ profile.primary_color|default:'#667eea' }};color:{{ profile.primary_color|default:'#667eea' }}
+                                             {% endif %}">
+                                            <i class="fas fa-file-invoice-dollar" style="width:16px"></i> Sales
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 px-2 py-1 text-muted" style="font-size:.8rem">
+                                            <i class="fas fa-boxes" style="width:16px"></i> Products
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 px-2 py-1 text-muted" style="font-size:.8rem">
+                                            <i class="fas fa-money-bill-wave" style="width:16px"></i> Payments
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section" style="background:#8b5cf6;border-color:#8b5cf6">
+                                    <i class="fas fa-save me-1"></i>Save Appearance
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Banking -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-banking" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-university me-2 text-primary"></i>Bank Accounts</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bankModal" onclick="resetBankModal()">
+                                <i class="fas fa-plus me-1"></i>Add Account
+                            </button>
+                        </div>
+                        <div id="bankAccountsList">
+                            {% if bank_accounts %}
+                            {% for account in bank_accounts %}
+                            <div class="entity-card d-flex justify-content-between align-items-start" data-bank-id="{{ account.pk }}">
+                                <div>
+                                    <div class="entity-title">
+                                        {{ account.bank_name }} &mdash; {{ account.branch_name }}
+                                        {% if account.is_primary %}<span class="badge bg-primary ms-1">PRIMARY</span>{% endif %}
+                                        {% if not account.is_active %}<span class="badge bg-secondary ms-1">Inactive</span>{% endif %}
+                                    </div>
+                                    <div class="entity-meta">
+                                        <span class="me-3"><i class="fas fa-hashtag me-1"></i>{{ account.account_number }}</span>
+                                        <span class="me-3">{{ account.get_account_type_display }}</span>
+                                        <span>{{ account.currency }}</span>
+                                        {% if account.swift_code %}<span class="ms-3">SWIFT: {{ account.swift_code }}</span>{% endif %}
+                                    </div>
+                                    {% if account.purpose %}<div class="entity-meta mt-1"><i class="fas fa-tag me-1"></i>{{ account.purpose }}</div>{% endif %}
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editBank({{ account.pk }}, this)" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBank({{ account.pk }})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-muted text-center py-4" id="noBanksMsg"><em>No bank accounts configured yet</em></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Locations -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-locations" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-map-marked-alt me-2 text-success"></i>Additional Locations</h5>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addressModal" onclick="resetAddressModal()">
+                                <i class="fas fa-plus me-1"></i>Add Location
+                            </button>
+                        </div>
+                        <div id="addressesList">
+                            {% if addresses %}
+                            {% for address in addresses %}
+                            <div class="entity-card d-flex justify-content-between align-items-start" data-address-id="{{ address.pk }}">
+                                <div>
+                                    <div class="entity-title">
+                                        {{ address.location_name }}
+                                        <span class="badge bg-info text-dark ms-1">{{ address.get_address_type_display }}</span>
+                                    </div>
+                                    <div class="entity-meta">{{ address.get_full_address }}</div>
+                                    {% if address.phone %}<div class="entity-meta"><i class="fas fa-phone me-1"></i>{{ address.phone }}</div>{% endif %}
+                                    {% if address.contact_person %}<div class="entity-meta"><i class="fas fa-user me-1"></i>{{ address.contact_person }}</div>{% endif %}
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-success" onclick="editAddress({{ address.pk }}, this)" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAddress({{ address.pk }})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-muted text-center py-4" id="noAddrsMsg"><em>No additional locations configured yet</em></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /tab-content -->
+        </div>
+    </div>
+</div>
+
+<!-- =============== MODAL: Bank Account =============== -->
+<div class="modal fade" id="bankModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bankForm">
+                {% csrf_token %}
+                <input type="hidden" id="bankPk" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bankModalTitle"><i class="fas fa-university me-2"></i>Add Bank Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label required-star">Account Holder Name</label>
+                            <input type="text" class="form-control" name="account_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Bank Name</label>
+                            <input type="text" class="form-control" name="bank_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Branch</label>
+                            <input type="text" class="form-control" name="branch_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Account Number</label>
+                            <input type="text" class="form-control" name="account_number" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Account Type</label>
+                            <select class="form-select" name="account_type">
+                                {% for val, label in account_types %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">SWIFT Code</label>
+                            <input type="text" class="form-control" name="swift_code">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">IBAN</label>
+                            <input type="text" class="form-control" name="iban">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Currency</label>
+                            <input type="text" class="form-control" name="currency" value="LKR" maxlength="3">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Purpose</label>
+                            <input type="text" class="form-control" name="purpose" placeholder="e.g., Operations">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_primary" id="bankPrimary">
+                                <label class="form-check-label fw-semibold" for="bankPrimary">Primary Account</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =============== MODAL: Address =============== -->
+<div class="modal fade" id="addressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addressForm">
+                {% csrf_token %}
+                <input type="hidden" id="addressPk" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addressModalTitle"><i class="fas fa-map-marked-alt me-2"></i>Add Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Address Type</label>
+                            <select class="form-select" name="address_type" required>
+                                {% for val, label in address_types %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Location Name</label>
+                            <input type="text" class="form-control" name="location_name" required placeholder="e.g., Colombo Warehouse">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required-star">Address Line 1</label>
+                            <input type="text" class="form-control" name="address_line1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address Line 2</label>
+                            <input type="text" class="form-control" name="address_line2">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required-star">City</label>
+                            <input type="text" class="form-control" name="city" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">District</label>
+                            <input type="text" class="form-control" name="district">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Postal Code</label>
+                            <input type="text" class="form-control" name="postal_code">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" name="country" value="Sri Lanka">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" name="contact_person">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="save-toast" id="saveToast"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- Progress Ring ---
+    const ring = document.getElementById('progressRing');
+    if (ring) {
+        const circumference = 2 * Math.PI * 30; // r=30
+        ring.style.strokeDasharray = circumference;
+        const pct = {{ completion|default:0 }};
+        ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+    }
+
+    function updateProgress(newPct) {
+        const circumference = 2 * Math.PI * 30;
+        if (ring) ring.style.strokeDashoffset = circumference - (newPct / 100) * circumference;
+        const el = document.getElementById('progressPct');
+        if (el) el.textContent = newPct + '%';
+    }
+
+    // --- Toast ---
+    function showToast(message, type) {
+        const t = document.getElementById('saveToast');
+        t.textContent = message;
+        t.className = 'save-toast ' + type + ' show';
+        setTimeout(() => { t.classList.remove('show'); }, 3000);
+    }
+
+    // --- CSRF ---
+    function getCSRF() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    // --- Section Save (AJAX) ---
+    document.querySelectorAll('.settings-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const section = this.dataset.section;
+            const btn = this.querySelector('.btn-save-section');
+            const origHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+            const data = new FormData(this);
+
+            fetch(`/business/save-section/${section}/`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: data
+            })
+            .then(r => r.json())
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+                if (res.ok) {
+                    showToast('Section saved successfully!', 'success');
+                    if (res.completion !== undefined) updateProgress(res.completion);
+                    // Reload page for sections that affect global UI (navbar, sidebar, branding)
+                    if (['appearance', 'branding'].includes(section)) {
+                        setTimeout(() => window.location.reload(), 600);
+                    }
+                } else {
+                    let msg = res.error || 'Validation errors';
+                    if (res.errors) {
+                        msg = Object.entries(res.errors).map(([k,v]) => `${k}: ${v}`).join(', ');
+                    }
+                    showToast(msg, 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+                showToast('Network error', 'error');
+            });
+        });
+    });
+
+    // --- Branding Live Preview ---
+    const bpHex = document.getElementById('brandPrimaryHex');
+    const bsHex = document.getElementById('brandSecondaryHex');
+    const baHex = document.getElementById('brandAccentHex');
+    const bp = document.getElementById('brandPrimary');
+    const bs = document.getElementById('brandSecondary');
+    const ba = document.getElementById('brandAccent');
+
+    function syncBrand() {
+        const p = bp ? bp.value : '#667eea';
+        const s = bs ? bs.value : '#764ba2';
+        const a = ba ? ba.value : '#f093fb';
+        if (bpHex) bpHex.value = p;
+        if (bsHex) bsHex.value = s;
+        if (baHex) baHex.value = a;
+        const hdr = document.getElementById('previewHeader');
+        if (hdr) hdr.style.background = `linear-gradient(135deg, ${p}, ${s})`;
+        const sp = document.getElementById('swatchPrimary');
+        const ss = document.getElementById('swatchSecondary');
+        const sa = document.getElementById('swatchAccent');
+        if (sp) sp.style.background = p;
+        if (ss) ss.style.background = s;
+        if (sa) sa.style.background = a;
+    }
+
+    if (bp) bp.addEventListener('input', syncBrand);
+    if (bs) bs.addEventListener('input', syncBrand);
+    if (ba) ba.addEventListener('input', syncBrand);
+    if (bpHex) bpHex.addEventListener('input', () => { if (bp) bp.value = bpHex.value; syncBrand(); });
+    if (bsHex) bsHex.addEventListener('input', () => { if (bs) bs.value = bsHex.value; syncBrand(); });
+    if (baHex) baHex.addEventListener('input', () => { if (ba) ba.value = baHex.value; syncBrand(); });
+
+    // --- Bank Account CRUD ---
+    window.resetBankModal = function() {
+        document.getElementById('bankPk').value = '';
+        document.getElementById('bankModalTitle').innerHTML = '<i class="fas fa-university me-2"></i>Add Bank Account';
+        document.getElementById('bankForm').reset();
+    };
+
+    window.editBank = function(pk, btn) {
+        // Populate from existing card data
+        const card = btn.closest('.entity-card');
+        document.getElementById('bankPk').value = pk;
+        document.getElementById('bankModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Bank Account';
+        // Open modal (fields are pre-filled from the inline data attributes if needed; simple approach: open modal)
+        const modal = new bootstrap.Modal(document.getElementById('bankModal'));
+        modal.show();
+    };
+
+    window.deleteBank = function(pk) {
+        if (!confirm('Delete this bank account?')) return;
+        fetch(`/business/bank-account/${pk}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRF()
+            }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.ok) {
+                const card = document.querySelector(`[data-bank-id="${pk}"]`);
+                if (card) card.remove();
+                showToast('Bank account deleted', 'success');
+            } else {
+                showToast(res.error || 'Error', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'));
+    };
+
+    document.getElementById('bankForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const pk = document.getElementById('bankPk').value;
+        const url = pk ? `/business/bank-account/${pk}/edit/` : '/business/bank-account/add/';
+        const fd = new FormData(this);
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.ok) {
+                showToast(pk ? 'Account updated' : 'Account added', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('bankModal')).hide();
+                // Reload page to show updated list
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(res.error || 'Error', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'));
+    });
+
+    // --- Address CRUD ---
+    window.resetAddressModal = function() {
+        document.getElementById('addressPk').value = '';
+        document.getElementById('addressModalTitle').innerHTML = '<i class="fas fa-map-marked-alt me-2"></i>Add Location';
+        document.getElementById('addressForm').reset();
+    };
+
+    window.editAddress = function(pk, btn) {
+        document.getElementById('addressPk').value = pk;
+        document.getElementById('addressModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Location';
+        const modal = new bootstrap.Modal(document.getElementById('addressModal'));
+        modal.show();
+    };
+
+    window.deleteAddress = function(pk) {
+        if (!confirm('Delete this location?')) return;
+        fetch(`/business/address/${pk}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRF()
+            }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.ok) {
+                const card = document.querySelector(`[data-address-id="${pk}"]`);
+                if (card) card.remove();
+                showToast('Location deleted', 'success');
+            } else {
+                showToast(res.error || 'Error', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'));
+    };
+
+    document.getElementById('addressForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const pk = document.getElementById('addressPk').value;
+        const url = pk ? `/business/address/${pk}/edit/` : '/business/address/add/';
+        const fd = new FormData(this);
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.ok) {
+                showToast(pk ? 'Location updated' : 'Location added', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('addressModal')).hide();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(res.error || 'Error', 'error');
+            }
+        })
+        .catch(() => showToast('Network error', 'error'));
+    });
+
+    // --- Appearance Live Previews ---
+    const navIconInput = document.getElementById('id_navbar_icon');
+    const navTitleInput = document.getElementById('id_navbar_title');
+    const navStyleSelect = document.getElementById('id_navbar_style');
+    const navBrandTypeSelect = document.getElementById('id_navbar_brand_type');
+    const loginSubInput = document.getElementById('id_login_subtitle');
+    const loginBgSelect = document.getElementById('id_login_bg_style');
+    const loginBrandTypeSelect = document.getElementById('id_login_brand_type');
+    const sidebarSelect = document.getElementById('id_sidebar_style');
+
+    function getPrimary() { return bp ? bp.value : '{{ profile.primary_color|default:"#667eea" }}'; }
+    function getSecondary() { return bs ? bs.value : '{{ profile.secondary_color|default:"#764ba2" }}'; }
+
+    function navbarBgCSS(style) {
+        const p = getPrimary(), s = getSecondary();
+        if (style === 'solid') return `background:${p}`;
+        if (style === 'dark') return 'background:#1f2937';
+        return `background:linear-gradient(135deg, ${p}, ${s})`;
+    }
+
+    function updateNavbarPreview() {
+        const bar = document.getElementById('navbarPreviewBar');
+        const icon = document.getElementById('navPreviewIcon');
+        const logo = document.getElementById('navPreviewLogo');
+        const title = document.getElementById('navPreviewTitle');
+        if (!bar) return;
+        bar.style.cssText = navbarBgCSS(navStyleSelect ? navStyleSelect.value : 'gradient') + ';color:#fff;min-height:42px;display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px';
+        
+        // Toggle logo vs icon based on brand type
+        const brandType = navBrandTypeSelect ? navBrandTypeSelect.value : 'logo';
+        if (logo) logo.style.display = (brandType === 'logo') ? '' : 'none';
+        if (icon) {
+            icon.style.display = (brandType === 'icon' || !logo) ? '' : 'none';
+            if (navIconInput) icon.className = navIconInput.value || 'fas fa-store';
+        }
+        
+        if (title && navTitleInput) title.textContent = navTitleInput.value || '{{ profile.business_name }}';
+        // Also update icon preview in input group
+        const iconPreview = document.getElementById('navIconPreview');
+        if (iconPreview && navIconInput) iconPreview.innerHTML = '<i class="' + (navIconInput.value || 'fas fa-store') + '"></i>';
+    }
+
+    function updateLoginPreview() {
+        const card = document.getElementById('loginPreviewCard');
+        const sub = document.getElementById('loginPreviewSub');
+        const loginLogo = document.getElementById('loginPreviewLogo');
+        const loginIcon = document.getElementById('loginPreviewIcon');
+        if (!card) return;
+        const style = loginBgSelect ? loginBgSelect.value : 'gradient';
+        const p = getPrimary(), s = getSecondary();
+        if (style === 'solid') card.style.background = p;
+        else if (style === 'image') card.style.background = `linear-gradient(135deg, ${p}88, ${s}88)`;
+        else card.style.background = `linear-gradient(135deg, ${p}, ${s})`;
+        if (sub && loginSubInput) sub.textContent = loginSubInput.value || 'Sales Management System';
+        // Toggle logo vs icon based on login brand type
+        const loginBrand = loginBrandTypeSelect ? loginBrandTypeSelect.value : 'logo';
+        if (loginLogo) loginLogo.style.display = (loginBrand === 'logo') ? '' : 'none';
+        if (loginIcon) loginIcon.style.display = (loginBrand === 'icon' || !loginLogo) ? '' : 'none';
+        // Toggle bg image upload visibility
+        const bgGroup = document.getElementById('loginBgImageGroup');
+        if (bgGroup) bgGroup.style.opacity = style === 'image' ? '1' : '0.5';
+    }
+
+    function updateSidebarPreview() {
+        const active = document.getElementById('sidebarPreviewActive');
+        if (!active || !sidebarSelect) return;
+        const style = sidebarSelect.value;
+        const p = getPrimary();
+        active.style.cssText = 'font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;padding:4px 8px;';
+        active.style.color = p;
+        if (style === 'fill') {
+            active.style.background = p + '22';
+            active.style.borderRadius = '6px';
+        } else if (style === 'pill') {
+            active.style.background = p + '15';
+            active.style.borderRadius = '20px';
+        } else {
+            active.style.borderLeft = '3px solid ' + p;
+        }
+    }
+
+    if (navIconInput) navIconInput.addEventListener('input', updateNavbarPreview);
+    if (navTitleInput) navTitleInput.addEventListener('input', updateNavbarPreview);
+    if (navStyleSelect) navStyleSelect.addEventListener('change', updateNavbarPreview);
+    if (navBrandTypeSelect) navBrandTypeSelect.addEventListener('change', updateNavbarPreview);
+    if (loginSubInput) loginSubInput.addEventListener('input', updateLoginPreview);
+    if (loginBgSelect) loginBgSelect.addEventListener('change', updateLoginPreview);
+    if (loginBrandTypeSelect) loginBrandTypeSelect.addEventListener('change', updateLoginPreview);
+    if (sidebarSelect) sidebarSelect.addEventListener('change', updateSidebarPreview);
+
+    // --- Persist active tab ---
+    const stored = localStorage.getItem('biz_settings_tab');
+    if (stored) {
+        const tab = document.querySelector(`[href="${stored}"]`);
+        if (tab) new bootstrap.Tab(tab).show();
+    }
+    document.querySelectorAll('#settingsTabs .nav-link').forEach(link => {
+        link.addEventListener('shown.bs.tab', function() {
+            localStorage.setItem('biz_settings_tab', this.getAttribute('href'));
+        });
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Exchange {{ exchange.exchange_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .page-header h2 {
+            font-size: 1.3rem;
+        }
+        
+        .action-buttons-mobile {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-buttons-mobile .btn {
+            flex: 1;
+            font-size: 0.9rem;
+            padding: 10px 8px;
+        }
+        
+        .mobile-card-view {
+            display: block;
+        }
+        
+        .desktop-table-view {
+            display: none;
+        }
+        
+        .exchange-item-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: white;
+        }
+        
+        .exchange-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px dashed #e5e7eb;
+        }
+        
+        .item-quantity-badge {
+            background: #2563eb;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .product-section {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .product-section.in-product {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+        
+        .product-section.out-product {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .product-label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .product-label.in {
+            color: #10b981;
+        }
+        
+        .product-label.out {
+            color: #ef4444;
+        }
+        
+        .product-details {
+            font-size: 0.9rem;
+        }
+        
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        
+        .info-value {
+            text-align: right;
+        }
+        
+        .back-button-spacer {
+            height: 70px;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .mobile-card-view {
+            display: none;
+        }
+        
+        .desktop-table-view {
+            display: block;
+        }
+        
+        .action-buttons-mobile {
+            display: none;
+        }
+        
+        .back-button-spacer {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3 page-header">
+        <div class="col-md-8">
+            <h2><i class="bi bi-arrow-repeat"></i> Exchange {{ exchange.exchange_number }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'sales:exchange_list' %}">Exchanges</a></li>
+                    <li class="breadcrumb-item active">{{ exchange.exchange_number }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end d-none d-md-block">
+            {% if exchange.exchange_status == 'unsettled' and user.user_type in 'admin,office' %}
+            <a href="{% url 'sales:exchange_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Exchange Information -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Exchange Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="150">Exchange No:</th>
+                            <td>{{ exchange.exchange_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th>
+                            <td>{{ exchange.exchange_date|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Shop:</th>
+                            <td>{{ exchange.shop.shop_code }} - {{ exchange.shop.shop_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Reason:</th>
+                            <td>{{ exchange.get_exchange_reason_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if exchange.exchange_status == 'unsettled' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif exchange.exchange_status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif exchange.exchange_status == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ exchange.exchange_status|title }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if exchange.notes %}
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ exchange.notes }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Tracking Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="150">Created By:</th>
+                            <td>{{ exchange.created_by.get_full_name|default:exchange.created_by.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created At:</th>
+                            <td>{{ exchange.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% if exchange.completed_at %}
+                        <tr>
+                            <th>Completed At:</th>
+                            <td>{{ exchange.completed_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Last Updated:</th>
+                            <td>{{ exchange.updated_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exchange Items -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> Exchange Items</h5>
+        </div>
+        <div class="card-body">
+            <!-- Desktop Table View -->
+            <div class="desktop-table-view">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th colspan="4" class="text-center bg-success text-white">IN - Shop Returns (Stock ↑)</th>
+                                <th rowspan="2" class="text-center align-middle">Quantity</th>
+                                <th colspan="4" class="text-center bg-danger text-white">OUT - We Give (Stock ↓)</th>
+                            </tr>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Size</th>
+                                <th>Unit Price</th>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Size</th>
+                                <th>Unit Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in exchange.items.all %}
+                            <tr>
+                                <td>{{ item.returned_product.product_name }}</td>
+                                <td>{{ item.returned_product.category.name }}</td>
+                                <td>{{ item.returned_product.size }}</td>
+                                <td>Rs. {{ item.returned_product.marked_price }}</td>
+                                <td class="text-center"><strong class="text-primary">{{ item.returned_quantity }}</strong></td>
+                                <td>{{ item.replacement_product.product_name }}</td>
+                                <td>{{ item.replacement_product.category.name }}</td>
+                                <td>{{ item.replacement_product.size }}</td>
+                                <td>Rs. {{ item.replacement_product.marked_price }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">No items in this exchange</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <td colspan="4" class="text-end"><strong>Total Items:</strong></td>
+                                <td class="text-center"><strong>{{ exchange.items.count }}</strong></td>
+                                <td colspan="4"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Mobile Card View -->
+            <div class="mobile-card-view">
+                {% for item in exchange.items.all %}
+                <div class="exchange-item-card">
+                    <div class="exchange-item-header">
+                        <span style="color: #6b7280; font-weight: 600;">Pair #{{ forloop.counter }}</span>
+                        <span class="item-quantity-badge">{{ item.returned_quantity }}</span>
+                    </div>
+                    
+                    <!-- IN Product (Shop Returns) -->
+                    <div class="product-section in-product">
+                        <div class="product-label in">
+                            <i class="fas fa-arrow-circle-up"></i>
+                            IN - Shop Returns (Stock ↑)
+                        </div>
+                        <div class="product-details">
+                            <div class="product-name">{{ item.returned_product.product_name }}</div>
+                            <div class="product-meta">
+                                <span>{{ item.returned_product.category.name }} • {{ item.returned_product.size }}</span>
+                                <span style="font-weight: 600;">Rs. {{ item.returned_product.marked_price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OUT Product (We Give) -->
+                    <div class="product-section out-product">
+                        <div class="product-label out">
+                            <i class="fas fa-arrow-circle-down"></i>
+                            OUT - We Give (Stock ↓)
+                        </div>
+                        <div class="product-details">
+                            <div class="product-name">{{ item.replacement_product.product_name }}</div>
+                            <div class="product-meta">
+                                <span>{{ item.replacement_product.category.name }} • {{ item.replacement_product.size }}</span>
+                                <span style="font-weight: 600;">Rs. {{ item.replacement_product.marked_price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-warning">No items in this exchange</div>
+                {% endfor %}
+                
+                <div class="alert alert-info mt-3">
+                    <strong>Total Items:</strong> {{ exchange.items.count }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-none d-md-flex justify-content-between">
+        <a href="{% url 'sales:exchange_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+    
+    <!-- Mobile Action Buttons -->
+    <div class="action-buttons-mobile">
+        <a href="{% url 'sales:exchange_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+    
+    <div class="back-button-spacer"></div>
+</div>
+{% endblock %}

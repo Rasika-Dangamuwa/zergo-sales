@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Bill - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-item {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .size-category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 15px 0 10px 0;
+        position: sticky;
+        top: 160px;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    
+    .size-category-header h5 {
+        color: white;
+        margin: 0;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 8px;
+    }
+    
+    .product-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+    
+    .product-details {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+    
+    .stock-badge {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .stock-badge.low {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .input-group-sm {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .input-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+        min-width: 35px;
+    }
+    
+    .input-field {
+        width: 70px;
+        padding: 6px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    
+    .input-field:focus {
+        outline: none;
+        border-color: #2563eb;
+    }
+    
+    .price-input {
+        width: 90px;
+    }
+    
+    .summary-card {
+        position: sticky;
+        top: 70px;
+        background: white;
+        border: 2px solid #2563eb;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    
+    .summary-total {
+        border-top: 2px solid #2563eb;
+        padding-top: 0.75rem;
+        margin-top: 0.5rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2563eb;
+    }
+    
+    .search-sticky {
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 1rem 0;
+        z-index: 10;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .summary-card {
+            position: relative;
+            top: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <form method="post" id="billForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Products List -->
+            <div class="col-lg-8">
+                <!-- Shop Selection (Sticky) -->
+                <div class="search-sticky">
+                    <h2 class="mb-3"><i class="fas fa-file-invoice"></i> Create Bill</h2>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-store text-primary"></i> Select Shop *
+                            </label>
+                            <select name="shop_id" id="shopSelect" class="form-select" required>
+                                <option value="">-- Select Shop --</option>
+                                {% for shop in shops %}
+                                <option value="{{ shop.id }}" 
+                                        data-balance="{{ shop.current_balance }}"
+                                        data-credit-limit="{{ shop.credit_limit }}"
+                                        {% if request.GET.shop == shop.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ shop.shop_name }} - {{ shop.owner_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <!-- Shop Balance Info -->
+                            <div id="shopBalanceInfo" class="mt-2 p-2 bg-light rounded" style="display: none; font-size: 0.85rem;">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <small class="text-muted">Credit Balance:</small>
+                                        <div class="fw-bold text-danger" id="creditBalance">Rs. 0.00</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">Uncleared Cheques:</small>
+                                        <div class="fw-bold text-warning" id="unclearedCheques">Rs. 0.00</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">Credit Limit:</small>
+                                        <div class="fw-bold text-primary" id="creditLimit">Rs. 0.00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Search</label>
+                            <input type="text" id="searchProduct" class="form-control" placeholder="Search product...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products List -->
+                <div id="productsList">
+                    {% for size, products in products_by_size.items %}
+                    <!-- Size Category Header -->
+                    <div class="size-category-header">
+                        <h5><i class="fas fa-bottle-water"></i> {{ size }}</h5>
+                    </div>
+                    
+                    {% for product in products %}
+                    <div class="product-item" data-name="{{ product.product_name }}" data-id="{{ product.id }}">
+                        <div class="product-header">
+                            <div>
+                                <div class="product-name">{{ product.product_name }}</div>
+                            </div>
+                            <span class="stock-badge {% if product.quantity_in_stock < 10 %}low{% endif %}">
+                                Stock: {{ product.quantity_in_stock|floatformat:0|default:"0" }}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <div class="input-group-sm d-flex align-items-center">
+                                <span class="input-label">Price:</span>
+                                <button type="button" class="unlock-btn" onclick="togglePriceLock({{ product.id }})" title="Click to unlock/lock price">
+                                    <i class="fas fa-lock" id="lock_{{ product.id }}"></i>
+                                </button>
+                                <input type="number" 
+                                       class="input-field price-input locked" 
+                                       id="price_{{ product.id }}"
+                                       step="0.01" 
+                                       min="0"
+                                       value="{{ product.final_price|floatformat:2 }}"
+                                       data-original="{{ product.marked_price|floatformat:2 }}"
+                                       data-discount="{{ product.discount_percentage }}"
+                                       readonly
+                                       onchange="calculateTotal()">
+                            </div>
+                            
+                            <div class="input-group-sm">
+                                <span class="input-label">Qty:</span>
+                                <input type="number" 
+                                       class="input-field" 
+                                       id="qty_{{ product.id }}"
+                                       min="0" 
+                                       max="{{ product.available_stock }}"
+                                       value="0"
+                                       data-product-id="{{ product.id }}"
+                                       data-product-name="{{ product.product_name }}"
+                                       data-price="{{ product.final_price|floatformat:2 }}"
+                                       data-stock="{{ product.available_stock }}"
+                                       data-tax="0"
+                                       onchange="calculateTotal()">
+                            </div>
+                            
+                            <div class="input-group-sm">
+                                <span class="input-label">FOC:</span>
+                                <input type="number" 
+                                       class="input-field" 
+                                       id="foc_{{ product.id }}"
+                                       min="0" 
+                                       max="{{ product.available_stock }}"
+                                       value="0"
+                                       onchange="calculateTotal()">
+                            </div>
+                            
+                            <span class="item-total" id="itemTotal_{{ product.id }}"></span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="col-lg-4">
+                <div class="summary-card">
+                    <h5 class="text-primary mb-3">
+                        <i class="fas fa-shopping-cart"></i> Bill Summary
+                        <span class="badge bg-primary" id="itemCount">0</span>
+                    </h5>
+                    
+                    <div id="summaryItems" class="mb-3" style="max-height: 300px; overflow-y: auto;">
+                        <p class="text-muted text-center small">No items selected</p>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span class="fw-bold" id="subtotal">Rs. 0.00</span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span>Bill Discount:</span>
+                        <div class="input-group input-group-sm" style="width: 100px;">
+                            <input type="number" 
+                                   name="discount_percentage" 
+                                   id="billDiscount" 
+                                   class="form-control" 
+                                   min="0" 
+                                   max="100" 
+                                   step="0.01" 
+                                   value="0"
+                                   onchange="calculateTotal()">
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span>Tax:</span>
+                        <span class="fw-bold" id="tax">Rs. 0.00</span>
+                    </div>
+                    
+                    <div class="summary-row summary-total">
+                        <span>TOTAL:</span>
+                        <span id="total">Rs. 0.00</span>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label small">Notes (Optional)</label>
+                        <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Remarks..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="items" id="itemsData">
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                            <i class="fas fa-check"></i> Create Bill
+                        </button>
+                        <a href="{% url 'shops:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Toggle price lock/unlock
+function togglePriceLock(productId) {
+    const priceInput = document.getElementById('price_' + productId);
+    const lockIcon = document.getElementById('lock_' + productId);
+    const unlockBtn = lockIcon.parentElement;
+    
+    if (priceInput.readOnly) {
+        // Unlock
+        priceInput.readOnly = false;
+        priceInput.classList.remove('locked');
+        lockIcon.classList.remove('fa-lock');
+        lockIcon.classList.add('fa-lock-open');
+        unlockBtn.classList.add('unlocked');
+        priceInput.focus();
+    } else {
+        // Lock and format to 2 decimals
+        const value = parseFloat(priceInput.value) || 0;
+        priceInput.value = value.toFixed(2);
+        priceInput.readOnly = true;
+        priceInput.classList.add('locked');
+        lockIcon.classList.remove('fa-lock-open');
+        lockIcon.classList.add('fa-lock');
+        unlockBtn.classList.remove('unlocked');
+        calculateTotal();
+    }
+}
+
+// Shop selection with balance info
+document.getElementById('shopSelect').addEventListener('change', async function() {
+    const option = this.options[this.selectedIndex];
+    const balance = parseFloat(option.dataset.balance) || 0;
+    const creditLimit = parseFloat(option.dataset.creditLimit) || 0;
+    const shopId = this.value;
+    
+    // Show shop balance info
+    if (shopId) {
+        document.getElementById('shopBalanceInfo').style.display = 'block';
+        document.getElementById('creditBalance').textContent = 'Rs. ' + Math.abs(balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('creditLimit').textContent = 'Rs. ' + creditLimit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Fetch uncleared cheques (you can implement this via API)
+        // For now, showing as 0
+        document.getElementById('unclearedCheques').textContent = 'Rs. 0.00';
+    } else {
+        document.getElementById('shopBalanceInfo').style.display = 'none';
+    }
+});
+
+// Product search
+document.getElementById('searchProduct').addEventListener('input', function() {
+    const search = this.value.toLowerCase();
+    document.querySelectorAll('.product-item').forEach(item => {
+        const name = item.dataset.name.toLowerCase();
+        item.style.display = name.includes(search) ? '' : 'none';
+    });
+});
+
+function calculateTotal() {
+    let itemCount = 0;
+    let subtotal = 0;
+    let totalTax = 0;
+    const items = [];
+    let summaryHtml = '';
+    
+    // Loop through all products
+    document.querySelectorAll('[id^="qty_"]').forEach(qtyInput => {
+        const productId = qtyInput.dataset.productId;
+        const qty = parseInt(qtyInput.value) || 0;
+        const foc = parseInt(document.getElementById('foc_' + productId).value) || 0;
+        const price = parseFloat(document.getElementById('price_' + productId).value) || 0;
+        const stock = parseFloat(qtyInput.dataset.stock);
+        const tax = parseFloat(qtyInput.dataset.tax) || 0;
+        
+        const totalQty = qty + foc;
+        
+        // Validate stock
+        if (totalQty > stock) {
+            qtyInput.value = 0;
+            document.getElementById('foc_' + productId).value = 0;
+            alert(`Insufficient stock! Available: ${stock}`);
+            return;
+        }
+        
+        if (qty > 0 || foc > 0) {
+            itemCount++;
+            const lineTotal = price * qty;
+            subtotal += lineTotal;
+            totalTax += lineTotal * (tax / 100);
+            
+            // Show inline item total
+            const itemTotalEl = document.getElementById('itemTotal_' + productId);
+            if (itemTotalEl) {
+                itemTotalEl.textContent = 'Total: Rs. ' + lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            
+            items.push({
+                product_id: productId,
+                quantity: qty,
+                foc_quantity: foc,
+                unit_price: price,
+                discount_percentage: 0
+            });
+            
+            // Improved summary with product name and better qty/foc display
+            summaryHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="fw-bold text-dark">${qtyInput.dataset.productName}</div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted small">
+                            Qty: <strong class="text-primary">${qty}</strong>${foc > 0 ? ' | FOC: <strong class="text-success">' + foc + '</strong>' : ''}
+                        </span>
+                        <span class="fw-bold text-success">Rs. ${lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="text-muted small">
+                        ${qty} × Rs. ${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </div>
+                </div>
+            `;
+        } else {
+            // Clear inline total if no quantity
+            const itemTotalEl = document.getElementById('itemTotal_' + productId);
+            if (itemTotalEl) {
+                itemTotalEl.textContent = '';
+            }
+        }
+    });
+    
+    // Update summary
+    document.getElementById('itemCount').textContent = itemCount;
+    
+    if (itemCount === 0) {
+        document.getElementById('summaryItems').innerHTML = '<p class="text-muted text-center small">No items selected</p>';
+        document.getElementById('submitBtn').disabled = true;
+    } else {
+        document.getElementById('summaryItems').innerHTML = summaryHtml;
+        document.getElementById('submitBtn').disabled = false;
+    }
+    
+    // Calculate bill discount
+    const billDiscountPercent = parseFloat(document.getElementById('billDiscount').value) || 0;
+    const billDiscount = subtotal * (billDiscountPercent / 100);
+    const afterDiscount = subtotal - billDiscount;
+    const total = afterDiscount + totalTax;
+    
+    document.getElementById('subtotal').textContent = 'Rs. ' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('tax').textContent = 'Rs. ' + totalTax.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('total').textContent = 'Rs. ' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    // Store items for submission
+    document.getElementById('itemsData').value = JSON.stringify(items);
+}
+
+// Form submission
+document.getElementById('billForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!document.getElementById('shopSelect').value) {
+        alert('Please select a shop');
+        return;
+    }
+    
+    const items = JSON.parse(document.getElementById('itemsData').value || '[]');
+    if (items.length === 0) {
+        alert('Please select at least one item');
+        return;
+    }
+    
+    this.submit();
+});
+
+// Trigger initial display if shop pre-selected
+if (document.getElementById('shopSelect').value) {
+    document.getElementById('shopSelect').dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

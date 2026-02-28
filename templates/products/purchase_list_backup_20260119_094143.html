@@ -1,0 +1,444 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Purchases (GRN) - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #2563eb;
+    }
+    
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .card-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+    
+    .card-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card-info-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-info-value {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .card-actions {
+        padding: 1rem 1.25rem;
+        background-color: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-draft { background-color: #fef3c7; color: #92400e; }
+    .status-received { background-color: #d1fae5; color: #065f46; }
+    .status-cancelled { background-color: #fee2e2; color: #991b1b; }
+    
+    .payment-unpaid { background-color: #fee2e2; color: #991b1b; }
+    .payment-partially_paid { background-color: #fef3c7; color: #92400e; }
+    .payment-paid { background-color: #d1fae5; color: #065f46; }
+    
+    .fab-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-box"></i> Purchases (GRN)</h2>
+            <p class="text-muted mb-0">Goods Received Notes</p>
+        </div>
+    </div>
+
+    <!-- Enhanced Stats Dashboard -->
+    <div class="stats-card">
+        <div class="row">
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-file-invoice" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.total_grns }}</span>
+                <span class="stat-label">Total GRNs</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-coins" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">Rs. {{ stats.total_value|floatformat:0|intcomma }}</span>
+                <span class="stat-label">Total Value</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-check-circle" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">Rs. {{ stats.paid_amount|floatformat:0|intcomma }}</span>
+                <span class="stat-label">Paid Amount</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">Rs. {{ stats.outstanding_amount|floatformat:0|intcomma }}</span>
+                <span class="stat-label">Outstanding</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-clock" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.unpaid }}</span>
+                <span class="stat-label">Unpaid GRNs</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-boxes" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.pending_stock_update }}</span>
+                <span class="stat-label">Pending Stock</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Search & Filters -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-search"></i> Search & Filters</h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                    <i class="fas fa-sliders-h"></i> Toggle Filters
+                </button>
+            </div>
+        </div>
+        <div class="collapse show" id="filterPanel">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <!-- Search Bar -->
+                    <div class="col-md-4">
+                        <label class="form-label"><i class="fas fa-search"></i> Search</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="GRN number, Invoice number, Company name..."
+                               value="{{ request.GET.search }}">
+                    </div>
+                    
+                    <!-- Date Range with Presets -->
+                    <div class="col-md-2">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" class="form-control" value="{{ request.GET.from_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" class="form-control" value="{{ request.GET.to_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quick Date Filters</label>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('today')">Today</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('week')">This Week</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('month')">This Month</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters Row -->
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="received" {% if request.GET.status == 'received' %}selected{% endif %}>Received</option>
+                            <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Company</label>
+                        <select name="company" class="form-select">
+                            <option value="">All Companies</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if request.GET.company|stringformat:"s" == company.id|stringformat:"s" %}selected{% endif %}>
+                                {{ company.company_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Payment Status</label>
+                        <select name="payment_status" class="form-select">
+                            <option value="">All</option>
+                            <option value="unpaid" {% if request.GET.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                            <option value="partially_paid" {% if request.GET.payment_status == 'partially_paid' %}selected{% endif %}>Partially Paid</option>
+                            <option value="paid" {% if request.GET.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Stock Status</label>
+                        <select name="stock_updated" class="form-select">
+                            <option value="">All</option>
+                            <option value="yes" {% if request.GET.stock_updated == 'yes' %}selected{% endif %}>Updated</option>
+                            <option value="no" {% if request.GET.stock_updated == 'no' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Sort By</label>
+                        <select name="sort" class="form-select">
+                            <option value="-grn_date" {% if request.GET.sort == '-grn_date' or not request.GET.sort %}selected{% endif %}>Latest First</option>
+                            <option value="grn_date" {% if request.GET.sort == 'grn_date' %}selected{% endif %}>Oldest First</option>
+                            <option value="-total_amount" {% if request.GET.sort == '-total_amount' %}selected{% endif %}>Highest Value</option>
+                            <option value="total_amount" {% if request.GET.sort == 'total_amount' %}selected{% endif %}>Lowest Value</option>
+                            <option value="company__company_name" {% if request.GET.sort == 'company__company_name' %}selected{% endif %}>Company A-Z</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Per Page</label>
+                        <select name="per_page" class="form-select">
+                            <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20</option>
+                            <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+                            <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                            <a href="{% url 'products:purchase_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Clear All
+                            </a>
+                            <button type="submit" name="export" value="excel" class="btn btn-success ms-auto">
+                                <i class="fas fa-file-excel"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+function setDateRange(range) {
+    const today = new Date();
+    let fromDate = new Date();
+    let toDate = new Date();
+    
+    if (range === 'today') {
+        fromDate = today;
+        toDate = today;
+    } else if (range === 'week') {
+        fromDate.setDate(today.getDate() - today.getDay()); // Start of week
+    } else if (range === 'month') {
+        fromDate.setDate(1); // Start of month
+    }
+    
+    document.querySelector('input[name="from_date"]').value = fromDate.toISOString().split('T')[0];
+    document.querySelector('input[name="to_date"]').value = toDate.toISOString().split('T')[0];
+}
+</script>
+
+    <!-- GRN List -->
+    {% if purchases %}
+        {% for purchase in purchases %}
+        <div class="card">
+            <div class="card-header-row">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="fas fa-file-invoice text-primary"></i> 
+                            <a href="{% url 'products:purchase_detail' purchase.pk %}" class="text-decoration-none">
+                                {{ purchase.grn_number }}
+                            </a>
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fas fa-building"></i> {{ purchase.company.company_name }}
+                        </small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge status-{{ purchase.status }}">{{ purchase.get_status_display }}</span>
+                    <span class="badge payment-{{ purchase.payment_status }}">{{ purchase.get_payment_status_display }}</span>
+                    {% if not purchase.stock_updated and purchase.status == 'received' %}
+                    <span class="badge bg-warning text-dark">
+                        <i class="fas fa-exclamation-triangle"></i> Stock Pending
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-info-grid">
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-calendar"></i> GRN Date</span>
+                    <span class="card-info-value">{{ purchase.grn_date|date:"d M Y" }}</span>
+                    <small class="text-muted">{{ purchase.grn_date|date:"h:i A" }}</small>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-file-alt"></i> Invoice No.</span>
+                    <span class="card-info-value">{{ purchase.supplier_invoice_number|default:"-" }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-coins"></i> Total Amount</span>
+                    <span class="card-info-value">Rs. {{ purchase.total_amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-money-bill-wave"></i> Outstanding</span>
+                    <span class="card-info-value">
+                        {% if purchase.payment_status == 'paid' %}
+                            <span class="text-success">Rs. 0</span>
+                        {% else %}
+                            <span class="text-danger fw-bold">Rs. {{ purchase.outstanding_amount|floatformat:2|intcomma }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-user"></i> Created By</span>
+                    <span class="card-info-value">{{ purchase.created_by.get_full_name }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-boxes"></i> Stock Status</span>
+                    <span class="card-info-value">
+                        {% if purchase.stock_updated %}
+                            <span class="text-success"><i class="fas fa-check-circle"></i> Updated</span>
+                        {% else %}
+                            <span class="text-danger"><i class="fas fa-times-circle"></i> Pending</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card-actions">
+                <a href="{% url 'products:purchase_detail' purchase.pk %}" class="btn btn-info btn-sm">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+                {% if not purchase.stock_updated and purchase.status == 'draft' %}
+                <a href="{% url 'products:update_purchase_stock' purchase.pk %}" 
+                   class="btn btn-success btn-sm"
+                   onclick="return confirm('Mark as received and update stock from this GRN?')">
+                    <i class="fas fa-check-double"></i> Receive & Update Stock
+                </a>
+                {% endif %}
+                {% if purchase.status == 'received' and purchase.payment_status != 'paid' %}
+                <a href="{% url 'products:company_account_detail' purchase.company.id %}" 
+                   class="btn btn-warning btn-sm" title="Make Payment">
+                    <i class="fas fa-money-bill"></i> Pay
+                </a>
+                {% endif %}
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Print">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-box fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No GRNs found. Create your first purchase!</p>
+            </div>
+        </div>
+    {% endif %}    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label=\"Page navigation\" class=\"mt-4\">
+        <ul class=\"pagination justify-content-center\">
+            {% if page_obj.has_previous %}
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">&laquo; First</a>
+            </li>
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Previous</a>
+            </li>
+            {% endif %}
+            
+            <li class=\"page-item active\">
+                <span class=\"page-link\">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Next</a>
+            </li>
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Last &raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+        <p class=\"text-center text-muted\">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} GRNs
+        </p>
+    </nav>
+    {% endif %}</div>
+
+<!-- FAB Button -->
+<a href="{% url 'products:create_purchase' %}" class="fab-button" title="Create New GRN">
+    <i class="fas fa-plus"></i>
+</a>
+{% endblock %}

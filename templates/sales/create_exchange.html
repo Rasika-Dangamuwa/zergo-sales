@@ -1,0 +1,1034 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Product Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --exchange-primary: #2563eb;
+        --exchange-secondary: #10b981;
+        --exchange-danger: #ef4444;
+        --exchange-warning: #f59e0b;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+    }
+    
+    .page-header-section {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+    }
+    
+    .page-header-section h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header-section p {
+        margin-bottom: 0;
+        opacity: 0.9;
+        font-size: 0.95rem;
+    }
+    
+    .breadcrumb {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: white;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item.active {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .exchange-info-card,
+    .exchange-items-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        border: 2px solid var(--gray-200);
+        transition: all 0.3s ease;
+    }
+    
+    .exchange-info-card:hover,
+    .exchange-items-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    
+    .card-title-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .card-title-row h4 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .card-title-row i {
+        color: var(--exchange-primary);
+        font-size: 1.35rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .form-select,
+    .form-control {
+        font-size: 15px;
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-select:focus,
+    .form-control:focus {
+        border-color: var(--exchange-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .form-select:disabled,
+    .form-control:disabled {
+        background-color: var(--gray-100);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    /* Exchange Pair Styling */
+    .exchange-pair {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid var(--exchange-primary);
+        border-left: 5px solid var(--exchange-primary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .exchange-pair:hover {
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .pair-number {
+        position: absolute;
+        top: -12px;
+        left: 16px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .remove-pair-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+    }
+    
+    .remove-pair-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        color: white;
+    }
+    
+    /* Group Selector */
+    .group-selector {
+        font-size: 16px;
+        padding: 0.85rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+    
+    .group-selector:focus {
+        border-color: var(--exchange-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    /* IN Product (Receiving from Shop - Green) */
+    .product-selector-wrapper {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .in-product-selector {
+        border-left: 5px solid var(--exchange-secondary);
+        font-weight: 500;
+        background-color: #f0fdf4;
+    }
+    
+    .in-product-selector:focus {
+        border-color: var(--exchange-secondary);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        background-color: white;
+    }
+    
+    .in-product-label {
+        color: var(--exchange-secondary);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+    }
+    
+    .in-product-label i {
+        font-size: 1.2rem;
+    }
+    
+    .in-helper-text {
+        font-size: 0.75rem;
+        color: #15803d;
+        margin-top: 0.25rem;
+        font-weight: 500;
+    }
+    
+    /* OUT Product (Giving to Shop - Red) */
+    .out-product-selector {
+        border-left: 5px solid var(--exchange-danger);
+        font-weight: 500;
+        background-color: #fef2f2;
+    }
+    
+    .out-product-selector:focus {
+        border-color: var(--exchange-danger);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        background-color: white;
+    }
+    
+    .out-product-label {
+        color: var(--exchange-danger);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+    }
+    
+    .out-product-label i {
+        font-size: 1.2rem;
+    }
+    
+    .out-helper-text {
+        font-size: 0.75rem;
+        color: #991b1b;
+        margin-top: 0.25rem;
+        font-weight: 500;
+    }
+    
+    /* Quantity Input */
+    .quantity-input {
+        font-size: 18px;
+        font-weight: 700;
+        text-align: center;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+    
+    .quantity-input:focus {
+        border-color: var(--exchange-secondary);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    
+    /* Add Pair Button */
+    .btn-add-pair {
+        background: linear-gradient(135deg, var(--exchange-primary) 0%, #1e40af 100%);
+        color: white;
+        border: none;
+        padding: 0.85rem 2rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-pair:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+        color: white;
+    }
+    
+    .btn-add-pair i {
+        font-size: 1.1rem;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid var(--gray-200);
+    }
+    
+    .btn-cancel {
+        background: white;
+        color: #64748b;
+        border: 2px solid var(--gray-300);
+        padding: 0.85rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-cancel:hover {
+        background: var(--gray-100);
+        border-color: var(--gray-400);
+        color: #475569;
+        transform: translateY(-2px);
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, var(--exchange-secondary) 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 0.85rem 2.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        color: white;
+    }
+    
+    .btn-submit i,
+    .btn-cancel i {
+        font-size: 1.1rem;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .page-header-section {
+            padding: 1.25rem 0;
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .page-header-section h2 {
+            font-size: 1.25rem;
+        }
+        
+        .page-header-section h2 i {
+            font-size: 1.1rem;
+        }
+        
+        .page-header-section p {
+            font-size: 0.8rem;
+        }
+        
+        .page-header-section .btn-light {
+            padding: 0.5rem 0.85rem;
+            font-size: 0.8rem;
+        }
+        
+        .page-header-section .btn-light i {
+            font-size: 0.85rem;
+        }
+        
+        .container-fluid {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+        
+        .exchange-info-card,
+        .exchange-items-card {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title-row {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .card-title-row h4 {
+            font-size: 1rem;
+        }
+        
+        .card-title-row i {
+            font-size: 1.1rem;
+        }
+        
+        .form-label {
+            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+        }
+        
+        .form-label i {
+            font-size: 0.85rem;
+        }
+        
+        .exchange-pair {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .pair-number {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+        }
+        
+        /* Single column layout on mobile */
+        .exchange-pair .row > div {
+            width: 100% !important;
+            margin-bottom: 0.75rem;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        
+        .product-selector-wrapper {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .in-product-label,
+        .out-product-label {
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        
+        .in-product-label i,
+        .out-product-label i {
+            font-size: 1rem;
+        }
+        
+        .in-helper-text,
+        .out-helper-text {
+            font-size: 0.7rem;
+            display: block;
+            margin-top: 0.2rem;
+        }
+        
+        /* Prevent iOS zoom on input focus */
+        .form-select,
+        .form-control,
+        input[type="number"],
+        .group-selector,
+        select,
+        textarea {
+            font-size: 16px !important;
+            min-height: 44px;
+        }
+        
+        textarea.form-control {
+            min-height: 80px;
+        }
+        
+        /* Touch-friendly buttons */
+        .btn {
+            min-height: 44px;
+            font-size: 0.9rem;
+        }
+        
+        .btn i {
+            font-size: 0.95rem;
+            margin-right: 0.3rem;
+        }
+        
+        .btn-add-pair {
+            width: 100%;
+            padding: 0.9rem;
+            font-size: 0.95rem;
+        }
+        
+        .btn-add-pair i {
+            font-size: 1.1rem;
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+        }
+        
+        .btn-cancel,
+        .btn-submit {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .remove-pair-btn {
+            width: 100%;
+            margin-bottom: 0.75rem;
+            min-height: 44px;
+            font-size: 0.85rem;
+        }
+        
+        .remove-pair-btn i {
+            font-size: 0.9rem;
+        }
+        
+        /* Add bottom spacing for fixed buttons */
+        body {
+            padding-bottom: 80px;
+        }
+        
+        /* Better spacing for form groups */
+        .row.g-3 {
+            --bs-gutter-x: 0.75rem;
+            --bs-gutter-y: 0.75rem;
+        }
+        
+        /* Optimize select dropdowns */
+        .form-select:disabled {
+            background-color: #f3f4f6;
+            opacity: 0.7;
+        }
+        
+        /* Breadcrumb optimization */
+        .breadcrumb {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        .breadcrumb-item + .breadcrumb-item::before {
+            font-size: 0.7rem;
+        }
+    }
+    
+    /* Extra small devices */
+    @media (max-width: 576px) {
+        .page-header-section h2 {
+            font-size: 1.15rem;
+        }
+        
+        .page-header-section h2 i {
+            font-size: 1rem;
+        }
+        
+        .card-title-row h4 {
+            font-size: 0.95rem;
+        }
+        
+        .card-title-row i {
+            font-size: 1rem;
+        }
+        
+        .exchange-pair {
+            padding: 0.85rem;
+        }
+        
+        .pair-number {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+        }
+        
+        .in-product-label,
+        .out-product-label {
+            font-size: 0.8rem;
+        }
+        
+        .in-product-label i,
+        .out-product-label i {
+            font-size: 0.95rem;
+        }
+        
+        .pair-actions {
+            justify-content: center;
+        }
+        
+        .btn {
+            font-size: 0.85rem;
+        }
+        
+        .btn i {
+            font-size: 0.9rem;
+        }
+    }
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header-section">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2><i class="fas fa-exchange-alt"></i> Create Product Exchange</h2>
+                    <p>Swap products within the same category-size-price group</p>
+                </div>
+                <a href="{% url 'sales:exchange_list' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'sales:exchange_list' %}">Exchanges</a></li>
+                    <li class="breadcrumb-item active">Create</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="post" id="exchange-form">
+        {% csrf_token %}
+        <input type="hidden" name="submission_token" value="{{ submission_token }}">
+
+        <!-- Exchange Information -->
+        <div class="exchange-info-card">
+            <div class="card-title-row">
+                <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Shop *</label>
+                    <select name="shop" class="form-select" required>
+                        <option value="">Select Shop</option>
+                        {% for shop in shops %}
+                        <option value="{{ shop.id }}" {% if preselected_shop_id and shop.id|stringformat:"s" == preselected_shop_id %}selected{% endif %}>{{ shop.shop_code }} - {{ shop.shop_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Reason *</label>
+                    <select name="exchange_reason" class="form-select" required>
+                        <option value="">Select Reason</option>
+                        <option value="damaged">Damaged Product</option>
+                        <option value="expired">Expired Product</option>
+                        <option value="slow_moving">Slow Moving Stock</option>
+                        <option value="customer_request">Customer Request</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Add any additional notes about this exchange..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exchange Pairs -->
+        <div class="exchange-items-card">
+            <div class="card-title-row">
+                <h4><i class="fas fa-arrow-right-arrow-left"></i> Exchange Items</h4>
+            </div>
+            
+            <div id="exchange-pairs-container">
+                <!-- Exchange pairs will be added here dynamically -->
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-add-pair" id="add-pair-btn">
+                    <i class="fas fa-plus-circle"></i> Add Exchange Pair
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% url 'sales:exchange_list' %}" class="btn btn-cancel">
+                <i class="fas fa-times-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-submit">
+                <i class="fas fa-check-circle"></i> Create Exchange
+            </button>
+        </div>
+        
+        <!-- Hidden field for items JSON -->
+        <input type="hidden" name="items" id="items-data">
+    </form>
+</div>
+
+<!-- Exchange Pair Template (Hidden) -->
+<template id="pair-template">
+    <div class="exchange-pair">
+        <span class="pair-number">Pair #<span class="pair-num"></span></span>
+        <div class="row align-items-end">
+            <div class="col-12 mb-3">
+                <button type="button" class="btn remove-pair-btn float-end">
+                    <i class="fas fa-trash"></i> Remove Pair
+                </button>
+            </div>
+            <div class="col-md-12 mb-3">
+                <label class="form-label"><i class="fas fa-layer-group text-primary"></i> Exchange Group (Category - Size - Price) *</label>
+                <select class="form-select group-selector" required>
+                    <option value="">Select Exchange Group</option>
+                    {% for key, group in exchange_groups.items %}
+                    <option value="{{ group.key }}" 
+                            data-category="{{ group.category }}" 
+                            data-size="{{ group.size }}" 
+                            data-price="{{ group.price }}">
+                        {{ group.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="product-selector-wrapper">
+                    <label class="form-label in-product-label">
+                        <i class="fas fa-arrow-circle-up"></i> IN - Shop Returns (Stock ↑) *
+                    </label>
+                    <div class="in-helper-text">Product shop gives back to us</div>
+                    <select name="out_product_id[]" class="form-select in-product-selector mt-2" required disabled>
+                        <option value="">Select group first</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="product-selector-wrapper">
+                    <label class="form-label out-product-label">
+                        <i class="fas fa-arrow-circle-down"></i> OUT - We Give (Stock ↓) *
+                    </label>
+                    <div class="out-helper-text">Product we give to shop</div>
+                    <select name="in_product_id[]" class="form-select out-product-selector mt-2" required disabled>
+                        <option value="">Select group first</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><i class="fas fa-hashtag"></i> Quantity *</label>
+                <input type="number" name="quantity[]" class="form-control quantity-input" min="1" step="1" value="1" required>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Exchange groups data
+const exchangeGroups = {
+    {% for key, group in exchange_groups.items %}
+    '{{ group.key }}': {
+        label: '{{ group.label }}',
+        products: [
+            {% for product in group.products %}
+            {id: {{ product.id }}, name: '{{ product.product_name }}', stock: {{ product.quantity_in_stock }}},
+            {% endfor %}
+        ]
+    },
+    {% endfor %}
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('exchange-pairs-container');
+    const addBtn = document.getElementById('add-pair-btn');
+    const template = document.getElementById('pair-template');
+    let pairCounter = 0;
+    
+    // Add first pair on load
+    addPair();
+    
+    // Add pair button
+    addBtn.addEventListener('click', function() {
+        addPair();
+    });
+    
+    // Delegate event for group selection
+    container.addEventListener('change', function(e) {
+        if (e.target.classList.contains('group-selector')) {
+            const pair = e.target.closest('.exchange-pair');
+            const groupKey = e.target.value;
+            updateProductSelectors(pair, groupKey);
+        }
+        
+        // Validate same product not selected in both dropdowns
+        if (e.target.classList.contains('in-product-selector') || e.target.classList.contains('out-product-selector')) {
+            const pair = e.target.closest('.exchange-pair');
+            validateProductSelection(pair);
+            validateStockAvailability(pair);
+        }
+    });
+    
+    // Validate stock when quantity changes
+    container.addEventListener('input', function(e) {
+        if (e.target.classList.contains('quantity-input')) {
+            const pair = e.target.closest('.exchange-pair');
+            validateStockAvailability(pair);
+        }
+    });
+    
+    // Delegate event for remove button
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-pair-btn')) {
+            const pair = e.target.closest('.exchange-pair');
+            if (container.querySelectorAll('.exchange-pair').length > 1) {
+                pair.remove();
+                updatePairNumbers();
+            } else {
+                alert('You must have at least one exchange pair');
+            }
+        }
+    });
+    
+    function addPair() {
+        pairCounter++;
+        const clone = template.content.cloneNode(true);
+        const pairNumSpan = clone.querySelector('.pair-num');
+        if (pairNumSpan) {
+            pairNumSpan.textContent = pairCounter;
+        }
+        container.appendChild(clone);
+    }
+    
+    function updatePairNumbers() {
+        const pairs = container.querySelectorAll('.exchange-pair');
+        pairs.forEach((pair, index) => {
+            const numSpan = pair.querySelector('.pair-num');
+            if (numSpan) {
+                numSpan.textContent = index + 1;
+            }
+        });
+        pairCounter = pairs.length;
+    }
+    
+    function updateProductSelectors(pair, groupKey) {
+        const outSelect = pair.querySelector('.out-product-selector');
+        const inSelect = pair.querySelector('.in-product-selector');
+        
+        if (!groupKey) {
+            outSelect.disabled = true;
+            inSelect.disabled = true;
+            outSelect.innerHTML = '<option value="">Select group first</option>';
+            inSelect.innerHTML = '<option value="">Select group first</option>';
+            return;
+        }
+        
+        const group = exchangeGroups[groupKey];
+        if (!group) return;
+        
+        // Populate OUT selector
+        outSelect.innerHTML = '<option value="">Select Product</option>';
+        group.products.forEach(product => {
+            outSelect.innerHTML += `<option value="${product.id}">${product.name} (Stock: ${product.stock})</option>`;
+        });
+        outSelect.disabled = false;
+        
+        // Populate IN selector
+        inSelect.innerHTML = '<option value="">Select Product</option>';
+        group.products.forEach(product => {
+            inSelect.innerHTML += `<option value="${product.id}">${product.name} (Stock: ${product.stock})</option>`;
+        });
+        inSelect.disabled = false;
+    }
+    
+    function validateProductSelection(pair) {
+        const inSelect = pair.querySelector('.in-product-selector');
+        const outSelect = pair.querySelector('.out-product-selector');
+        
+        if (inSelect.value && outSelect.value && inSelect.value === outSelect.value) {
+            // Find the product name from the selected option
+            const productName = inSelect.options[inSelect.selectedIndex].text.split(' (Stock:')[0];
+            
+            alert(`Error: Cannot exchange ${productName} for the same product!\n\nPlease select different products for IN and OUT.`);
+            
+            // Clear the most recently changed selector
+            if (event.target === inSelect) {
+                inSelect.value = '';
+            } else {
+                outSelect.value = '';
+            }
+            
+            return false;
+        }
+        return true;
+    }
+    
+    function validateStockAvailability(pair) {
+        const groupSelector = pair.querySelector('.group-selector');
+        const outSelect = pair.querySelector('.out-product-selector');  // Product we give
+        const qtyInput = pair.querySelector('.quantity-input');
+        
+        if (!groupSelector.value || !outSelect.value || !qtyInput.value) {
+            return true;  // Skip validation if fields not filled
+        }
+        
+        const groupKey = groupSelector.value;
+        const outProductId = outSelect.value;
+        const quantity = parseInt(qtyInput.value);
+        
+        if (quantity <= 0) {
+            alert('Error: Quantity must be greater than 0');
+            qtyInput.value = 1;
+            return false;
+        }
+        
+        // Find product stock from exchange groups
+        const group = exchangeGroups[groupKey];
+        if (!group) return true;
+        
+        const outProduct = group.products.find(p => p.id == outProductId);
+        if (!outProduct) return true;
+        
+        // Check if we have enough stock to give
+        if (outProduct.stock < quantity) {
+            const productName = outSelect.options[outSelect.selectedIndex].text.split(' (Stock:')[0];
+            alert(`Insufficient Stock!\n\nProduct: ${productName}\nAvailable Stock: ${outProduct.stock}\nRequested Quantity: ${quantity}\n\nPlease reduce the quantity or select a different product.`);
+            qtyInput.value = Math.min(quantity, outProduct.stock);
+            if (qtyInput.value <= 0) {
+                qtyInput.value = 1;
+            }
+            return false;
+        }
+        
+        // Warning for low stock after exchange
+        const remainingStock = outProduct.stock - quantity;
+        if (remainingStock < 5 && remainingStock >= 0) {
+            const productName = outSelect.options[outSelect.selectedIndex].text.split(' (Stock:')[0];
+            console.warn(`Warning: ${productName} will have only ${remainingStock} units remaining after exchange`);
+        }
+        
+        return true;
+    }
+    
+    // Prevent duplicate submissions
+    let isSubmitting = false;
+
+    // Form validation before submit
+    document.getElementById('exchange-form').addEventListener('submit', function(e) {
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+
+        const pairs = container.querySelectorAll('.exchange-pair');
+        let hasValidPair = false;
+        const itemsData = [];
+        let stockErrors = [];
+        
+        pairs.forEach(pair => {
+            const groupSelector = pair.querySelector('.group-selector');
+            const inProduct = pair.querySelector('.in-product-selector');  // Shop returns (IN)
+            const outProduct = pair.querySelector('.out-product-selector');  // We give (OUT)
+            const qty = pair.querySelector('input[name="quantity[]"]');
+            
+            if (groupSelector.value && inProduct.value && outProduct.value && qty.value) {
+                const quantity = parseInt(qty.value);
+                
+                // Validate quantity is positive
+                if (quantity <= 0) {
+                    e.preventDefault();
+                    alert('Error: Quantity must be greater than 0');
+                    return false;
+                }
+                
+                // Validate same product not selected
+                if (inProduct.value === outProduct.value) {
+                    e.preventDefault();
+                    alert('Error: Cannot exchange a product for the same product!\n\nPlease select different products for IN and OUT in all pairs.');
+                    hasValidPair = false;
+                    return false;
+                }
+                
+                // Validate stock availability for OUT product
+                const groupKey = groupSelector.value;
+                const outProductId = outProduct.value;
+                const group = exchangeGroups[groupKey];
+                
+                if (group) {
+                    const outProductData = group.products.find(p => p.id == outProductId);
+                    if (outProductData && outProductData.stock < quantity) {
+                        const productName = outProduct.options[outProduct.selectedIndex].text.split(' (Stock:')[0];
+                        stockErrors.push(`${productName}: Need ${quantity}, Available ${outProductData.stock}`);
+                    }
+                }
+                
+                hasValidPair = true;
+                
+                // Build item data for backend
+                itemsData.push({
+                    returned_product_id: inProduct.value,  // Product shop returns to us (IN)
+                    replacement_product_id: outProduct.value,  // Product we give to shop (OUT)
+                    returned_quantity: quantity,
+                    replacement_quantity: quantity,  // Same quantity for both
+                    is_resellable: true,  // Assume returned items are resellable
+                    notes: ''
+                });
+            }
+        });
+        
+        // Check for stock errors
+        if (stockErrors.length > 0) {
+            e.preventDefault();
+            alert('Insufficient Stock!\n\n' + stockErrors.join('\n') + '\n\nPlease reduce quantities or select different products.');
+            return false;
+        }
+        
+        if (!hasValidPair) {
+            e.preventDefault();
+            alert('Please complete at least one exchange pair:\n- Select exchange group\n- Select IN product (shop returns)\n- Select OUT product (we give)\n- Enter quantity');
+            return false;
+        }
+
+        // Lock submission
+        isSubmitting = true;
+        const submitBtn = this.querySelector('.btn-submit');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        
+        // Serialize items to JSON and set hidden field
+        document.getElementById('items-data').value = JSON.stringify(itemsData);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1061 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Settlement Management - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --info-color: #17a2b8;
+    }
+    
+    /* Page Header */
+    .page-hero {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2.5rem 0;
+        margin: -2rem -2rem 2rem -2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .page-hero h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-hero p {
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    /* Statistics Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: currentColor;
+        opacity: 0.05;
+        border-radius: 50%;
+        transform: translate(30%, -30%);
+    }
+    
+    .stat-card.total { border-color: #667eea; color: #667eea; }
+    .stat-card.completed { border-color: var(--success-color); color: var(--success-color); }
+    .stat-card.pending { border-color: var(--warning-color); color: var(--warning-color); }
+    .stat-card.bounced { border-color: var(--danger-color); color: var(--danger-color); }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+        font-weight: 600;
+    }
+    
+    .stat-sublabel {
+        font-size: 0.85rem;
+        opacity: 0.6;
+        margin-top: 0.25rem;
+    }
+    
+    /* Search and Filters */
+    .search-filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box input {
+        padding-left: 45px;
+        border-radius: 50px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s;
+    }
+    
+    .search-box input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    
+    .quick-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .quick-filter-btn {
+        padding: 0.5rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 50px;
+        background: white;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    
+    .quick-filter-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+        background: #f8f9ff;
+    }
+    
+    .quick-filter-btn.active {
+        background: var(--primary-gradient);
+        border-color: #667eea;
+        color: white;
+    }
+    
+    /* Advanced Filters Toggle */
+    .advanced-filters {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px dashed #e9ecef;
+    }
+    
+    .advanced-filters.collapsed {
+        display: none;
+    }
+    
+    /* Settlement Table */
+    .settlement-table-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .settlement-table {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    
+    .settlement-table thead {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .payment-table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 1.25rem 1rem;
+        border: none;
+        white-space: nowrap;
+    }
+    
+    .payment-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    
+    .payment-table tbody tr:hover {
+        background: #f8f9ff;
+        transform: scale(1.01);
+    }
+    
+    .payment-table tbody td {
+        padding: 1.25rem 1rem;
+        vertical-align: middle;
+    }
+    
+    /* Badges */
+    .badge-method,
+    .badge-status {
+        padding: 0.4rem 0.9rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge-cash { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
+    .badge-cheque { background: linear-gradient(135deg, #17a2b8, #138496); color: white; }
+    .badge-bank_transfer { background: linear-gradient(135deg, #6f42c1, #5a32a3); color: white; }
+    .badge-credit { background: linear-gradient(135deg, #ffc107, #ff9800); color: #000; }
+    .badge-return_adjustment { background: linear-gradient(135deg, #e83e8c, #d6176b); color: white; }
+    
+    .badge-pending { background: linear-gradient(135deg, #ffc107, #ff9800); color: #000; }
+    .badge-completed { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
+    .badge-cancelled { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
+    .badge-bounced { background: linear-gradient(135deg, #6c757d, #495057); color: white; }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-action {
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    /* Pagination */
+    .pagination-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .pagination {
+        margin: 0;
+    }
+    
+    .pagination .page-link {
+        border-radius: 8px;
+        margin: 0 0.2rem;
+        border: none;
+        color: #667eea;
+        font-weight: 600;
+    }
+    
+    .pagination .page-link:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: var(--primary-gradient);
+        border: none;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 5rem 2rem;
+    }
+    
+    .empty-state i {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state h3 {
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+    }
+    
+    .empty-state p {
+        color: #adb5bd;
+        font-size: 1.1rem;
+    }
+    
+    /* Analytics Section */
+    .analytics-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .analytics-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        color: #495057;
+    }
+    
+    .chart-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .mini-chart {
+        padding: 1rem;
+        border: 2px solid #f1f3f5;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+    
+    .mini-chart:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+    }
+    
+    .mini-chart-header {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+    }
+    
+    .mini-chart-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .mini-chart-count {
+        font-size: 0.9rem;
+        color: #adb5bd;
+        margin-top: 0.25rem;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .page-hero {
+            padding: 1.5rem 1rem;
+            margin: -1rem -1rem 1.5rem -1rem;
+        }
+        
+        .page-hero h1 {
+            font-size: 1.3rem;
+        }
+        
+        .page-hero p {
+            font-size: 0.9rem;
+        }
+        
+        .page-hero .btn-lg {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .page-hero .col-lg-4 {
+            margin-top: 1rem !important;
+            text-align: center !important;
+        }
+        
+        .page-hero .btn {
+            width: 48%;
+            margin: 0 1% !important;
+        }
+        
+        .stats-container {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .page-hero p {
+            font-size: 0.9rem;
+        }
+        
+        .stats-container {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.65rem;
+        }
+        
+        .stat-sublabel {
+            font-size: 0.75rem;
+        }
+        
+        .search-filter-section {
+            padding: 1rem;
+        }
+        .search-filter-section {
+            padding: 1rem;
+            margin: 0 -1rem;
+        }
+        
+        .search-box input {
+            font-size: 0.9rem;
+        }
+        
+        .quick-filters {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+        }
+        
+        .quick-filter-btn {
+            padding: 0.5rem 0.3rem;
+            font-size: 0.7rem;
+            text-align: center;
+        }
+        
+        .advanced-filters .form-select,
+        .advanced-filters .form-control {
+            font-size: 0.9rem;
+        }
+        
+        /* Hide table on mobile, show cards */
+        .settlement-table-container .table-responsive {
+            display: none;
+        }
+        
+        .settlement-table-container .mobile-settlement-cards {
+            display: block;
+        }
+        
+        .analytics-section {
+            padding: 1rem;
+            margin: 0 -1rem;
+        }
+        
+        .chart-container {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .mini-chart {
+            padding: 0.75rem;
+        }
+        
+        .mini-chart-value {
+            font-size: 1.25rem;
+        }
+        
+        .pagination-wrapper {
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        .pagination-wrapper > div:first-child {
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: center;
+        }
+        
+        .pagination-info {
+            font-size: 0.85rem;
+        }
+        
+        .pagination .page-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+    }
+    
+    /* Mobile Settlement Cards */
+    .mobile-settlement-cards {
+        display: none;
+        padding: 1rem;
+    }
+    
+    .mobile-settlement-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .mobile-settlement-card.pending { border-color: var(--warning-color); }
+    .mobile-settlement-card.completed { border-color: var(--success-color); }
+    .mobile-settlement-card.cancelled { border-color: var(--danger-color); }
+    .mobile-settlement-card.bounced { border-color: #6c757d; }
+    
+    .mobile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    
+    .mobile-card-number {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #667eea;
+    }
+    
+    .mobile-card-amount {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #212529;
+    }
+    
+    .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        font-size: 0.85rem;
+    }
+    
+    .mobile-card-label {
+        color: #6c757d;
+        font-weight: 600;
+    }
+    
+    .mobile-card-value {
+        color: #212529;
+        text-align: right;
+    }
+    
+    .mobile-card-actions {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #f1f3f5;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .mobile-card-actions .btn {
+        flex: 1;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+    
+    @media (min-width: 769px) {
+        .mobile-settlement-cards {
+            display: none !important;
+        }
+        
+        .settlement-table-container .table-responsive {
+            display: block !important;
+        }
+    }
+    
+    /* Loading Animation */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-md-4 p-2">
+    <!-- Hero Header -->
+    <div class="page-hero">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1><i class="fas fa-money-bill-wave me-3"></i>Settlement Management</h1>
+                    <p class="mb-0">Comprehensive settlement tracking and analytics system</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <a href="{% url 'sales:pending' %}" class="btn btn-light btn-lg me-2">
+                        <i class="fas fa-clock me-2"></i>Pending
+                        {% if stats.pending_count %}
+                        <span class="badge bg-warning text-dark ms-2">{{ stats.pending_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="?export=csv{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-file-excel me-2"></i>Export
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Dashboard -->
+    <div class="stats-container">
+        <div class="stat-card total">
+            <i class="fas fa-receipt stat-icon"></i>
+            <div class="stat-label">Total Settlements</div>
+            <div class="stat-value">{{ stats.total_count|default:0 }}</div>
+            <div class="stat-sublabel">Rs. {{ stats.total_amount|default:0|floatformat:2|intcomma }}</div>
+        </div>
+        
+        <div class="stat-card completed">
+            <i class="fas fa-check-circle stat-icon"></i>
+            <div class="stat-label">Completed</div>
+            <div class="stat-value">{{ stats.completed_count|default:0 }}</div>
+            <div class="stat-sublabel">Rs. {{ stats.completed_amount|default:0|floatformat:2|intcomma }}</div>
+        </div>
+        
+        <div class="stat-card pending">
+            <i class="fas fa-clock stat-icon"></i>
+            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ stats.pending_count|default:0 }}</div>
+            <div class="stat-sublabel">Rs. {{ stats.pending_amount|default:0|floatformat:2|intcomma }}</div>
+        </div>
+        
+        <div class="stat-card bounced">
+            <i class="fas fa-exclamation-triangle stat-icon"></i>
+            <div class="stat-label">Bounced/Cancelled</div>
+            <div class="stat-value">{{ stats.bounced_count|add:stats.cancelled_count|default:0 }}</div>
+            <div class="stat-sublabel">Rs. {{ stats.bounced_amount|add:stats.cancelled_amount|default:0|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <!-- Analytics Section -->
+    {% if method_stats or status_stats %}
+    <div class="analytics-section">
+        <div class="analytics-title">
+            <i class="fas fa-chart-pie me-2"></i>Settlement Analytics
+        </div>
+        <div class="chart-container">
+            {% for method in method_stats %}
+            <div class="mini-chart">
+                <div class="mini-chart-header">
+                    {% if method.settlement_method == 'cash' %}💵 Cash
+                    {% elif method.settlement_method == 'cheque' %}💳 Cheque
+                    {% elif method.settlement_method == 'bank_transfer' %}🏦 Bank Transfer
+                    {% elif method.settlement_method == 'credit' %}📝 Credit
+                    {% elif method.settlement_method == 'return_adjustment' %}🔄 Return Adjustment
+                    {% else %}{{ method.settlement_method|title }}
+                    {% endif %}
+                </div>
+                <div class="mini-chart-value">Rs. {{ method.total|floatformat:2|intcomma }}</div>
+                <div class="mini-chart-count">{{ method.count }} settlement{{ method.count|pluralize }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Search and Filters -->
+    <div class="search-filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <!-- Search Box -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" 
+                               name="search" 
+                               class="form-control form-control-lg" 
+                               placeholder="Search by settlement #, shop, bill, reference..." 
+                               value="{{ request.GET.search }}">
+                    </div>
+                </div>
+                
+                <!-- Quick Date Filters -->
+                <div class="col-md-6 col-lg-8">
+                    <div class="quick-filters">
+                        <a href="?" class="quick-filter-btn {% if not request.GET.quick_date %}active{% endif %}">All Time</a>
+                        <a href="?quick_date=today" class="quick-filter-btn {% if request.GET.quick_date == 'today' %}active{% endif %}">Today</a>
+                        <a href="?quick_date=yesterday" class="quick-filter-btn {% if request.GET.quick_date == 'yesterday' %}active{% endif %}">Yesterday</a>
+                        <a href="?quick_date=this_week" class="quick-filter-btn {% if request.GET.quick_date == 'this_week' %}active{% endif %}">This Week</a>
+                        <a href="?quick_date=this_month" class="quick-filter-btn {% if request.GET.quick_date == 'this_month' %}active{% endif %}">This Month</a>
+                        <a href="?quick_date=last_month" class="quick-filter-btn {% if request.GET.quick_date == 'last_month' %}active{% endif %}">Last Month</a>
+                        <button type="button" class="quick-filter-btn" onclick="toggleAdvancedFilters()">
+                            <i class="fas fa-sliders-h me-1"></i>Advanced
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters (Collapsible) -->
+            <div class="advanced-filters collapsed" id="advancedFilters">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Shop</label>
+                        <select name="shop" class="form-select">
+                            <option value="">All Shops</option>
+                            {% for shop in shops %}
+                            <option value="{{ shop.id }}" {% if request.GET.shop == shop.id|stringformat:"s" %}selected{% endif %}>
+                                {{ shop.shop_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="pending" {% if request.GET.status == 'unsettled' %}selected{% endif %}>Pending</option>
+                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            <option value="bounced" {% if request.GET.status == 'bounced' %}selected{% endif %}>Bounced</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Settlement Method</label>
+                        <select name="method" class="form-select">
+                            <option value="">All Methods</option>
+                            <option value="cash" {% if request.GET.method == 'cash' %}selected{% endif %}>Cash</option>
+                            <option value="cheque" {% if request.GET.method == 'cheque' %}selected{% endif %}>Cheque</option>
+                            <option value="bank_transfer" {% if request.GET.method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                            <option value="credit" {% if request.GET.method == 'credit' %}selected{% endif %}>Credit</option>
+                            <option value="return_adjustment" {% if request.GET.method == 'return_adjustment' %}selected{% endif %}>Return Adjustment</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Sort By</label>
+                        <select name="sort" class="form-select">
+                            <option value="-payment_date" {% if request.GET.sort == '-payment_date' %}selected{% endif %}>Newest First</option>
+                            <option value="payment_date" {% if request.GET.sort == 'payment_date' %}selected{% endif %}>Oldest First</option>
+                            <option value="-amount" {% if request.GET.sort == '-amount' %}selected{% endif %}>Highest Amount</option>
+                            <option value="amount" {% if request.GET.sort == 'amount' %}selected{% endif %}>Lowest Amount</option>
+                            <option value="shop__shop_name" {% if request.GET.sort == 'shop__shop_name' %}selected{% endif %}>Shop Name</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Date From</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Date To</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                    </div>
+                    
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="fas fa-filter me-2"></i>Apply Filters
+                        </button>
+                        <a href="{% url 'sales:settlement_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo me-2"></i>Reset
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Settlement Table -->
+    <div class="settlement-table-container">
+        {% if settlements %}
+        <!-- Desktop Table View -->
+        <div class="table-responsive">
+            <table class="settlement-table table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Settlement #</th>
+                        <th>Date & Time</th>
+                        <th>Shop</th>
+                        <th>Bill</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                        <th>Received By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for settlement in settlements %}
+                    <tr>
+                        <td>
+                            <strong>{{ settlement.settlement_number }}</strong>
+
+                        </td>
+                        <td>
+                            <div>{{ settlement.settlement_date|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ settlement.settlement_date|date:"h:i A" }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ settlement.shop.shop_name|default:"N/A" }}</strong>
+                            {% if settlement.shop.shop_code %}
+                            <br><small class="text-muted">{{ settlement.shop.shop_code }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if settlement.bill %}
+                            <a href="{% url 'sales:detail' settlement.bill.pk %}" class="text-decoration-none">
+                                {{ settlement.bill.bill_number }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Direct</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-method badge-{{ settlement.settlement_method }}">
+                                {{ settlement.get_settlement_method_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-status badge-{{ settlement.settlement_status }}">
+                                {{ settlement.get_settlement_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <strong class="text-primary" style="font-size: 1.1rem;">
+                                Rs. {{ settlement.amount|floatformat:2|intcomma }}
+                            </strong>
+                        </td>
+                        <td>
+                            <div>{{ settlement.received_by.get_full_name|default:"System" }}</div>
+                            {% if settlement.verified_by %}
+                            <small class="text-muted">✓ {{ settlement.verified_by.username }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'sales:settlement_detail' settlement.pk %}" 
+                                   class="btn btn-sm btn-outline-primary btn-action"
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if settlement.settlement_status == 'pending' and request.user.user_type != 'sales_rep' %}
+                                    {% if settlement.settlement_method == 'cheque' %}
+                                    <a href="{% url 'sales:clear_cheque' settlement.pk %}" 
+                                       class="btn btn-sm btn-success btn-action"
+                                       title="Clear Cheque">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    {% elif settlement.settlement_method == 'bank_transfer' %}
+                                    <a href="{% url 'sales:confirm_bank_transfer' settlement.pk %}" 
+                                       class="btn btn-sm btn-success btn-action"
+                                       title="Confirm Transfer">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="mobile-settlement-cards">
+            {% for settlement in settlements %}
+            <div class="mobile-settlement-card {{ settlement.settlement_status }}">
+                <div class="mobile-card-header">
+                    <div>
+                        <div class="mobile-card-number">{{ settlement.settlement_number }}</div>
+                        <small class="text-muted">{{ settlement.settlement_date|date:"M d, Y - h:i A" }}</small>
+
+                    </div>
+                    <div class="mobile-card-amount">
+                        Rs. {{ settlement.amount|floatformat:2|intcomma }}
+                    </div>
+                </div>
+                
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label"><i class="fas fa-store me-1"></i>Shop</span>
+                    <span class="mobile-card-value"><strong>{{ settlement.shop.shop_name|default:"N/A" }}</strong></span>
+                </div>
+                
+                {% if settlement.bill %}
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label"><i class="fas fa-file-invoice me-1"></i>Bill</span>
+                    <span class="mobile-card-value">
+                        <a href="{% url 'sales:detail' settlement.bill.pk %}" class="text-decoration-none">
+                            {{ settlement.bill.bill_number }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label"><i class="fas fa-credit-card me-1"></i>Method</span>
+                    <span class="mobile-card-value">
+                        <span class="badge badge-method badge-{{ settlement.settlement_method }}">
+                            {{ settlement.get_settlement_method_display }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label"><i class="fas fa-info-circle me-1"></i>Status</span>
+                    <span class="mobile-card-value">
+                        <span class="badge badge-status badge-{{ settlement.settlement_status }}">
+                            {{ settlement.get_settlement_status_display }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label"><i class="fas fa-user me-1"></i>Received By</span>
+                    <span class="mobile-card-value">{{ settlement.received_by.get_full_name|default:"System" }}</span>
+                </div>
+                
+                <div class="mobile-card-actions">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                    {% if settlement.settlement_status == 'pending' and request.user.user_type != 'sales_rep' %}
+                        {% if settlement.settlement_method == 'cheque' %}
+                        <a href="{% url 'sales:clear_cheque' settlement.pk %}" 
+                           class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Clear
+                        </a>
+                        {% elif settlement.settlement_method == 'bank_transfer' %}
+                        <a href="{% url 'sales:confirm_bank_transfer' settlement.pk %}" 
+                           class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Confirm
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- 
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="pagination-wrapper">
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-3">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} payments
+                </span>
+                <select class="form-select form-select-sm" style="width: auto;" onchange="changePerPage(this.value)">
+                    <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10 per page</option>
+                    <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20 per page</option>
+                    <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50 per page</option>
+                    <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 per page</option>
+                </select>
+            </div>
+            
+            <nav>
+                <ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="fas fa-receipt"></i>
+            <h3>No Settlements Found</h3>
+            <p>{% if request.GET %}No settlements match your filter criteria. Try adjusting your filters.{% else %}Start by adding your first settlement.{% endif %}</p>
+            {% if request.GET %}
+            <a href="{% url 'sales:settlement_list' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-redo me-2"></i>Clear Filters
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleAdvancedFilters() {
+    const filters = document.getElementById('advancedFilters');
+    filters.classList.toggle('collapsed');
+}
+
+function changePerPage(value) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', value);
+    url.searchParams.set('page', '1');
+    window.location = url;
+}
+
+// Auto-submit search after typing (debounced)
+let searchTimeout;
+const searchInput = document.querySelector('input[name="search"]');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 800);
+    });
+}
+</script>
+{% endblock %}
+

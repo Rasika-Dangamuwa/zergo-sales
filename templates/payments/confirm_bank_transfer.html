@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Confirm Bank Transfer - {{ settlement.payment_number }} - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .confirm-transfer-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 5px solid #6f42c1;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .amount-highlight {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #6f42c1;
+        text-align: center;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #e7d9f5 0%, #dac4f0 100%);
+        border-radius: 12px;
+        margin: 1.5rem 0;
+    }
+    
+    .alert-info-custom {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border-left: 5px solid #17a2b8;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-confirm {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        padding: 14px 32px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .info-label {
+            margin-bottom: 4px;
+            font-size: 0.85em;
+        }
+        
+        .amount-highlight {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="confirm-transfer-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-university me-2"></i>Confirm Bank Transfer</h1>
+            <p class="mb-0 opacity-75">Verify and confirm bank transfer {{ settlement.reference_number }}</p>
+        </div>
+        
+        <!-- Info Alert -->
+        <div class="alert-info-custom">
+            <h5><i class="fas fa-info-circle me-2"></i>Important</h5>
+            <p class="mb-0">
+                <strong>By confirming this bank transfer, you verify that:</strong>
+                <ul class="mt-2 mb-0">
+                    <li>The funds have been successfully credited to the company bank account</li>
+                    <li>The transaction reference matches the bank statement</li>
+                    <li>The bill payment status will be updated automatically</li>
+                </ul>
+            </p>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Payment Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-receipt me-1"></i>Payment Number</span>
+                <span class="info-value"><strong>{{ settlement.payment_number }}</strong></span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-calendar me-1"></i>Payment Date</span>
+                <span class="info-value">{{ settlement.payment_date|date:"F d, Y - h:i A" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-store me-1"></i>Shop</span>
+                <span class="info-value">{{ settlement.shop.shop_name }}</span>
+            </div>
+            
+            {% if settlement.bill %}
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-file-invoice me-1"></i>Bill Number</span>
+                <span class="info-value">
+                    <a href="{% url 'sales:detail' settlement.bill.pk %}">{{ settlement.bill.bill_number }}</a>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Bank Transfer Information -->
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-exchange-alt me-2"></i>Transfer Details</h5>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-hashtag me-1"></i>Reference/Transaction Number</span>
+                <span class="info-value"><strong>{{ settlement.reference_number }}</strong></span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-university me-1"></i>Bank Name</span>
+                <span class="info-value">{{ settlement.bank_name|default:"Not specified" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label"><i class="fas fa-user me-1"></i>Received By</span>
+                <span class="info-value">{{ settlement.received_by.get_full_name }}</span>
+            </div>
+        </div>
+        
+        <!-- Amount Display -->
+        <div class="amount-highlight">
+            <i class="fas fa-rupee-sign me-2"></i>Rs. {{ settlement.amount|floatformat:2|intcomma }}
+        </div>
+        
+        <!-- Confirm Transfer Form -->
+        <div class="form-card">
+            <h5 class="mb-4"><i class="fas fa-check-circle me-2"></i>Confirm Receipt</h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-info-circle me-2"></i>What will happen:</h6>
+                    <ul class="mb-0">
+                        <li>Payment status: <strong>Pending → Completed</strong></li>
+                        {% if settlement.bill %}
+                        <li>Bill paid amount: <strong>Rs. {{ settlement.bill.paid_amount|floatformat:2|intcomma }} → Rs. {{ new_paid_amount|floatformat:2|intcomma }}</strong></li>
+                        <li>Bill balance: <strong>Rs. {{ settlement.bill.balance_amount|floatformat:2|intcomma }} → Rs. {{ new_balance|floatformat:2|intcomma }}</strong></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-confirm btn-lg" onclick="return confirm('Are you sure you want to confirm this bank transfer? This will update the bill payment status.')">
+                        <i class="fas fa-check-circle me-2"></i>Confirm Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

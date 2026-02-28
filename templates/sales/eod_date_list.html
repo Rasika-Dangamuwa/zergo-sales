@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}EOD Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .eod-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 15px;
+    }
+    
+    .date-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 15px;
+        margin-bottom: 12px;
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+    
+    .date-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .date-badge {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    
+    .route-text {
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+    
+    .stats-row {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.85em;
+    }
+    
+    @media (max-width: 767px) {
+        .eod-container {
+            padding: 10px;
+        }
+        
+        .date-card {
+            padding: 12px;
+        }
+        
+        .stats-row {
+            gap: 10px;
+        }
+        
+        .stat-item {
+            font-size: 0.8em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eod-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4><i class="fas fa-calendar-alt me-2"></i>EOD Reports</h4>
+        <a href="{% url 'sales:eod_settings' %}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-box me-1"></i>Case Value
+        </a>
+    </div>
+    
+    {% if date_list %}
+    <div class="list-group">
+        {% for item in date_list %}
+        <a href="{% url 'sales:eod_detail' date=item.date|date:'Y-m-d' %}" class="list-group-item list-group-item-action p-0 border-0 mb-2">
+            <div class="date-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="date-badge mb-1">
+                            <i class="fas fa-calendar-check me-2"></i>{{ item.date|date:"l, F d, Y" }}
+                        </div>
+                        <div class="route-text">
+                            <i class="fas fa-route me-1"></i>{{ item.route }}
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-item text-success">
+                        <i class="fas fa-rupee-sign"></i>
+                        <strong>{{ item.total_sale|floatformat:2 }}</strong>
+                    </div>
+                    <div class="stat-item text-primary">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>{{ item.bill_count }} bill{{ item.bill_count|pluralize }}</span>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-center py-5">
+        <div class="card-body">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No EOD Reports Yet</h5>
+            <p class="text-muted">Your EOD reports will appear here once you create bills.</p>
+            <a href="{% url 'sales:create' %}" class="btn btn-primary mt-2">
+                <i class="fas fa-plus me-2"></i>Create First Bill
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

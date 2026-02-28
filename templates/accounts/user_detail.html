@@ -1,0 +1,656 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ user_obj.get_full_name }} — User Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981; --emerald-bg: #d1fae5;
+    --amber: #f59e0b; --amber-bg: #fef3c7;
+    --rose: #ef4444; --rose-bg: #fee2e2;
+    --violet: #8b5cf6; --violet-bg: #ede9fe;
+    --cyan: #06b6d4; --cyan-bg: #cffafe;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155;
+    --s800: #1e293b; --s900: #0f172a;
+    --r: 16px; --rs: 10px;
+    --sh1: 0 1px 3px rgba(0,0,0,.06);
+    --sh2: 0 4px 14px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; }
+.ud-container { max-width: 1100px; margin: 0 auto; padding: .75rem 1rem; }
+
+/* ===== HERO ===== */
+.ud-hero {
+    background: var(--brand-gradient);
+    border-radius: var(--r);
+    padding: 1.75rem 2rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+.ud-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%; right: -10%;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+}
+.ud-hero-inner {
+    display: flex; align-items: center; gap: 1.5rem;
+    position: relative; z-index: 1;
+}
+.ud-hero-avatar {
+    width: 90px; height: 90px;
+    border-radius: 50%; object-fit: cover;
+    border: 3px solid rgba(255,255,255,.35);
+    flex-shrink: 0;
+}
+.ud-hero-avatar-placeholder {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 700;
+    flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,.25);
+}
+.ud-hero-info { flex: 1; min-width: 0; }
+.ud-hero-name {
+    font-size: 1.65rem; font-weight: 800; margin: 0 0 .2rem;
+    line-height: 1.2;
+}
+.ud-hero-badges {
+    display: flex; flex-wrap: wrap; gap: .4rem;
+    margin-bottom: .6rem;
+}
+.ud-badge {
+    display: inline-flex; align-items: center; gap: .25rem;
+    padding: .2rem .6rem; border-radius: 8px;
+    font-size: .75rem; font-weight: 700;
+}
+.ud-badge.role {
+    background: rgba(255,255,255,.2);
+    backdrop-filter: blur(4px);
+}
+.ud-badge.status-active { background: rgba(16,185,129,.3); }
+.ud-badge.status-inactive { background: rgba(239,68,68,.3); }
+.ud-badge.emp-id {
+    background: rgba(255,255,255,.12);
+    font-family: monospace; letter-spacing: .5px;
+}
+.ud-hero-meta {
+    display: flex; flex-wrap: wrap; gap: .4rem 1.25rem;
+    font-size: .9rem; opacity: .9;
+}
+.ud-hero-meta i { width: 15px; text-align: center; margin-right: .25rem; }
+.ud-hero-meta a { color: #fff; text-decoration: none; }
+.ud-hero-meta a:hover { text-decoration: underline; }
+.ud-hero-actions {
+    display: flex; flex-direction: column; gap: .4rem;
+    flex-shrink: 0; position: relative; z-index: 1;
+}
+.ud-action-btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem .9rem; border-radius: 8px;
+    font-size: .8rem; font-weight: 700;
+    border: 2px solid rgba(255,255,255,.25);
+    background: rgba(255,255,255,.1);
+    color: #fff; text-decoration: none;
+    transition: all .2s; cursor: pointer;
+    white-space: nowrap;
+}
+.ud-action-btn:hover { background: rgba(255,255,255,.22); color: #fff; text-decoration: none; }
+.ud-action-btn.solid {
+    background: #fff; color: var(--brand);
+    border: none; font-weight: 800;
+}
+.ud-action-btn.solid:hover { background: #e3f2fd; color: var(--brand-dark); }
+.ud-action-btn.danger { border-color: rgba(239,68,68,.5); }
+.ud-action-btn.danger:hover { background: rgba(239,68,68,.25); }
+.ud-action-btn.success { border-color: rgba(16,185,129,.5); }
+.ud-action-btn.success:hover { background: rgba(16,185,129,.25); }
+
+/* ===== CARDS ===== */
+.ud-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .85rem;
+    margin-bottom: .85rem;
+}
+.ud-card {
+    background: #fff; border-radius: var(--r);
+    box-shadow: var(--sh1); overflow: hidden;
+}
+.ud-card-head {
+    padding: .85rem 1.15rem;
+    border-bottom: 1px solid var(--s100);
+    display: flex; align-items: center; gap: .5rem;
+}
+.ud-card-head i { color: var(--brand); font-size: .9rem; }
+.ud-card-head h3 {
+    font-size: .9rem; font-weight: 800;
+    color: var(--s800); margin: 0;
+}
+.ud-card-body { padding: .85rem 1.15rem; }
+.ud-info-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: .5rem 0;
+    border-bottom: 1px solid var(--s50);
+}
+.ud-info-row:last-child { border-bottom: none; }
+.ud-info-label {
+    font-size: .78rem; font-weight: 600;
+    color: var(--s500); text-transform: uppercase;
+    letter-spacing: .3px;
+}
+.ud-info-value {
+    font-size: .88rem; font-weight: 700;
+    color: var(--s800); text-align: right;
+}
+.ud-info-value.muted { color: var(--s400); font-style: italic; font-weight: 500; }
+
+/* ===== STAT BOXES ===== */
+.ud-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: .65rem; margin-bottom: .85rem;
+}
+.ud-stat-box {
+    background: #fff; border-radius: var(--rs);
+    padding: .85rem 1rem; box-shadow: var(--sh1);
+    text-align: center;
+}
+.ud-stat-box-val { font-size: 1.4rem; font-weight: 800; color: var(--s900); }
+.ud-stat-box-lbl {
+    font-size: .65rem; font-weight: 700; color: var(--s500);
+    text-transform: uppercase; letter-spacing: .3px; margin-top: .15rem;
+}
+
+/* ===== RECENT TABLE ===== */
+.ud-recent-table {
+    width: 100%; font-size: .85rem; border-collapse: collapse;
+}
+.ud-recent-table th {
+    text-align: left; font-weight: 700;
+    color: var(--s500); font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .3px;
+    padding: .55rem .5rem; border-bottom: 2px solid var(--s100);
+}
+.ud-recent-table td {
+    padding: .55rem .5rem;
+    border-bottom: 1px solid var(--s50);
+    color: var(--s700);
+}
+.ud-recent-table td.num { font-weight: 700; font-family: monospace; }
+.ud-recent-table tbody tr { transition: background .15s; }
+.ud-recent-table tbody tr:hover { background: var(--s50); }
+
+/* ===== ACTIVITY TIMELINE ===== */
+.ud-activity-filters {
+    display: flex; flex-wrap: wrap; gap: .35rem;
+    padding: .65rem 1rem; border-bottom: 1px solid var(--s100);
+}
+.ud-filter-btn {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .3rem .7rem; border-radius: 20px;
+    font-size: .72rem; font-weight: 700;
+    text-decoration: none; color: var(--s500);
+    background: var(--s50); border: 1px solid var(--s200);
+    transition: all .2s; cursor: pointer;
+}
+.ud-filter-btn:hover { background: var(--brand-light); color: var(--brand); border-color: var(--brand); }
+.ud-filter-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.ud-type-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px;
+    font-size: .7rem; flex-shrink: 0;
+}
+.ud-type-icon.bill { background: #e3f2fd; color: #0078D7; }
+.ud-type-icon.return { background: #fee2e2; color: #ef4444; }
+.ud-type-icon.exchange { background: #ede9fe; color: #8b5cf6; }
+.ud-type-icon.payment { background: #d1fae5; color: #10b981; }
+.ud-type-icon.visit { background: #cffafe; color: #06b6d4; }
+.ud-status-pill {
+    display: inline-block; padding: .15rem .5rem;
+    border-radius: 12px; font-size: .65rem; font-weight: 700;
+}
+.ud-status-pill.success { background: #d1fae5; color: #059669; }
+.ud-status-pill.warning { background: #fef3c7; color: #d97706; }
+.ud-status-pill.danger { background: #fee2e2; color: #dc2626; }
+.ud-status-pill.info { background: #cffafe; color: #0891b2; }
+.ud-status-pill.secondary { background: #f1f5f9; color: #64748b; }
+.ud-activity-empty {
+    text-align: center; padding: 2.5rem 1rem; color: var(--s400);
+}
+.ud-activity-empty i { font-size: 2rem; margin-bottom: .5rem; display: block; }
+
+/* Mobile activity cards */
+.ud-activity-cards { display: none; }
+.ud-activity-card {
+    display: flex; gap: .75rem; padding: .75rem 0;
+    border-bottom: 1px solid var(--s50);
+}
+.ud-activity-card:last-child { border-bottom: none; }
+.ud-activity-card-body { flex: 1; min-width: 0; }
+.ud-activity-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: .2rem;
+}
+.ud-activity-card-ref { font-size: .8rem; font-weight: 700; color: var(--s800); font-family: monospace; }
+.ud-activity-card-mid {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .5rem; margin-top: .2rem;
+}
+.ud-activity-card-shop { font-size: .75rem; color: var(--s500); }
+.ud-activity-card-amount { font-size: .85rem; font-weight: 800; color: var(--s800); }
+
+/* ===== BACK LINK ===== */
+.ud-back {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .85rem; font-weight: 600; color: var(--brand);
+    text-decoration: none; margin-bottom: .6rem;
+}
+.ud-back:hover { text-decoration: underline; }
+
+/* ===== DESKTOP EXTRAS ≥992px ===== */
+@media (min-width: 992px) {
+    .ud-hero-actions {
+        flex-direction: row;
+        gap: .5rem;
+    }
+    .ud-activity-cards { display: none !important; }
+}
+
+/* ===== TABLET ===== */
+@media (max-width: 991px) and (min-width: 577px) {
+    .ud-container { padding: .5rem .75rem; }
+    .ud-stat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 576px) {
+    .ud-container { padding: .35rem; }
+    .ud-hero { padding: 1rem; }
+    .ud-hero-inner { flex-wrap: wrap; gap: .75rem; }
+    .ud-hero-avatar, .ud-hero-avatar-placeholder { width: 60px; height: 60px; font-size: 1.4rem; }
+    .ud-hero-name { font-size: 1.2rem; }
+    .ud-hero-meta { font-size: .78rem; }
+    .ud-hero-actions { flex-direction: row; flex-wrap: wrap; }
+    .ud-action-btn { padding: .4rem .7rem; font-size: .72rem; }
+    .ud-grid { grid-template-columns: 1fr; }
+    .ud-stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .ud-stat-box { padding: .6rem .7rem; }
+    .ud-stat-box-val { font-size: 1.15rem; }
+    .ud-card-head { padding: .7rem .9rem; }
+    .ud-card-body { padding: .7rem .9rem; }
+    .ud-info-label { font-size: .68rem; }
+    .ud-info-value { font-size: .8rem; }
+    .ud-recent-table { font-size: .75rem; }
+    .ud-recent-table th, .ud-recent-table td { padding: .4rem .3rem; }
+    /* Activity: show cards, hide table on mobile */
+    .ud-activity-table-wrap { display: none; }
+    .ud-activity-cards { display: block; padding: .5rem .85rem; }
+    .ud-type-icon { width: 26px; height: 26px; font-size: .6rem; }
+    .ud-filter-btn { font-size: .65rem; padding: .25rem .55rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ud-container">
+    <a href="{% url 'accounts:user_list' %}" class="ud-back">
+        <i class="fas fa-arrow-left"></i> Back to User Management
+    </a>
+
+    <!-- Hero -->
+    <div class="ud-hero">
+        <div class="ud-hero-inner">
+            {% if user_obj.profile_picture %}
+                <img src="{{ user_obj.profile_picture.url }}" class="ud-hero-avatar" alt="">
+            {% else %}
+                <div class="ud-hero-avatar-placeholder">
+                    {{ user_obj.first_name|first }}{{ user_obj.last_name|first }}
+                </div>
+            {% endif %}
+            <div class="ud-hero-info">
+                <h1 class="ud-hero-name">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
+                <div class="ud-hero-badges">
+                    <span class="ud-badge role">
+                        {% if user_obj.user_type == 'admin' %}
+                            <i class="fas fa-shield-alt"></i> Admin
+                        {% elif user_obj.user_type == 'office' %}
+                            <i class="fas fa-building"></i> Distributor
+                        {% else %}
+                            <i class="fas fa-car"></i> Sales Representative
+                        {% endif %}
+                    </span>
+                    <span class="ud-badge {% if user_obj.is_active and user_obj.is_active_employee %}status-active{% else %}status-inactive{% endif %}">
+                        <i class="fas fa-circle" style="font-size:.4rem"></i>
+                        {% if user_obj.is_active and user_obj.is_active_employee %}Active{% else %}Inactive{% endif %}
+                    </span>
+                    {% if user_obj.employee_id %}
+                    <span class="ud-badge emp-id">
+                        <i class="fas fa-id-badge"></i> {{ user_obj.employee_id }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="ud-hero-meta">
+                    <span><i class="fas fa-at"></i>{{ user_obj.username }}</span>
+                    {% if user_obj.email %}
+                    <span><i class="fas fa-envelope"></i><a href="mailto:{{ user_obj.email }}">{{ user_obj.email }}</a></span>
+                    {% endif %}
+                    {% if user_obj.phone_number %}
+                    <span><i class="fas fa-phone"></i><a href="tel:{{ user_obj.phone_number }}">{{ user_obj.phone_number }}</a></span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="ud-hero-actions">
+                <a href="{% url 'accounts:user_edit' user_obj.pk %}" class="ud-action-btn solid">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'accounts:user_reset_password' user_obj.pk %}" class="ud-action-btn">
+                    <i class="fas fa-key"></i> Reset Password
+                </a>
+                {% if user_obj.user_type == 'sales_rep' %}
+                <a href="{% url 'accounts:user_manage_shop_access' user_obj.pk %}" class="ud-action-btn">
+                    <i class="fas fa-store"></i> Shop Access
+                </a>
+                {% endif %}
+                {% if user_obj.pk != request.user.pk %}
+                <form method="post" action="{% url 'accounts:user_toggle_active' user_obj.pk %}" style="margin:0;">
+                    {% csrf_token %}
+                    {% if user_obj.is_active and user_obj.is_active_employee %}
+                    <button type="submit" class="ud-action-btn danger"
+                            onclick="return confirm('Deactivate {{ user_obj.get_full_name }}?')">
+                        <i class="fas fa-user-slash"></i> Deactivate
+                    </button>
+                    {% else %}
+                    <button type="submit" class="ud-action-btn success">
+                        <i class="fas fa-user-check"></i> Activate
+                    </button>
+                    {% endif %}
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if user_obj.user_type == 'sales_rep' and activity %}
+    <!-- Sales Rep Stats -->
+    <div class="ud-stat-grid">
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.total_bills|default:"0" }}</div>
+            <div class="ud-stat-box-lbl">Total Bills</div>
+        </div>
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.month_bills|default:"0" }}</div>
+            <div class="ud-stat-box-lbl">This Month</div>
+        </div>
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.total_revenue|default:"0"|intcomma }}</div>
+            <div class="ud-stat-box-lbl">Total Revenue</div>
+        </div>
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.month_revenue|default:"0"|intcomma }}</div>
+            <div class="ud-stat-box-lbl">Month Revenue</div>
+        </div>
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.total_returns|default:"0" }}</div>
+            <div class="ud-stat-box-lbl">Returns</div>
+        </div>
+        <div class="ud-stat-box">
+            <div class="ud-stat-box-val">{{ activity.assigned_shops|default:"0" }}</div>
+            <div class="ud-stat-box-lbl">Shops Assigned</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Details Grid -->
+    <div class="ud-grid">
+        <!-- Personal Information -->
+        <div class="ud-card">
+            <div class="ud-card-head">
+                <i class="fas fa-user"></i>
+                <h3>Personal Information</h3>
+            </div>
+            <div class="ud-card-body">
+                <div class="ud-info-row">
+                    <span class="ud-info-label">First Name</span>
+                    <span class="ud-info-value">{{ user_obj.first_name|default:"—" }}</span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Last Name</span>
+                    <span class="ud-info-value">{{ user_obj.last_name|default:"—" }}</span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Username</span>
+                    <span class="ud-info-value">{{ user_obj.username }}</span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Email</span>
+                    <span class="ud-info-value {% if not user_obj.email %}muted{% endif %}">
+                        {{ user_obj.email|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Phone</span>
+                    <span class="ud-info-value {% if not user_obj.phone_number %}muted{% endif %}">
+                        {{ user_obj.phone_number|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Address</span>
+                    <span class="ud-info-value {% if not user_obj.address %}muted{% endif %}">
+                        {{ user_obj.address|default:"Not set" }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="ud-card">
+            <div class="ud-card-head">
+                <i class="fas fa-cog"></i>
+                <h3>Account Information</h3>
+            </div>
+            <div class="ud-card-body">
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Employee ID</span>
+                    <span class="ud-info-value {% if not user_obj.employee_id %}muted{% endif %}">
+                        {{ user_obj.employee_id|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Role</span>
+                    <span class="ud-info-value">{{ user_obj.get_user_type_display }}</span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Account Status</span>
+                    <span class="ud-info-value">
+                        {% if user_obj.is_active and user_obj.is_active_employee %}
+                            <span style="color:var(--emerald);font-weight:800;">Active</span>
+                        {% else %}
+                            <span style="color:var(--rose);font-weight:800;">Inactive</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Date Joined</span>
+                    <span class="ud-info-value">{{ user_obj.date_joined|date:"M d, Y" }}</span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Last Login</span>
+                    <span class="ud-info-value {% if not user_obj.last_login %}muted{% endif %}">
+                        {% if user_obj.last_login %}
+                            {{ user_obj.last_login|timesince }} ago
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Staff Access</span>
+                    <span class="ud-info-value">
+                        {% if user_obj.is_staff %}Yes{% else %}No{% endif %}
+                    </span>
+                </div>
+                {% if activity.money_balance is not None %}
+                <div class="ud-info-row">
+                    <span class="ud-info-label">Money Balance</span>
+                    <span class="ud-info-value" style="color:{% if activity.money_balance >= 0 %}var(--emerald){% else %}var(--rose){% endif %}">
+                        Rs. {{ activity.money_balance|intcomma }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if timeline %}
+    <!-- Activity Log -->
+    <div class="ud-card" style="margin-bottom:.85rem;">
+        <div class="ud-card-head" style="justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+                <i class="fas fa-stream"></i>
+                <h3>Activity Log</h3>
+                <span style="font-size:.7rem;color:var(--s400);font-weight:600;margin-left:.25rem;">({{ timeline|length }})</span>
+            </div>
+        </div>
+        <!-- Filter tabs -->
+        <div class="ud-activity-filters">
+            <a href="?activity=all" class="ud-filter-btn {% if activity_filter == 'all' %}active{% endif %}">
+                <i class="fas fa-layer-group"></i> All
+            </a>
+            <a href="?activity=bills" class="ud-filter-btn {% if activity_filter == 'bills' %}active{% endif %}">
+                <i class="fas fa-file-invoice"></i> Bills
+            </a>
+            <a href="?activity=returns" class="ud-filter-btn {% if activity_filter == 'returns' %}active{% endif %}">
+                <i class="fas fa-undo-alt"></i> Returns
+            </a>
+            <a href="?activity=exchanges" class="ud-filter-btn {% if activity_filter == 'exchanges' %}active{% endif %}">
+                <i class="fas fa-exchange-alt"></i> Exchanges
+            </a>
+            <a href="?activity=payments" class="ud-filter-btn {% if activity_filter == 'payments' %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+            {% if user_obj.user_type == 'sales_rep' %}
+            <a href="?activity=visits" class="ud-filter-btn {% if activity_filter == 'visits' %}active{% endif %}">
+                <i class="fas fa-map-marker-alt"></i> Visits
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Desktop Table -->
+        <div class="ud-activity-table-wrap">
+            <div class="ud-card-body" style="padding:.4rem .85rem;">
+                <table class="ud-recent-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;"></th>
+                            <th>Type</th>
+                            <th>Reference</th>
+                            <th>Shop</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th style="text-align:right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in timeline %}
+                        <tr>
+                            <td>
+                                <span class="ud-type-icon {{ item.type|lower }}">
+                                    <i class="fas {{ item.icon }}"></i>
+                                </span>
+                            </td>
+                            <td style="font-weight:700;font-size:.78rem;">{{ item.type }}</td>
+                            <td class="num">{{ item.ref }}</td>
+                            <td>{{ item.shop|truncatechars:25 }}</td>
+                            <td>{{ item.date|date:"M d, Y" }}</td>
+                            <td><span class="ud-status-pill {{ item.status_class }}">{{ item.status }}</span></td>
+                            <td style="text-align:right" class="num">
+                                {% if item.amount %}Rs. {{ item.amount|intcomma }}{% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="ud-activity-cards">
+            {% for item in timeline %}
+            <div class="ud-activity-card">
+                <span class="ud-type-icon {{ item.type|lower }}">
+                    <i class="fas {{ item.icon }}"></i>
+                </span>
+                <div class="ud-activity-card-body">
+                    <div class="ud-activity-card-top">
+                        <span class="ud-activity-card-ref">{{ item.ref }}</span>
+                        <span class="ud-status-pill {{ item.status_class }}">{{ item.status }}</span>
+                    </div>
+                    <div class="ud-activity-card-shop">
+                        <i class="fas fa-store" style="font-size:.6rem;margin-right:.2rem;"></i>{{ item.shop|truncatechars:30 }}
+                        &nbsp;·&nbsp; {{ item.date|date:"M d" }}
+                    </div>
+                    {% if item.amount %}
+                    <div class="ud-activity-card-mid">
+                        <span class="ud-activity-card-amount">Rs. {{ item.amount|intcomma }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif activity_filter != 'all' %}
+    <!-- Empty state for filtered view -->
+    <div class="ud-card" style="margin-bottom:.85rem;">
+        <div class="ud-card-head" style="justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+                <i class="fas fa-stream"></i>
+                <h3>Activity Log</h3>
+            </div>
+        </div>
+        <div class="ud-activity-filters">
+            <a href="?activity=all" class="ud-filter-btn {% if activity_filter == 'all' %}active{% endif %}">
+                <i class="fas fa-layer-group"></i> All
+            </a>
+            <a href="?activity=bills" class="ud-filter-btn {% if activity_filter == 'bills' %}active{% endif %}">
+                <i class="fas fa-file-invoice"></i> Bills
+            </a>
+            <a href="?activity=returns" class="ud-filter-btn {% if activity_filter == 'returns' %}active{% endif %}">
+                <i class="fas fa-undo-alt"></i> Returns
+            </a>
+            <a href="?activity=exchanges" class="ud-filter-btn {% if activity_filter == 'exchanges' %}active{% endif %}">
+                <i class="fas fa-exchange-alt"></i> Exchanges
+            </a>
+            <a href="?activity=payments" class="ud-filter-btn {% if activity_filter == 'payments' %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+            {% if user_obj.user_type == 'sales_rep' %}
+            <a href="?activity=visits" class="ud-filter-btn {% if activity_filter == 'visits' %}active{% endif %}">
+                <i class="fas fa-map-marker-alt"></i> Visits
+            </a>
+            {% endif %}
+        </div>
+        <div class="ud-activity-empty">
+            <i class="fas fa-inbox"></i>
+            <div style="font-weight:700;">No {{ activity_filter }} found</div>
+            <div style="font-size:.78rem;margin-top:.25rem;">
+                <a href="?activity=all" style="color:var(--brand);">Show all activity</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

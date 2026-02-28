@@ -1,0 +1,609 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Product Status Adjustment{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #2563eb;
+        --danger: #ef4444;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --gray: #6b7280;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .page-header h2 {
+        color: white;
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+    .page-header .header-actions a {
+        color: rgba(255,255,255,0.85);
+        font-size: 0.85rem;
+        text-decoration: none;
+    }
+    .page-header .header-actions a:hover { color: white; }
+
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        margin-bottom: 1.25rem;
+        border: 1px solid #e5e7eb;
+    }
+    .form-section {
+        padding: 1.25rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .form-section:last-child { border-bottom: none; }
+    .form-section-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .form-section-title i { color: var(--primary); }
+
+    /* ── Product Table ── */
+    .product-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .product-table thead th {
+        background: #f8fafc;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        padding: 0.6rem 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .product-table tbody tr {
+        transition: background 0.15s;
+    }
+    .product-table tbody tr:hover {
+        background: #f0f7ff;
+    }
+    .product-table tbody tr.has-qty {
+        background: #eff6ff;
+    }
+    .product-table td {
+        padding: 0.45rem 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        font-size: 0.88rem;
+    }
+    .product-table .col-code {
+        font-weight: 600;
+        color: var(--primary);
+        white-space: nowrap;
+        font-size: 0.82rem;
+    }
+    .product-table .col-name {
+        color: #1f2937;
+        font-weight: 500;
+    }
+    .product-table .col-stock {
+        text-align: center;
+        font-weight: 600;
+        color: #374151;
+    }
+    .product-table .col-stock.low-stock {
+        color: var(--danger);
+    }
+    .qty-input {
+        width: 72px;
+        text-align: center;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.4rem 0.25rem;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.2s;
+        -moz-appearance: textfield;
+    }
+    .qty-input::-webkit-outer-spin-button,
+    .qty-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .qty-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        outline: none;
+    }
+    .qty-input.has-value {
+        border-color: var(--primary);
+        background: #eff6ff;
+        color: var(--primary);
+    }
+    .qty-input.over-stock {
+        border-color: var(--danger);
+        background: #fef2f2;
+        color: var(--danger);
+    }
+
+    /* Company group header */
+    .company-header td {
+        background: #f1f5f9;
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: #475569;
+        padding: 0.5rem 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .company-header td i {
+        color: var(--primary);
+    }
+
+    /* ── Summary Bar ── */
+    .summary-bar {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .summary-bar .stat {
+        text-align: center;
+    }
+    .summary-bar .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    .summary-bar .stat-label {
+        font-size: 0.7rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    /* ── Stock Action ── */
+    .stock-action-selector {
+        display: grid;
+        gap: 0.6rem;
+    }
+    .stock-action-option { display: none; }
+    .stock-action-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+    .stock-action-label:hover { border-color: var(--primary); background: #eff6ff; }
+    .stock-action-option:checked + .stock-action-label { border-color: var(--primary); background: #eff6ff; }
+    .stock-action-icon {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .stock-action-icon.move { background: #dbeafe; color: var(--primary); }
+    .stock-action-icon.reduce { background: #fee2e2; color: var(--danger); }
+    .stock-action-icon.record { background: #f3f4f6; color: var(--gray); }
+    .stock-action-title { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
+    .stock-action-desc { font-size: 0.78rem; color: var(--gray); margin: 0; }
+
+    /* ── Submit ── */
+    .btn-submit {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.9rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.2s;
+        width: 100%;
+    }
+    .btn-submit:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .btn-submit:disabled {
+        background: #94a3b8;
+        transform: none;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    .form-select, .form-control {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.65rem 0.75rem;
+        font-size: 16px;
+        transition: all 0.2s;
+    }
+    .form-select:focus, .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    /* Search box */
+    .product-search {
+        position: relative;
+        margin-bottom: 0.75rem;
+    }
+    .product-search input {
+        padding-left: 2.5rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        width: 100%;
+        padding: 0.6rem 0.75rem 0.6rem 2.5rem;
+    }
+    .product-search i {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .page-header { padding: 1rem; }
+        .page-header h2 { font-size: 1.15rem; }
+        .form-section { padding: 1rem; }
+        .product-table .col-code { font-size: 0.75rem; }
+        .product-table td { padding: 0.4rem 0.35rem; font-size: 0.82rem; }
+        .qty-input { width: 60px; padding: 0.35rem 0.15rem; }
+        .summary-bar { flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 0.75rem; }
+        body { padding-bottom: 80px; }
+        .action-buttons-fixed {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; padding: 0.75rem 1rem;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+    }
+    @media (max-width: 576px) {
+        .d-sm-none { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="page-header">
+        <h2><i class="fas fa-exclamation-triangle me-2"></i>Status Adjustment</h2>
+        <div class="header-actions">
+            <a href="{% url 'products:product_status_history' %}">
+                <i class="fas fa-history me-1"></i>History
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar" id="summaryBar">
+        <div class="stat">
+            <div class="stat-value" id="selectedCount">0</div>
+            <div class="stat-label">Products</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="totalQty">0</div>
+            <div class="stat-label">Total Qty</div>
+        </div>
+        <div class="stat">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAll()" id="clearBtn" style="display:none;">
+                <i class="fas fa-eraser"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" id="adjustmentForm">
+        {% csrf_token %}
+        <input type="hidden" name="items" id="itemsData" value="[]">
+
+        <!-- Product List -->
+        <div class="form-card">
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-boxes"></i>
+                    <span>Products — Enter Qty</span>
+                </div>
+
+                <!-- Search -->
+                <div class="product-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="productSearch" class="form-control" placeholder="Search products...">
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive" style="max-height: 55vh; overflow-y: auto;">
+                    <table class="product-table" id="productTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Product</th>
+                                <th class="text-center d-sm-none" style="width: 15%;">Size</th>
+                                <th class="text-center" style="width: 15%;">Stock</th>
+                                <th class="text-center" style="width: 20%;">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% regroup products by company as company_groups %}
+                            {% for group in company_groups %}
+                            <tr class="company-header">
+                                <td colspan="4"><i class="fas fa-building me-1"></i> {{ group.grouper.company_name }}</td>
+                            </tr>
+                            {% for product in group.list %}
+                            <tr data-product-id="{{ product.id }}"
+                                data-code="{{ product.product_code }}"
+                                data-name="{{ product.product_name }}"
+                                data-stock="{{ product.quantity_in_stock }}"
+                                data-search="{{ product.product_code|lower }} {{ product.product_name|lower }}">
+                                <td>
+                                    <div class="col-code">{{ product.product_code }}</div>
+                                    <div class="col-name">{{ product.product_name }}</div>
+                                </td>
+                                <td class="text-center d-sm-none" style="font-size:0.8rem; color:#64748b;">{{ product.size }}</td>
+                                <td class="col-stock {% if product.quantity_in_stock <= product.minimum_stock_level %}low-stock{% endif %}">
+                                    {{ product.quantity_in_stock }}
+                                </td>
+                                <td class="text-center">
+                                    <input type="number"
+                                           class="qty-input"
+                                           data-product-id="{{ product.id }}"
+                                           data-max-stock="{{ product.quantity_in_stock }}"
+                                           min="0"
+                                           step="1"
+                                           placeholder="0"
+                                           inputmode="numeric"
+                                           oninput="onQtyChange(this)">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Card (Status + Action + Reason) -->
+        <div class="form-card">
+            <!-- Status Type -->
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-tags"></i> Status Type</div>
+                <select name="status_type" id="status_type" class="form-select" required>
+                    <option value="">Select Status Type</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Stock Action -->
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-exchange-alt"></i> Stock Action</div>
+                <div class="stock-action-selector">
+                    <div id="action_move_container">
+                        <input type="radio" class="stock-action-option" name="stock_action" id="action_move" value="move_to_non_resaleable">
+                        <label class="stock-action-label" for="action_move">
+                            <div class="stock-action-icon move"><i class="fas fa-arrow-right"></i></div>
+                            <div>
+                                <div class="stock-action-title">Move to Non-Resaleable</div>
+                                <p class="stock-action-desc">Moves from resaleable to non-resaleable stock</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="action_reduce_container">
+                        <input type="radio" class="stock-action-option" name="stock_action" id="action_reduce" value="reduce_completely">
+                        <label class="stock-action-label" for="action_reduce">
+                            <div class="stock-action-icon reduce"><i class="fas fa-minus-circle"></i></div>
+                            <div>
+                                <div class="stock-action-title">Reduce Completely</div>
+                                <p class="stock-action-desc">Completely removes from resaleable stock</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="action_record_container">
+                        <input type="radio" class="stock-action-option" name="stock_action" id="action_record" value="record_only">
+                        <label class="stock-action-label" for="action_record">
+                            <div class="stock-action-icon record"><i class="fas fa-file-alt"></i></div>
+                            <div>
+                                <div class="stock-action-title">Record Only</div>
+                                <p class="stock-action-desc">Records adjustment without changing stock</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reason -->
+            <div class="form-section">
+                <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                <textarea name="reason" class="form-control" rows="2" required placeholder="Reason for this adjustment"></textarea>
+            </div>
+
+            <!-- Reference -->
+            <div class="form-section">
+                <label class="form-label fw-semibold">Reference Number <small class="text-muted">(Optional)</small></label>
+                <input type="text" name="reference_number" class="form-control" placeholder="E.g., batch number">
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="action-buttons-fixed">
+            <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                <i class="fas fa-paper-plane me-1"></i> Submit Adjustment
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function onQtyChange(input) {
+    const val = parseInt(input.value) || 0;
+    const maxStock = parseInt(input.dataset.maxStock) || 0;
+    const row = input.closest('tr');
+
+    // Visual feedback
+    input.classList.toggle('has-value', val > 0);
+    input.classList.toggle('over-stock', val > maxStock);
+    row.classList.toggle('has-qty', val > 0);
+
+    updateSummary();
+}
+
+function updateSummary() {
+    let count = 0, total = 0;
+    document.querySelectorAll('.qty-input').forEach(inp => {
+        const v = parseInt(inp.value) || 0;
+        if (v > 0) { count++; total += v; }
+    });
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('totalQty').textContent = total;
+    document.getElementById('clearBtn').style.display = count > 0 ? '' : 'none';
+    document.getElementById('submitBtn').disabled = count === 0;
+}
+
+function clearAll() {
+    document.querySelectorAll('.qty-input').forEach(inp => {
+        inp.value = '';
+        inp.classList.remove('has-value', 'over-stock');
+        inp.closest('tr').classList.remove('has-qty');
+    });
+    updateSummary();
+}
+
+// Search / filter
+document.getElementById('productSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#productTable tbody tr');
+    let lastCompanyRow = null;
+    let companyHasVisible = false;
+
+    rows.forEach(row => {
+        if (row.classList.contains('company-header')) {
+            // Show/hide previous company header
+            if (lastCompanyRow) {
+                lastCompanyRow.style.display = companyHasVisible ? '' : 'none';
+            }
+            lastCompanyRow = row;
+            companyHasVisible = false;
+            return;
+        }
+        const search = row.dataset.search || '';
+        const match = !q || search.includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) companyHasVisible = true;
+    });
+    // Handle last company header
+    if (lastCompanyRow) {
+        lastCompanyRow.style.display = companyHasVisible ? '' : 'none';
+    }
+});
+
+// Status type → stock action toggle
+document.getElementById('status_type').addEventListener('change', function() {
+    const st = this.value;
+    const moveC = document.getElementById('action_move_container');
+    const reduceC = document.getElementById('action_reduce_container');
+    const recordC = document.getElementById('action_record_container');
+
+    document.querySelectorAll('input[name="stock_action"]').forEach(r => r.checked = false);
+
+    if (st === 'damaged' || st === 'expired') {
+        moveC.style.display = 'block';
+        reduceC.style.display = 'none';
+        recordC.style.display = 'none';
+        document.getElementById('action_move').checked = true;
+    } else if (st) {
+        moveC.style.display = 'none';
+        reduceC.style.display = 'block';
+        recordC.style.display = 'block';
+        document.getElementById('action_reduce').checked = true;
+    } else {
+        moveC.style.display = 'block';
+        reduceC.style.display = 'block';
+        recordC.style.display = 'block';
+    }
+});
+
+// Form submit — collect qty values into JSON
+document.getElementById('adjustmentForm').addEventListener('submit', function(e) {
+    const items = [];
+    let hasOverStock = false;
+
+    document.querySelectorAll('.qty-input').forEach(inp => {
+        const qty = parseInt(inp.value) || 0;
+        if (qty > 0) {
+            const row = inp.closest('tr');
+            const maxStock = parseInt(inp.dataset.maxStock) || 0;
+            const stockAction = document.querySelector('input[name="stock_action"]:checked');
+
+            // Skip stock check for record_only
+            if (stockAction && stockAction.value !== 'record_only' && qty > maxStock) {
+                hasOverStock = true;
+            }
+
+            items.push({
+                product_id: row.dataset.productId,
+                quantity: qty
+            });
+        }
+    });
+
+    if (items.length === 0) {
+        e.preventDefault();
+        alert('Please enter quantity for at least one product.');
+        return false;
+    }
+
+    if (hasOverStock) {
+        e.preventDefault();
+        alert('Some quantities exceed available stock. Please correct the highlighted items.');
+        return false;
+    }
+
+    const stockActionSelected = document.querySelector('input[name="stock_action"]:checked');
+    if (!stockActionSelected) {
+        e.preventDefault();
+        alert('Please select a stock action.');
+        return false;
+    }
+
+    document.getElementById('itemsData').value = JSON.stringify(items);
+    return true;
+});
+
+// Init
+updateSummary();
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}EOD Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 15px;
+    }
+    
+    .settings-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .history-table {
+        width: 100%;
+        font-size: 0.9em;
+    }
+    
+    @media (max-width: 767px) {
+        .settings-container {
+            padding: 10px;
+        }
+        
+        .settings-card {
+            padding: 15px;
+        }
+        
+        .history-table {
+            font-size: 0.85em;
+        }
+        
+        .history-table td, .history-table th {
+            padding: 8px 4px !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4><i class="fas fa-cog me-2"></i>EOD Settings</h4>
+        <a href="{% url 'sales:eod_date_list' %}" class="btn btn-sm btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Reports
+        </a>
+    </div>
+    
+    <!-- Info Banner -->
+    <div class="settings-card">
+        <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            Case value is now managed globally from <strong>Platform Settings</strong>.
+            Changes apply across all distributors.
+            {% if user.is_superuser or user.is_platform_admin %}
+            <a href="/platform/settings/" class="btn btn-sm btn-primary ms-2">
+                <i class="fas fa-external-link-alt me-1"></i>Go to Platform Settings
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Active Case Value -->
+    <div class="settings-card">
+        <h5 class="text-primary mb-3"><i class="fas fa-box me-2"></i>Active Case Value</h5>
+        {% if active_setting %}
+        <div class="alert alert-success mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">Rs. {{ active_setting.case_value|floatformat:2 }}</h4>
+                    <small class="text-muted">Effective from {{ active_setting.effective_date }}</small>
+                </div>
+                <i class="fas fa-check-circle fa-2x"></i>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>No active case value set. Using default Rs. 2,160.00.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- History -->
+    <div class="settings-card">
+        <h5 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Case Value History</h5>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover history-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Effective Date</th>
+                        <th class="text-end">Case Value</th>
+                        <th class="d-none d-md-table-cell">Created By</th>
+                        <th class="d-none d-md-table-cell">Notes</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for setting in settings %}
+                    <tr>
+                        <td>{{ setting.effective_date }}</td>
+                        <td class="text-end">Rs. {{ setting.case_value|floatformat:2 }}</td>
+                        <td class="d-none d-md-table-cell">
+                            {% if setting.created_by %}
+                                {{ setting.created_by.get_full_name|default:setting.created_by.username }}
+                            {% else %}
+                                System
+                            {% endif %}
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <small class="text-muted">{{ setting.notes|default:"-"|truncatewords:10 }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if setting.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No history available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

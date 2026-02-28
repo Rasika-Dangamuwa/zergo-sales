@@ -1,0 +1,762 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Record Return - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f5f5f5;
+    }
+    
+    .mobile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px 15px;
+        margin: -20px -15px 20px -15px;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 15px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin: 20px 0 10px 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .category-header:first-child {
+        margin-top: 0;
+    }
+    
+    .product-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .product-item.selected {
+        border-color: #667eea;
+        background: #f0f3ff;
+    }
+    
+    .product-details {
+        display: none;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px dashed #dee2e6;
+    }
+    
+    .product-item.selected .product-details {
+        display: block;
+    }
+    
+    .input-group-custom {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .input-group-custom label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .input-group-custom input {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 10px;
+    }
+    
+    .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .qty-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 8px;
+        border: none;
+        background: #667eea;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    
+    .qty-btn:active {
+        background: #764ba2;
+        color: white;
+    }
+    
+    .qty-control input[type="number"] {
+        flex: 1;
+        min-width: 0;
+        max-width: 80px;
+        text-align: center;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        padding: 8px 4px;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .qty-section,
+    .price-section,
+    .total-section {
+        margin-bottom: 12px;
+    }
+    
+    .qty-section label,
+    .price-section label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    
+    .qty-input {
+        width: 80px;
+        text-align: center;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .submit-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        width: 100%;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .total-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+        
+        .form-card h6 {
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        transition: all 0.2s;
+        font-size: 0.95rem;
+        background: white;
+    }
+    
+    .settlement-chip.active {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+    }
+    
+    .reason-chip {
+        display: inline-block;
+        padding: 8px 15px;
+        border-radius: 20px;
+        border: 2px solid #e9ecef;
+        margin: 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+    
+    .reason-chip.active {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+    }
+    
+    .stock-type-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+    
+    .stock-type-badge.resellable {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .stock-type-badge.non-resellable {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .stock-type-info {
+        background: #e7f3ff;
+        border-left: 4px solid #667eea;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 10px;
+        font-size: 0.85rem;
+        display: none;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .search-box input {
+        padding-left: 40px;
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3">
+    <div class="mobile-header">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'sales:return_list' %}" class="text-white me-3">
+                <i class="fas fa-arrow-left fa-lg"></i>
+            </a>
+            <h4><i class="fas fa-undo me-2"></i>Record Return</h4>
+        </div>
+    </div>
+
+    <form method="post" id="returnForm">
+        {% csrf_token %}
+        
+        <!-- Step 1: Shop & Reason -->
+        <div class="form-card">
+            <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Step 1: Basic Information</h6>
+            
+            <label class="form-label">
+                <i class="fas fa-store text-primary me-2"></i>Shop
+            </label>
+            <select name="shop" class="form-select mb-3" required>
+                <option value="">Select Shop</option>
+                {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.shop_name }}</option>
+                {% endfor %}
+            </select>
+            
+            <label class="form-label">
+                <i class="fas fa-question-circle text-warning me-2"></i>Return Reason
+            </label>
+            <input type="hidden" name="return_reason" id="returnReason" required>
+            <div id="reasonChips">
+                <span class="reason-chip" data-value="damaged" data-resellable="no">Damaged</span>
+                <span class="reason-chip" data-value="expired" data-resellable="no">Expired</span>
+                <span class="reason-chip" data-value="wrong_item" data-resellable="yes">Wrong Item</span>
+                <span class="reason-chip" data-value="excess" data-resellable="yes">Excess Stock</span>
+                <span class="reason-chip" data-value="quality" data-resellable="yes">Quality Issue</span>
+                <span class="reason-chip" data-value="other" data-resellable="yes">Other</span>
+            </div>
+            
+            <div class="stock-type-info" id="stockTypeInfo">
+                <i class="fas fa-info-circle me-2"></i>
+                <span id="stockTypeText"></span>
+            </div>
+        </div>
+
+        <!-- Step 2: Product Selection -->
+        <div class="form-card">
+            <h6 class="text-success mb-3"><i class="fas fa-box me-2"></i>Step 2: Select Products</h6>
+            
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-control" id="productSearch" placeholder="Search products...">
+            </div>
+            
+            <div id="productsList">
+                {% for category, products in products_by_category.items %}
+                <div class="category-header">
+                    <i class="fas fa-tag me-2"></i>{{ category }}
+                </div>
+                
+                {% for product in products %}
+                <div class="product-item" data-product-id="{{ product.id }}" data-product-name="{{ product.product_name }}" data-default-price="{{ product.shop_price }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ product.product_name }}</strong>
+                            <div class="text-muted small">MRP: Rs. {{ product.marked_price }} | Shop: Rs. {{ product.shop_price }}</div>
+                        </div>
+                        <input type="checkbox" class="form-check-input product-checkbox" style="width: 24px; height: 24px;">
+                    </div>
+                    <div class="product-details">
+                        <div class="qty-section">
+                            <label class="small text-muted">Regular Qty</label>
+                            <div class="qty-control">
+                                <button type="button" class="qty-btn qty-minus">−</button>
+                                <input type="number" class="regular-qty" min="0" value="0" step="1">
+                                <button type="button" class="qty-btn qty-plus">+</button>
+                            </div>
+                        </div>
+                        
+                        <div class="qty-section">
+                            <label class="small text-muted">FOC Qty</label>
+                            <div class="qty-control">
+                                <button type="button" class="qty-btn foc-minus">−</button>
+                                <input type="number" class="foc-qty" min="0" value="0" step="1">
+                                <button type="button" class="qty-btn foc-plus">+</button>
+                            </div>
+                        </div>
+                        
+                        <div class="price-section">
+                            <label class="small text-muted">Return Price (per unit)</label>
+                            <input type="number" class="form-control return-price" step="0.01" min="0" value="{{ product.shop_price }}">
+                        </div>
+                        
+                        <div class="total-section">
+                            <div class="d-flex justify-content-between align-items-center" style="background: #e9ecef; padding: 10px; border-radius: 8px;">
+                                <span class="small">Line Total:</span>
+                                <strong class="line-total">Rs. 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Step 3: Settlement & Summary -->
+        <div class="form-card">
+            <h6 class="text-info mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Step 3: Settlement Details</h6>
+            
+            <label class="form-label">
+                <i class="fas fa-money-bill-wave text-success me-2"></i>Settlement Method
+            </label>
+            <input type="hidden" name="settlement_method" id="settlementMethod" required>
+            <div id="settlementChips" class="mb-3">
+                <span class="settlement-chip" data-value="cash">Cash Refund</span>
+                <span class="settlement-chip" data-value="credit_note">Credit Note</span>
+                <span class="settlement-chip" data-value="next_bill">Adjust in Next Bill</span>
+            </div>
+            
+            <!-- Field Cash Given Section (only shows when Cash Refund selected) -->
+            <div id="fieldCashSection" style="display: none;" class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                <h6 class="text-warning mb-3">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Field Cash Settlement
+                </h6>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="fieldCashGiven" name="field_cash_given" value="false">
+                    <label class="form-check-label fw-bold" for="fieldCashGiven">
+                        ✅ I have given cash to customer in the field
+                    </label>
+                </div>
+                
+                <div id="fieldCashDetails" style="display: none;">
+                    <input type="hidden" name="field_cash_amount" id="fieldCashAmount" value="0">
+                    
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Amount to be confirmed:</strong> Rs. <span id="fieldCashDisplayAmount">0.00</span>
+                    </div>
+                    
+                    <label class="form-label">
+                        <i class="fas fa-comment me-2"></i>Cash Payment Notes (Optional)
+                    </label>
+                    <textarea name="field_cash_notes" id="fieldCashNotes" class="form-control" rows="2" 
+                        placeholder="e.g., Customer name who received cash, any remarks..."></textarea>
+                    
+                    <div class="alert alert-warning mt-2 mb-0">
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> By checking this, you confirm you have physically given the cash amount to the customer. 
+                            This will be recorded and receipt will be generated upon approval.
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <label class="form-label mt-3">
+                <i class="fas fa-sticky-note text-info me-2"></i>Notes (Optional)
+            </label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+        </div>
+
+        <!-- Total Summary -->
+        <div class="total-summary">
+            <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Return Summary</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total Items:</span>
+                <strong id="totalItems">0</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Regular Qty:</span>
+                <strong id="totalRegularQty">0</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>FOC Qty:</span>
+                <strong id="totalFOCQty">0</strong>
+            </div>
+            <div class="d-flex justify-content-between" style="font-size: 1.3rem; padding-top: 10px; border-top: 2px solid rgba(255,255,255,0.3);">
+                <span>Total Amount:</span>
+                <strong>Rs. <span id="grandTotal">0.00</span></strong>
+            </div>
+        </div>
+
+        <!-- Hidden fields -->
+        <input type="hidden" name="items" id="itemsData">
+        <input type="hidden" name="total_amount" id="totalAmountHidden">
+
+        <!-- Submit Button -->
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>
+            <i class="fas fa-check-circle me-2"></i>Submit Return
+        </button>
+        
+        <div class="text-center mt-3 mb-5 pb-3">
+            <small class="text-muted">Returns will be reviewed by management</small>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Reason selection
+    const reasonChips = document.querySelectorAll('.reason-chip');
+    const returnReasonInput = document.getElementById('returnReason');
+    const stockTypeInfo = document.getElementById('stockTypeInfo');
+    const stockTypeText = document.getElementById('stockTypeText');
+    
+    reasonChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            reasonChips.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            returnReasonInput.value = this.dataset.value;
+            
+            // Show stock type information
+            const isResellable = this.dataset.resellable === 'yes';
+            stockTypeInfo.style.display = 'block';
+            
+            if (isResellable) {
+                stockTypeText.innerHTML = '<strong class="text-success">Resellable Items:</strong> These items will be returned to regular stock and can be sold again.';
+            } else {
+                stockTypeText.innerHTML = '<strong class="text-danger">Non-Resellable Items:</strong> These items will be marked as damaged/expired and moved to non-resellable stock. They can later be returned to the company.';
+            }
+            
+            validateForm();
+        });
+    });
+    
+    // Settlement method selection
+    const settlementChips = document.querySelectorAll('.settlement-chip');
+    const settlementMethodInput = document.getElementById('settlementMethod');
+    const fieldCashSection = document.getElementById('fieldCashSection');
+    const fieldCashCheckbox = document.getElementById('fieldCashGiven');
+    const fieldCashDetails = document.getElementById('fieldCashDetails');
+    const fieldCashAmountInput = document.getElementById('fieldCashAmount');
+    const fieldCashDisplayAmount = document.getElementById('fieldCashDisplayAmount');
+    
+    settlementChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            settlementChips.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            settlementMethodInput.value = this.dataset.value;
+            
+            // Show/hide field cash section based on settlement method
+            if (this.dataset.value === 'cash') {
+                fieldCashSection.style.display = 'block';
+            } else {
+                fieldCashSection.style.display = 'none';
+                fieldCashCheckbox.checked = false;
+                fieldCashCheckbox.value = 'false';
+                fieldCashDetails.style.display = 'none';
+            }
+            
+            validateForm();
+        });
+    });
+    
+    // Field cash checkbox handling
+    fieldCashCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            this.value = 'true';
+            fieldCashDetails.style.display = 'block';
+            // Update field cash amount with current total
+            const grandTotal = parseFloat(document.getElementById('grandTotal').textContent) || 0;
+            fieldCashAmountInput.value = grandTotal.toFixed(2);
+            fieldCashDisplayAmount.textContent = grandTotal.toFixed(2);
+        } else {
+            this.value = 'false';
+            fieldCashDetails.style.display = 'none';
+            fieldCashAmountInput.value = '0';
+        }
+    });
+    
+    // Product selection
+    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    
+    productCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const productItem = this.closest('.product-item');
+            
+            if (this.checked) {
+                productItem.classList.add('selected');
+                // Rep will enter quantity manually - no auto-set
+                calculateLineTotal(productItem);
+            } else {
+                productItem.classList.remove('selected');
+                productItem.querySelector('.regular-qty').value = 0;
+                productItem.querySelector('.foc-qty').value = 0;
+                calculateLineTotal(productItem);
+            }
+            calculateGrandTotal();
+            validateForm();
+        });
+    });
+    
+    // Quantity controls
+    document.addEventListener('click', function(e) {
+        const productItem = e.target.closest('.product-item');
+        if (!productItem) return;
+        
+        // Regular quantity controls
+        if (e.target.classList.contains('qty-minus') || e.target.closest('.qty-minus')) {
+            const qtyInput = productItem.querySelector('.regular-qty');
+            if (parseInt(qtyInput.value) > 0) {
+                qtyInput.value = parseInt(qtyInput.value) - 1;
+                calculateLineTotal(productItem);
+                calculateGrandTotal();
+            }
+        }
+        
+        if (e.target.classList.contains('qty-plus') || e.target.closest('.qty-plus')) {
+            const qtyInput = productItem.querySelector('.regular-qty');
+            qtyInput.value = parseInt(qtyInput.value) + 1;
+            calculateLineTotal(productItem);
+            calculateGrandTotal();
+        }
+        
+        // FOC quantity controls
+        if (e.target.classList.contains('foc-minus') || e.target.closest('.foc-minus')) {
+            const qtyInput = productItem.querySelector('.foc-qty');
+            if (parseInt(qtyInput.value) > 0) {
+                qtyInput.value = parseInt(qtyInput.value) - 1;
+                calculateGrandTotal();
+            }
+        }
+        
+        if (e.target.classList.contains('foc-plus') || e.target.closest('.foc-plus')) {
+            const qtyInput = productItem.querySelector('.foc-qty');
+            qtyInput.value = parseInt(qtyInput.value) + 1;
+            calculateGrandTotal();
+        }
+    });
+    
+    // Price input change
+    document.querySelectorAll('.return-price').forEach(input => {
+        input.addEventListener('input', function() {
+            const productItem = this.closest('.product-item');
+            calculateLineTotal(productItem);
+            calculateGrandTotal();
+        });
+    });
+    
+    // Calculate line total for a product
+    function calculateLineTotal(productItem) {
+        const regularQty = parseFloat(productItem.querySelector('.regular-qty').value) || 0;
+        const price = parseFloat(productItem.querySelector('.return-price').value) || 0;
+        const lineTotal = regularQty * price;
+        productItem.querySelector('.line-total').textContent = 'Rs. ' + lineTotal.toFixed(2);
+    }
+    
+    // Calculate grand total
+    function calculateGrandTotal() {
+        let grandTotal = 0;
+        let totalItems = 0;
+        let totalRegularQty = 0;
+        let totalFOCQty = 0;
+        
+        document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
+            const productItem = checkbox.closest('.product-item');
+            const regularQty = parseFloat(productItem.querySelector('.regular-qty').value) || 0;
+            const focQty = parseFloat(productItem.querySelector('.foc-qty').value) || 0;
+            const price = parseFloat(productItem.querySelector('.return-price').value) || 0;
+            
+            if (regularQty > 0 || focQty > 0) {
+                totalItems++;
+                totalRegularQty += regularQty;
+                totalFOCQty += focQty;
+                grandTotal += regularQty * price;
+            }
+        });
+        
+        document.getElementById('totalItems').textContent = totalItems;
+        document.getElementById('totalRegularQty').textContent = totalRegularQty;
+        document.getElementById('totalFOCQty').textContent = totalFOCQty;
+        document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+        document.getElementById('totalAmountHidden').value = grandTotal.toFixed(2);
+        
+        // Update field cash amount if checkbox is checked
+        if (fieldCashCheckbox.checked) {
+            fieldCashAmountInput.value = grandTotal.toFixed(2);
+            fieldCashDisplayAmount.textContent = grandTotal.toFixed(2);
+        }
+    }
+    
+    // Product search
+    const searchInput = document.getElementById('productSearch');
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const productItems = document.querySelectorAll('.product-item');
+        
+        productItems.forEach(item => {
+            const productName = item.dataset.productName.toLowerCase();
+            if (productName.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+    
+    // Form validation
+    function validateForm() {
+        const shopSelected = document.querySelector('[name="shop"]').value;
+        const reasonSelected = returnReasonInput.value;
+        const settlementSelected = settlementMethodInput.value;
+        const productsSelected = document.querySelectorAll('.product-checkbox:checked').length;
+        const submitBtn = document.getElementById('submitBtn');
+        
+        let hasValidQty = false;
+        document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
+            const productItem = checkbox.closest('.product-item');
+            const regularQty = parseFloat(productItem.querySelector('.regular-qty').value) || 0;
+            const focQty = parseFloat(productItem.querySelector('.foc-qty').value) || 0;
+            if (regularQty > 0 || focQty > 0) {
+                hasValidQty = true;
+            }
+        });
+        
+        if (shopSelected && reasonSelected && settlementSelected && productsSelected > 0 && hasValidQty) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+    
+    // Shop selection validation
+    document.querySelector('[name="shop"]').addEventListener('change', validateForm);
+    
+    // Quantity input validation
+    document.querySelectorAll('.regular-qty, .foc-qty').forEach(input => {
+        input.addEventListener('input', function() {
+            const productItem = this.closest('.product-item');
+            calculateLineTotal(productItem);
+            calculateGrandTotal();
+            validateForm();
+        });
+    });
+    
+    // Form submission
+    document.getElementById('returnForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Collect selected products
+        const items = [];
+        const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
+        
+        selectedProducts.forEach(checkbox => {
+            const productItem = checkbox.closest('.product-item');
+            const productId = productItem.dataset.productId;
+            const regularQty = parseFloat(productItem.querySelector('.regular-qty').value) || 0;
+            const focQty = parseFloat(productItem.querySelector('.foc-qty').value) || 0;
+            const price = parseFloat(productItem.querySelector('.return-price').value) || 0;
+            
+            if (regularQty > 0 || focQty > 0) {
+                items.push({
+                    product_id: productId,
+                    quantity: regularQty,
+                    foc_quantity: focQty,
+                    unit_price: price
+                });
+            }
+        });
+        
+        // Set items data
+        document.getElementById('itemsData').value = JSON.stringify(items);
+        
+        // Submit form
+        this.submit();
+    });
+});
+</script>
+{% endblock %}

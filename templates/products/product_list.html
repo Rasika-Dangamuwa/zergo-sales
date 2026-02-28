@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Products - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile Product Card Styles */
+    .mobile-product-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .mobile-product-card .card-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .mobile-product-card .product-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+        flex: 1;
+    }
+    .mobile-product-card .product-code-badge {
+        background: #6c757d;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-left: 10px;
+        white-space: nowrap;
+    }
+    .mobile-product-card .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .mobile-product-card .info-item {
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 4px;
+    }
+    .mobile-product-card .info-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+    }
+    .mobile-product-card .info-value {
+        font-size: 0.9rem;
+        color: #212529;
+        font-weight: 500;
+    }
+    .mobile-product-card .stock-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .mobile-product-card .stock-low {
+        background: #dc3545;
+        color: white;
+    }
+    .mobile-product-card .stock-ok {
+        background: #28a745;
+        color: white;
+    }
+    .mobile-product-card .action-section {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .mobile-product-card .btn-edit {
+        flex: 1;
+        padding: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    
+    /* Mobile Action Buttons */
+    .mobile-action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    .mobile-action-buttons .btn {
+        padding: 12px 10px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    
+    /* Mobile Filter */
+    .mobile-filters {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .mobile-filters .form-control,
+    .mobile-filters .form-select {
+        margin-bottom: 10px;
+    }
+    
+    /* Quick Info Cards Mobile */
+    .quick-info-mobile {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .quick-info-mobile .card {
+        margin-bottom: 0;
+    }
+    .quick-info-mobile .card-body {
+        padding: 12px;
+    }
+    .quick-info-mobile h6 {
+        font-size: 0.85rem;
+        margin-bottom: 5px;
+    }
+    .quick-info-mobile p {
+        font-size: 0.7rem;
+        margin-bottom: 8px;
+    }
+    .quick-info-mobile .btn {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    /* Responsive behavior */
+    @media (max-width: 768px) {
+        .desktop-view {
+            display: none !important;
+        }
+        .mobile-view {
+            display: block !important;
+        }
+        h2 {
+            font-size: 1.3rem;
+        }
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 10px;
+        }
+        .page-header > div {
+            width: 100%;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .mobile-view {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 page-header">
+        <h2 class="fw-bold mb-0">
+            <i class="fas fa-box me-2"></i>Products
+        </h2>
+        
+        <!-- Desktop Action Buttons -->
+        <div class="desktop-view">
+            <a href="{% url 'products:stock_alert' %}" class="btn btn-warning me-2">
+                <i class="fas fa-exclamation-triangle me-1"></i>Stock Alerts
+            </a>
+            <a href="{% url 'sales:list' %}" class="btn btn-success me-2">
+                <i class="fas fa-file-invoice me-1"></i>Sales
+            </a>
+            <a href="{% url 'products:po_list' %}" class="btn btn-info me-2">
+                <i class="fas fa-shopping-cart me-1"></i>Purchase Orders
+            </a>
+            {% if user.is_staff %}
+            <a href="{% url 'products:activate_catalog' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-globe me-1"></i>Catalog
+            </a>
+            <a href="/admin/products/product/add/" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Product
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Mobile Action Buttons -->
+    <div class="mobile-view mobile-action-buttons" style="display: none;">
+        <a href="{% url 'products:stock_alert' %}" class="btn btn-warning">
+            <i class="fas fa-exclamation-triangle me-1"></i>Alerts
+        </a>
+        <a href="{% url 'products:stock_count' %}\" class="btn btn-info">
+            <i class="fas fa-clipboard-check me-1"></i>Count
+        </a>
+        <a href="{% url 'sales:list' %}" class="btn btn-success">
+            <i class="fas fa-file-invoice me-1"></i>Sales
+        </a>
+        {% if user.is_staff %}
+        <a href="/admin/products/product/add/" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Add
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3 desktop-view">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Search products..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="company" class="form-select">
+                        <option value="">All Companies</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}" {% if request.GET.company == company.id|stringformat:"s" %}selected{% endif %}>
+                            {{ company.company_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Mobile Filters -->
+    <div class="mobile-view mobile-filters" style="display: none;">
+        <form method="get">
+            <input type="text" name="search" class="form-control" placeholder="Search products..." value="{{ request.GET.search }}">
+            <select name="company" class="form-select">
+                <option value="">All Companies</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}" {% if request.GET.company == company.id|stringformat:"s" %}selected{% endif %}>
+                    {{ company.company_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search me-1"></i> Search & Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Products List -->
+    <div class="card">
+        <div class="card-body">
+            {% if products %}
+            
+            <!-- Desktop Table View -->
+            <div class="table-responsive desktop-view">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Product Name</th>
+                            <th>Size</th>
+                            <th>Company</th>
+                            <th>Pricing</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td><strong>{{ product.product_code }}</strong></td>
+                            <td>{{ product.product_name }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ product.size }}</span>
+                            </td>
+                            <td>{{ product.company.company_name }}</td>
+                            <td>
+                                <div>
+                                    <small class="text-muted">MRP:</small> Rs. {{ product.marked_price }}<br>
+                                    <small class="text-muted">Discount:</small> {{ product.discount_percentage }}%
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if product.is_low_stock %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ product.quantity_in_stock }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if product.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/admin/products/product/{{ product.id }}/change/" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Mobile Card View -->
+            <div class="mobile-view" style="display: none;">
+                {% for product in products %}
+                <div class="mobile-product-card">
+                    <div class="card-header-section">
+                        <div class="product-name">
+                            {{ product.product_name }}
+                            <div style="font-size: 0.8rem; color: #6c757d; margin-top: 3px;">
+                                {{ product.company.company_name }}
+                            </div>
+                        </div>
+                        <span class="product-code-badge">{{ product.product_code }}</span>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Size</div>
+                            <div class="info-value">
+                                <span class="badge bg-primary">{{ product.size }}</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Stock</div>
+                            <div class="info-value">
+                                <span class="stock-badge {% if product.is_low_stock %}stock-low{% else %}stock-ok{% endif %}">
+                                    {{ product.quantity_in_stock }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Price (MRP)</div>
+                            <div class="info-value">Rs. {{ product.marked_price }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Discount</div>
+                            <div class="info-value">{{ product.discount_percentage }}%</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Shop Price</div>
+                            <div class="info-value" style="color: #28a745; font-weight: 600;">Rs. {{ product.shop_price|floatformat:2 }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Pack Size</div>
+                            <div class="info-value">{{ product.bottles_per_pack }} bottles</div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-section">
+                        <a href="/admin/products/product/{{ product.id }}/change/" class="btn-edit">
+                            <i class="fas fa-edit"></i> Edit Product
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-3">
+                <p class="text-muted mb-0">Total: {{ total_products }} products</p>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No products found</h5>
+                <p class="text-muted">Start by adding your first product.</p>
+                <a href="/admin/products/product/add/" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Product
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Info Cards -->
+    <div class="row g-2 mt-3 desktop-view">
+        <div class="col-6 col-sm-4 col-md-4 col-lg col-xl">
+            <div class="card border-warning h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="text-warning mb-1" style="font-size: 0.85rem;"><i class="fas fa-exclamation-triangle me-1"></i>Low Stock</h6>
+                    <p class="mb-2 small" style="font-size: 0.7rem;">Items below minimum level</p>
+                    <a href="{% url 'products:stock_alert' %}" class="btn btn-sm btn-warning w-100" style="font-size: 0.75rem; padding: 0.25rem;">
+                        View Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg col-xl">
+            <div class="card border-info h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="text-info mb-1" style="font-size: 0.85rem;"><i class="fas fa-clipboard-check me-1"></i>Stock Count</h6>
+                    <p class="mb-2 small" style="font-size: 0.7rem;">Physical inventory count</p>
+                    <a href="{% url 'products:stock_count' %}" class="btn btn-sm btn-info w-100" style="font-size: 0.75rem; padding: 0.25rem;">
+                        Count Stock
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg col-xl">
+            <div class="card h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="text-muted mb-1" style="font-size: 0.85rem;"><i class="fas fa-box me-1"></i>Opening Balance</h6>
+                    <p class="mb-2 small" style="font-size: 0.7rem;">Set initial stock</p>
+                    <a href="{% url 'products:opening_balance' %}" class="btn btn-sm btn-outline-secondary w-100" style="font-size: 0.75rem; padding: 0.25rem;">
+                        Set Balance
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg col-xl">
+            <div class="card border-primary h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="text-primary mb-1" style="font-size: 0.85rem;"><i class="fas fa-chart-line me-1"></i>Usage History</h6>
+                    <p class="mb-2 small" style="font-size: 0.7rem;">Product sales analysis</p>
+                    <a href="{% url 'products:product_usage_history' %}" class="btn btn-sm btn-primary w-100" style="font-size: 0.75rem; padding: 0.25rem;">
+                        View Usage
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg col-xl">
+            <div class="card h-100">
+                <div class="card-body text-center p-2">
+                    <h6 class="text-muted mb-1" style="font-size: 0.85rem;"><i class="fas fa-shopping-cart me-1"></i>Purchase Orders</h6>
+                    <p class="mb-2 small" style="font-size: 0.7rem;">Manage incoming stock</p>
+                    <a href="{% url 'products:po_list' %}" class="btn btn-sm btn-outline-secondary w-100" style="font-size: 0.75rem; padding: 0.25rem;">
+                        View Orders
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products List -->
+    <div class="products-container mt-4">
+        <div class="row">
+            {% for product in products %}
+            <div class="col-12 col-md-6 col-lg-4 mb-3 d-none d-md-block">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Quick Info Cards Mobile -->
+    <div class="mobile-view quick-info-mobile" style="display: none;">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h6 class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Low Stock</h6>
+                <p>Items below minimum</p>
+                <a href="{% url 'products:stock_alert' %}" class="btn btn-warning w-100">
+                    View
+                </a>
+            </div>
+        </div>
+        <div class="card border-info">
+            <div class="card-body">
+                <h6 class="text-info"><i class="fas fa-clipboard-check me-1"></i>Stock Count</h6>
+                <p>Physical count</p>
+                <a href="{% url 'products:stock_count' %}" class="btn btn-info w-100">
+                    Count
+                </a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted"><i class="fas fa-box me-1"></i>Opening</h6>
+                <p>Set initial stock</p>
+                <a href="{% url 'products:opening_balance' %}" class="btn btn-outline-secondary w-100">
+                    Set
+                </a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted"><i class="fas fa-shopping-cart me-1"></i>Orders</h6>
+                <p>Purchase orders</p>
+                <a href="{% url 'products:po_list' %}" class="btn btn-outline-secondary w-100">
+                    View
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

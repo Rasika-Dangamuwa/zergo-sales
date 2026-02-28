@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Recurring Expense - Zergo Distributors{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Delete Recurring Expense</h5>
+                </div>
+                <div class="card-body">
+                    <p>Are you sure you want to delete the recurring expense <strong>"{{ recurring.name }}"</strong>?</p>
+                    <table class="table table-sm mb-3">
+                        <tr><th style="width:35%">Name</th><td>{{ recurring.name }}</td></tr>
+                        <tr><th>Category</th><td>{{ recurring.category.name }}</td></tr>
+                        <tr><th>Frequency</th><td>{{ recurring.get_frequency_display }}</td></tr>
+                        <tr><th>Amount</th><td class="fw-bold text-danger">Rs. {{ recurring.amount|floatformat:2 }}</td></tr>
+                    </table>
+                    <div class="alert alert-info py-2">
+                        <i class="fas fa-info-circle me-1"></i>Previously generated expenses will not be deleted.
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'expenses:recurring_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

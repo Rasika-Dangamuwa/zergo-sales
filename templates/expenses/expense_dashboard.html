@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Expense Dashboard - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .expense-header {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .expense-header h1 { font-size: 1.6rem; font-weight: 700; margin: 0; }
+    .expense-header p { opacity: 0.85; font-size: 0.9rem; margin: 0.25rem 0 0; }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 4px solid transparent;
+        height: 100%;
+        transition: transform 0.15s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card.this-month { border-left-color: #ef4444; }
+    .stat-card.last-month { border-left-color: #f59e0b; }
+    .stat-card.ytd { border-left-color: #8b5cf6; }
+    .stat-card.count { border-left-color: #2563eb; }
+    .stat-label { font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; }
+    .stat-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 0.15rem; }
+
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    .section-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .section-header h5 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }
+    .section-body { padding: 1.25rem; }
+
+    .category-bar {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f8fafc;
+    }
+    .category-bar:last-child { border-bottom: none; }
+    .cat-icon {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.85rem; color: white; flex-shrink: 0;
+    }
+    .cat-name { font-weight: 600; font-size: 0.85rem; color: #1e293b; }
+    .cat-amount { font-weight: 700; font-size: 0.9rem; color: #ef4444; }
+    .progress { height: 6px; border-radius: 3px; background: #f1f5f9; }
+
+    .recent-row { padding: 0.65rem 0; border-bottom: 1px solid #f8fafc; }
+    .recent-row:last-child { border-bottom: none; }
+
+    .change-badge {
+        font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 20px;
+        font-weight: 600;
+    }
+    .change-up { background: #fef2f2; color: #dc2626; }
+    .change-down { background: #f0fdf4; color: #16a34a; }
+
+    .recurring-badge {
+        display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.45rem;
+        border-radius: 4px; font-weight: 600; background: #ede9fe; color: #7c3aed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-3">
+    <!-- Header -->
+    <div class="expense-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-wallet me-2"></i>Expense Dashboard</h1>
+                <p>Track and manage business operating expenses</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'expenses:expense_create' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-1"></i>Record Expense
+                </a>
+                <a href="{% url 'expenses:expense_list' %}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-list me-1"></i>All Expenses
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card this-month">
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">{{ month_total|floatformat:2|intcomma }}</div>
+                <div class="stat-sub">
+                    {% if month_change > 0 %}
+                        <span class="change-badge change-up"><i class="fas fa-arrow-up"></i> {{ month_change|floatformat:1 }}%</span>
+                    {% elif month_change < 0 %}
+                        <span class="change-badge change-down"><i class="fas fa-arrow-down"></i> {{ month_change|floatformat:1 }}%</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                    vs last month
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card last-month">
+                <div class="stat-label">Last Month</div>
+                <div class="stat-value">{{ last_month_total|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card ytd">
+                <div class="stat-label">Year to Date</div>
+                <div class="stat-value">{{ ytd_total|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card count">
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">{{ month_count }}</div>
+                <div class="stat-sub">transactions</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Category Breakdown -->
+        <div class="col-lg-5">
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-chart-pie me-2 text-danger"></i>By Category (This Month)</h5>
+                    <a href="{% url 'expenses:category_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                </div>
+                <div class="section-body">
+                    {% if category_breakdown %}
+                        {% for cat in category_breakdown %}
+                        <div class="category-bar">
+                            <div class="cat-icon me-2" style="background: {{ cat.category__color }};">
+                                <i class="fas {{ cat.category__icon }}"></i>
+                            </div>
+                            <div class="flex-grow-1 me-2">
+                                <div class="cat-name">{{ cat.category__name }}</div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar" style="width: {% widthratio cat.total month_total 100 %}%; background: {{ cat.category__color }};"></div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="cat-amount">{{ cat.total|floatformat:2|intcomma }}</div>
+                                <small class="text-muted">{{ cat.count }} item{{ cat.count|pluralize }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-receipt fa-2x mb-2 opacity-25"></i>
+                            <p class="mb-0">No expenses this month</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recurring Expenses -->
+            {% if active_recurring %}
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-sync-alt me-2 text-purple"></i>Recurring Expenses</h5>
+                    <a href="{% url 'expenses:recurring_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="section-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for rec in active_recurring %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                            <div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">{{ rec.name }}</div>
+                                <small class="text-muted">
+                                    <span class="recurring-badge">{{ rec.get_frequency_display }}</span>
+                                    Next: {{ rec.next_due_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <div class="fw-bold text-danger">{{ rec.amount|floatformat:2|intcomma }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Chart + Recent -->
+        <div class="col-lg-7">
+            <!-- Monthly Trend Chart -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-chart-bar me-2 text-primary"></i>Monthly Trend</h5>
+                </div>
+                <div class="section-body">
+                    <canvas id="expenseChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Expenses -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-clock me-2 text-secondary"></i>Recent Expenses</h5>
+                    <a href="{% url 'expenses:expense_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="section-body p-0">
+                    {% if recent_expenses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for exp in recent_expenses %}
+                                <tr>
+                                    <td class="text-nowrap">{{ exp.expense_date|date:"M d" }}</td>
+                                    <td>
+                                        <span class="badge" style="background: {{ exp.category.color }}; font-size: 0.72rem;">
+                                            <i class="fas {{ exp.category.icon }} me-1"></i>{{ exp.category.name }}
+                                        </span>
+                                    </td>
+                                    <td class="text-truncate" style="max-width: 200px;">{{ exp.description }}</td>
+                                    <td class="text-end fw-bold text-danger">{{ exp.amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-receipt fa-2x mb-2 opacity-25"></i>
+                        <p class="mb-0">No expenses recorded yet</p>
+                        <a href="{% url 'expenses:expense_create' %}" class="btn btn-danger btn-sm mt-2">
+                            <i class="fas fa-plus me-1"></i>Record First Expense
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Recurring Alert -->
+    {% if pending_recurring %}
+    <div class="alert alert-warning d-flex align-items-start mt-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+        <div>
+            <strong>{{ pending_recurring.count }} recurring expense{{ pending_recurring.count|pluralize }} due!</strong>
+            <div class="mt-1">
+                {% for rec in pending_recurring %}
+                <form method="post" action="{% url 'expenses:recurring_generate' rec.pk %}" class="d-inline-block me-2 mb-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-warning">
+                        <i class="fas fa-play me-1"></i>{{ rec.name }} ({{ rec.amount|floatformat:2|intcomma }})
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{{ chart_labels|json_script:"chartLabels" }}
+{{ chart_data|json_script:"chartData" }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = JSON.parse(document.getElementById('chartLabels').textContent);
+    const data = JSON.parse(document.getElementById('chartData').textContent);
+
+    if (labels.length > 0) {
+        new Chart(document.getElementById('expenseChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Expenses',
+                    data: data,
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    hoverBackgroundColor: 'rgba(239, 68, 68, 0.3)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => 'Rs. ' + ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2})
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: v => 'Rs. ' + v.toLocaleString(),
+                            font: { size: 11 }
+                        },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    x: {
+                        ticks: { font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

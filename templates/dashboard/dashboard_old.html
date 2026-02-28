@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feature-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .feature-card .card-header {
+        border: none;
+        padding: 1.25rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .feature-card .card-header i {
+        font-size: 1.5rem;
+    }
+    
+    .feature-link {
+        display: block;
+        padding: 0.75rem 1.25rem;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .feature-link:last-child {
+        border-bottom: none;
+    }
+    
+    .feature-link:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        padding-left: 1.5rem;
+    }
+    
+    .feature-link i {
+        width: 20px;
+        margin-right: 0.5rem;
+        text-align: center;
+    }
+    
+    .stats-row {
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        height: 100%;
+    }
+    
+    .stat-card .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .stat-card .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #212529;
+    }
+    
+    @media (max-width: 768px) {
+        .feature-card .card-header {
+            font-size: 1rem;
+            padding: 1rem;
+        }
+        
+        .feature-link {
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h2 class="fw-bold mb-1">Dashboard</h2>
+        <p class="text-muted mb-0">
+            Welcome, {{ user.get_full_name }}! 
+            <span class="badge bg-primary">{{ user.get_user_type_display }}</span>
+        </p>
+    </div>
+
+    <!-- Statistics Row (for office and admin) -->
+    {% if user.user_type in 'admin,office' %}
+    <div class="row stats-row g-3">
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <h3 class="stat-value">{{ today_bills|default:0 }}</h3>
+                <p class="stat-label">Today's Bills</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h3 class="stat-value">₹{{ today_sales|floatformat:0|default:0 }}</h3>
+                <p class="stat-label">Today's Sales</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 class="stat-value">{{ pending_returns|default:0 }}</h3>
+                <p class="stat-label">Pending Returns</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <h3 class="stat-value">{{ low_stock_products|default:0 }}</h3>
+                <p class="stat-label">Low Stock Items</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions for Sales Rep -->
+    {% if user.user_type == 'sales_rep' %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <a href="{% url 'sales:create' %}" class="btn btn-primary w-100 py-3">
+                <i class="fas fa-file-invoice fa-2x d-block mb-2"></i>
+                <div class="fw-bold">Create Bill</div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a href="{% url 'sales:create_return' %}" class="btn btn-success w-100 py-3">
+                <i class="fas fa-undo fa-2x d-block mb-2"></i>
+                <div class="fw-bold">Create Return</div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a href="{% url 'shops:map' %}" class="btn btn-info w-100 py-3">
+                <i class="fas fa-map-marked-alt fa-2x d-block mb-2"></i>
+                <div class="fw-bold">Shop Map</div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a href="{% url 'sales:return_list' %}" class="btn btn-warning w-100 py-3">
+                <i class="fas fa-list fa-2x d-block mb-2"></i>
+                <div class="fw-bold">My Returns</div>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Feature Navigation Cards -->
+    <h3 class="section-title">Available Features</h3>
+    
+    <div class="row g-4">
+        <!-- Sales Management -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Sales Management</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if user.user_type == 'sales_rep' %}
+                        <a href="{% url 'sales:create' %}" class="feature-link">
+                            <i class="fas fa-plus-circle"></i> Create Bill
+                        </a>
+                        <a href="{% url 'sales:list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> My Bills
+                        </a>
+                    {% else %}
+                        <a href="{% url 'sales:create' %}" class="feature-link">
+                            <i class="fas fa-plus-circle"></i> Create Bill
+                        </a>
+                        <a href="{% url 'sales:list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> All Bills
+                        </a>
+                        <a href="{% url 'sales:quick' %}" class="feature-link">
+                            <i class="fas fa-bolt"></i> Quick Bill
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'sales:settlement_list' %}" class="feature-link">
+                        <i class="fas fa-money-bill-wave"></i> Payments
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Returns -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-undo-alt"></i>
+                    <span>Shop Returns</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if user.user_type == 'sales_rep' %}
+                        <a href="{% url 'sales:create_return' %}" class="feature-link">
+                            <i class="fas fa-plus-circle"></i> Create Return
+                        </a>
+                        <a href="{% url 'sales:return_list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> My Returns
+                        </a>
+                    {% else %}
+                        <a href="{% url 'sales:create_return' %}" class="feature-link">
+                            <i class="fas fa-plus-circle"></i> Create Return
+                        </a>
+                        <a href="{% url 'sales:return_list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> All Returns
+                        </a>
+                        <a href="{% url 'sales:return_list' %}?status=pending" class="feature-link">
+                            <i class="fas fa-check-circle"></i> Pending Returns
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Management (Office and Admin only) -->
+        {% if user.user_type in 'admin,office' %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-box"></i>
+                    <span>Product Management</span>
+                </div>
+                <div class="card-body p-0">
+                    <a href="{% url 'products:list' %}" class="feature-link">
+                        <i class="fas fa-boxes"></i> Products List
+                    </a>
+                    <a href="{% url 'products:stock_alert' %}" class="feature-link">
+                        <i class="fas fa-exclamation-triangle"></i> Stock Alerts
+                    </a>
+                    <a href="{% url 'products:stock_count' %}" class="feature-link">
+                        <i class="fas fa-warehouse"></i> Stock Count
+                    </a>
+                    <a href="{% url 'products:stock_count_history' %}" class="feature-link">
+                        <i class="fas fa-history"></i> Stock Count History
+                    </a>
+                    <a href="{% url 'products:product_usage_history' %}" class="feature-link">
+                        <i class="fas fa-chart-line"></i> Product Usage History
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Returns (Office and Admin only) -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+        <!-- Inventory Operations (Office and Admin only) -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-dolly"></i>
+                    <span>Inventory Operations</span>
+                </div>
+                <div class="card-body p-0">
+                    <a href="{% url 'products:product_status_adjustment' %}" class="feature-link">
+                        <i class="fas fa-exchange-alt"></i> Status Adjustment
+                    </a>
+                    <a href="{% url 'products:product_status_history' %}" class="feature-link">
+                        <i class="fas fa-history"></i> Adjustment History
+                    </a>
+                    <a href="{% url 'products:opening_balance' %}" class="feature-link">
+                        <i class="fas fa-balance-scale"></i> Opening Balance
+                    </a>
+                    <a href="{% url 'products:company_list' %}" class="feature-link">
+                        <i class="fas fa-building"></i> Companies
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Shop Management -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-store"></i>
+                    <span>Shop Management</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if user.user_type == 'sales_rep' %}
+                        <a href="{% url 'shops:list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> My Shops
+                        </a>
+                        <a href="{% url 'shops:map' %}" class="feature-link">
+                            <i class="fas fa-map-marked-alt"></i> Shop Map
+                        </a>
+                        <a href="{% url 'shops:nearby' %}" class="feature-link">
+                            <i class="fas fa-map-marker-alt"></i> Nearby Shops
+                        </a>
+                    {% else %}
+                        <a href="{% url 'shops:list' %}" class="feature-link">
+                            <i class="fas fa-list"></i> All Shops
+                        </a>
+                        <a href="{% url 'shops:add' %}" class="feature-link">
+                            <i class="fas fa-plus-circle"></i> Add Shop
+                        </a>
+                        <a href="{% url 'shops:map' %}" class="feature-link">
+                            <i class="fas fa-map-marked-alt"></i> Shop Map
+                        </a>
+                        <a href="{% url 'shops:nearby' %}" class="feature-link">
+                            <i class="fas fa-map-marker-alt"></i> Nearby Shops
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Functions (Admin only) -->
+        {% if user.user_type == 'admin' %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-cog"></i>
+                    <span>Administration</span>
+                </div>
+                <div class="card-body p-0">
+                    <a href="/admin/" class="feature-link">
+                        <i class="fas fa-tools"></i> Django Admin
+                    </a>
+                    <a href="{% url 'accounts:profile' %}" class="feature-link">
+                        <i class="fas fa-user-circle"></i> My Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reports (Office and Admin) -->
+        {% if user.user_type in 'admin,office' %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card feature-card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports & Analytics</span>
+                </div>
+                <div class="card-body p-0">
+                    <a href="{% url 'products:product_usage_history' %}" class="feature-link">
+                        <i class="fas fa-chart-line"></i> Product Usage History
+                    </a>
+                    <a href="{% url 'products:stock_count_history' %}" class="feature-link">
+                        <i class="fas fa-history"></i> Stock Count History
+                    </a>
+                    <a href="{% url 'sales:settlement_list' %}" class="feature-link">
+                        <i class="fas fa-money-bill-wave"></i> Payment History
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Tips Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Quick Tips
+                    </h5>
+                    {% if user.user_type == 'sales_rep' %}
+                    <ul class="mb-0">
+                        <li>Use the map feature to find nearby shops efficiently</li>
+                        <li>Create returns for damaged or expired products before leaving the shop</li>
+                        <li>Check your pending payments regularly</li>
+                    </ul>
+                    {% elif user.user_type == 'office' %}
+                    <ul class="mb-0">
+                        <li>Review and approve pending returns daily</li>
+                        <li>Monitor stock alerts to prevent stockouts</li>
+                        <li>Process non-resellable items by creating company returns</li>
+                        <li>Perform regular stock counts for accuracy</li>
+                    </ul>
+                    {% elif user.user_type == 'admin' %}
+                    <ul class="mb-0">
+                        <li>Review system activity regularly through Django Admin</li>
+                        <li>Monitor user activities and sales rep performance</li>
+                        <li>Ensure pending returns and company returns are processed timely</li>
+                        <li>Check stock levels and product usage patterns</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

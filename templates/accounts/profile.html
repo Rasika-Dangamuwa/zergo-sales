@@ -1,0 +1,427 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981; --emerald-bg: #d1fae5;
+    --amber: #f59e0b; --amber-bg: #fef3c7;
+    --rose: #ef4444; --rose-bg: #fee2e2;
+    --violet: #8b5cf6; --violet-bg: #ede9fe;
+    --cyan: #06b6d4; --cyan-bg: #cffafe;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155;
+    --s800: #1e293b; --s900: #0f172a;
+    --r: 16px; --rs: 10px;
+    --sh1: 0 1px 3px rgba(0,0,0,.06);
+    --sh2: 0 4px 14px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; }
+.mp-container { max-width: 900px; margin: 0 auto; padding: .75rem 1rem; }
+
+/* ===== HERO ===== */
+.mp-hero {
+    background: var(--brand-gradient);
+    border-radius: var(--r);
+    padding: 2rem 2.25rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+.mp-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%; right: -10%;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+}
+.mp-hero-inner {
+    display: flex; align-items: center; gap: 1.75rem;
+    position: relative; z-index: 1;
+}
+.mp-avatar {
+    width: 100px; height: 100px;
+    border-radius: 50%; object-fit: cover;
+    border: 4px solid rgba(255,255,255,.35);
+    flex-shrink: 0;
+}
+.mp-avatar-ph {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; font-weight: 800;
+    flex-shrink: 0;
+    border: 4px solid rgba(255,255,255,.25);
+}
+.mp-info { flex: 1; min-width: 0; }
+.mp-name {
+    font-size: 1.75rem; font-weight: 800; margin: 0 0 .25rem;
+    line-height: 1.2;
+}
+.mp-badges {
+    display: flex; flex-wrap: wrap; gap: .4rem;
+    margin-bottom: .65rem;
+}
+.mp-badge {
+    display: inline-flex; align-items: center; gap: .25rem;
+    padding: .22rem .65rem; border-radius: 8px;
+    font-size: .75rem; font-weight: 700;
+}
+.mp-badge.role { background: rgba(255,255,255,.2); backdrop-filter: blur(4px); }
+.mp-badge.emp { background: rgba(255,255,255,.12); font-family: monospace; letter-spacing: .5px; }
+.mp-meta {
+    display: flex; flex-wrap: wrap; gap: .4rem 1.25rem;
+    font-size: .9rem; opacity: .9;
+}
+.mp-meta i { width: 15px; text-align: center; margin-right: .25rem; }
+.mp-meta a { color: #fff; text-decoration: none; }
+.mp-meta a:hover { text-decoration: underline; }
+.mp-actions {
+    display: flex; flex-direction: column; gap: .45rem;
+    flex-shrink: 0; position: relative; z-index: 1;
+}
+.mp-action-btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .55rem 1rem; border-radius: 8px;
+    font-size: .82rem; font-weight: 700;
+    border: none; text-decoration: none;
+    transition: all .2s; cursor: pointer;
+    white-space: nowrap;
+}
+.mp-action-btn.solid {
+    background: #fff; color: var(--brand);
+}
+.mp-action-btn.solid:hover { background: #e3f2fd; color: var(--brand-dark); text-decoration: none; }
+.mp-action-btn.outline {
+    background: rgba(255,255,255,.1);
+    border: 2px solid rgba(255,255,255,.25);
+    color: #fff;
+}
+.mp-action-btn.outline:hover { background: rgba(255,255,255,.22); color: #fff; text-decoration: none; }
+
+/* ===== STAT BOXES ===== */
+.mp-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: .65rem; margin-bottom: 1rem;
+}
+.mp-stat {
+    background: #fff; border-radius: var(--rs);
+    padding: .85rem 1rem; box-shadow: var(--sh1);
+    text-align: center;
+}
+.mp-stat-val { font-size: 1.4rem; font-weight: 800; color: var(--s900); }
+.mp-stat-lbl {
+    font-size: .65rem; font-weight: 700; color: var(--s500);
+    text-transform: uppercase; letter-spacing: .3px; margin-top: .15rem;
+}
+
+/* ===== CARDS ===== */
+.mp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .85rem;
+    margin-bottom: 1rem;
+}
+.mp-card {
+    background: #fff; border-radius: var(--r);
+    box-shadow: var(--sh1); overflow: hidden;
+}
+.mp-card.full { grid-column: 1 / -1; }
+.mp-card-head {
+    padding: .85rem 1.15rem;
+    border-bottom: 1px solid var(--s100);
+    display: flex; align-items: center; gap: .5rem;
+}
+.mp-card-head i { color: var(--brand); font-size: .9rem; }
+.mp-card-head h3 {
+    font-size: .9rem; font-weight: 800;
+    color: var(--s800); margin: 0;
+}
+.mp-card-body { padding: .85rem 1.15rem; }
+.mp-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: .5rem 0;
+    border-bottom: 1px solid var(--s50);
+}
+.mp-row:last-child { border-bottom: none; }
+.mp-lbl {
+    font-size: .78rem; font-weight: 600;
+    color: var(--s500); text-transform: uppercase;
+    letter-spacing: .3px;
+}
+.mp-val {
+    font-size: .88rem; font-weight: 700;
+    color: var(--s800); text-align: right;
+}
+.mp-val.muted { color: var(--s400); font-style: italic; font-weight: 500; }
+
+/* ===== RECENT TABLE ===== */
+.mp-table {
+    width: 100%; font-size: .85rem; border-collapse: collapse;
+}
+.mp-table th {
+    text-align: left; font-weight: 700;
+    color: var(--s500); font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .3px;
+    padding: .55rem .5rem; border-bottom: 2px solid var(--s100);
+}
+.mp-table td {
+    padding: .55rem .5rem;
+    border-bottom: 1px solid var(--s50);
+    color: var(--s700);
+}
+.mp-table td.num { font-weight: 700; font-family: monospace; }
+.mp-table tbody tr:hover { background: var(--s50); }
+
+/* ===== DESKTOP ===== */
+@media (min-width: 992px) {
+    .mp-actions { flex-direction: row; gap: .5rem; }
+}
+
+/* ===== TABLET ===== */
+@media (max-width: 991px) and (min-width: 577px) {
+    .mp-container { padding: .5rem .75rem; }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 576px) {
+    .mp-container { padding: .35rem; }
+    .mp-hero { padding: 1.2rem; }
+    .mp-hero-inner { flex-wrap: wrap; gap: .75rem; }
+    .mp-avatar, .mp-avatar-ph { width: 65px; height: 65px; font-size: 1.5rem; }
+    .mp-name { font-size: 1.25rem; }
+    .mp-meta { font-size: .78rem; }
+    .mp-actions { flex-direction: row; flex-wrap: wrap; }
+    .mp-action-btn { padding: .4rem .7rem; font-size: .72rem; }
+    .mp-grid { grid-template-columns: 1fr; }
+    .mp-stat { padding: .65rem .7rem; }
+    .mp-stat-val { font-size: 1.15rem; }
+    .mp-card-head { padding: .7rem .9rem; }
+    .mp-card-body { padding: .7rem .9rem; }
+    .mp-lbl { font-size: .68rem; }
+    .mp-val { font-size: .8rem; }
+    .mp-table { font-size: .75rem; }
+    .mp-table th, .mp-table td { padding: .4rem .3rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mp-container">
+
+    <!-- Hero -->
+    <div class="mp-hero">
+        <div class="mp-hero-inner">
+            {% if user_obj.profile_picture %}
+                <img src="{{ user_obj.profile_picture.url }}" class="mp-avatar" alt="">
+            {% else %}
+                <div class="mp-avatar-ph">
+                    {{ user_obj.first_name|first }}{{ user_obj.last_name|first }}
+                </div>
+            {% endif %}
+            <div class="mp-info">
+                <h1 class="mp-name">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
+                <div class="mp-badges">
+                    <span class="mp-badge role">
+                        {% if user_obj.user_type == 'admin' %}
+                            <i class="fas fa-shield-alt"></i> Admin
+                        {% elif user_obj.user_type == 'office' %}
+                            <i class="fas fa-building"></i> Distributor
+                        {% else %}
+                            <i class="fas fa-car"></i> Sales Representative
+                        {% endif %}
+                    </span>
+                    {% if user_obj.employee_id %}
+                    <span class="mp-badge emp">
+                        <i class="fas fa-id-badge"></i> {{ user_obj.employee_id }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="mp-meta">
+                    <span><i class="fas fa-at"></i>{{ user_obj.username }}</span>
+                    {% if user_obj.email %}
+                    <span><i class="fas fa-envelope"></i><a href="mailto:{{ user_obj.email }}">{{ user_obj.email }}</a></span>
+                    {% endif %}
+                    {% if user_obj.phone_number %}
+                    <span><i class="fas fa-phone"></i><a href="tel:{{ user_obj.phone_number }}">{{ user_obj.phone_number }}</a></span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mp-actions">
+                <a href="{% url 'accounts:edit_profile' %}" class="mp-action-btn solid">
+                    <i class="fas fa-pen"></i> Edit Profile
+                </a>
+                <a href="{% url 'accounts:change_password' %}" class="mp-action-btn outline">
+                    <i class="fas fa-lock"></i> Change Password
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if user_obj.user_type == 'sales_rep' and activity %}
+    <!-- Sales Rep Stats -->
+    <div class="mp-stat-grid">
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.total_bills|default:"0" }}</div>
+            <div class="mp-stat-lbl">Total Bills</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.month_bills|default:"0" }}</div>
+            <div class="mp-stat-lbl">This Month</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.total_revenue|default:"0"|intcomma }}</div>
+            <div class="mp-stat-lbl">Total Revenue</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.month_revenue|default:"0"|intcomma }}</div>
+            <div class="mp-stat-lbl">Month Revenue</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.total_returns|default:"0" }}</div>
+            <div class="mp-stat-lbl">Returns</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.assigned_shops|default:"0" }}</div>
+            <div class="mp-stat-lbl">Shops</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.total_payments|default:"0" }}</div>
+            <div class="mp-stat-lbl">Payments</div>
+        </div>
+        <div class="mp-stat">
+            <div class="mp-stat-val">{{ activity.total_visits|default:"0" }}</div>
+            <div class="mp-stat-lbl">Visits</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Details Grid -->
+    <div class="mp-grid">
+        <!-- Personal Information -->
+        <div class="mp-card">
+            <div class="mp-card-head">
+                <i class="fas fa-user"></i>
+                <h3>Personal Information</h3>
+            </div>
+            <div class="mp-card-body">
+                <div class="mp-row">
+                    <span class="mp-lbl">First Name</span>
+                    <span class="mp-val">{{ user_obj.first_name|default:"—" }}</span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Last Name</span>
+                    <span class="mp-val">{{ user_obj.last_name|default:"—" }}</span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Email</span>
+                    <span class="mp-val {% if not user_obj.email %}muted{% endif %}">
+                        {{ user_obj.email|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Phone</span>
+                    <span class="mp-val {% if not user_obj.phone_number %}muted{% endif %}">
+                        {{ user_obj.phone_number|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Address</span>
+                    <span class="mp-val {% if not user_obj.address %}muted{% endif %}">
+                        {{ user_obj.address|default:"Not set" }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="mp-card">
+            <div class="mp-card-head">
+                <i class="fas fa-cog"></i>
+                <h3>Account Details</h3>
+            </div>
+            <div class="mp-card-body">
+                <div class="mp-row">
+                    <span class="mp-lbl">Username</span>
+                    <span class="mp-val">{{ user_obj.username }}</span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Employee ID</span>
+                    <span class="mp-val {% if not user_obj.employee_id %}muted{% endif %}">
+                        {{ user_obj.employee_id|default:"Not set" }}
+                    </span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Role</span>
+                    <span class="mp-val">{{ user_obj.get_user_type_display }}</span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Date Joined</span>
+                    <span class="mp-val">{{ user_obj.date_joined|date:"M d, Y" }}</span>
+                </div>
+                <div class="mp-row">
+                    <span class="mp-lbl">Last Login</span>
+                    <span class="mp-val {% if not user_obj.last_login %}muted{% endif %}">
+                        {% if user_obj.last_login %}
+                            {{ user_obj.last_login|date:"M d, Y — h:i A" }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </span>
+                </div>
+                {% if activity.money_balance is not None %}
+                <div class="mp-row">
+                    <span class="mp-lbl">Money Balance</span>
+                    <span class="mp-val" style="color:{% if activity.money_balance >= 0 %}var(--emerald){% else %}var(--rose){% endif %}">
+                        Rs. {{ activity.money_balance|intcomma }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if activity.recent_bills %}
+    <!-- Recent Bills -->
+    <div class="mp-card" style="margin-bottom:1rem;">
+        <div class="mp-card-head">
+            <i class="fas fa-file-invoice"></i>
+            <h3>Recent Bills</h3>
+        </div>
+        <div class="mp-card-body" style="padding:.55rem .85rem;">
+            <table class="mp-table">
+                <thead>
+                    <tr>
+                        <th>Bill No.</th>
+                        <th>Shop</th>
+                        <th>Date</th>
+                        <th style="text-align:right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bill in activity.recent_bills %}
+                    <tr>
+                        <td class="num">{{ bill.bill_number }}</td>
+                        <td>{{ bill.shop.shop_name|truncatechars:30 }}</td>
+                        <td>{{ bill.bill_date|date:"M d" }}</td>
+                        <td style="text-align:right" class="num">Rs. {{ bill.total_amount|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

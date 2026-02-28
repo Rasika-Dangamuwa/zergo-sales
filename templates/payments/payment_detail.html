@@ -1,0 +1,779 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Settlement {{ settlement.settlement_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Container */
+    .container {
+        max-width: 1200px;
+        padding: 15px;
+    }
+    
+    /* Header with Back Button */
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+    
+    .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .back-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .back-btn i {
+        font-size: 0.9rem;
+    }
+    
+    .page-title {
+        flex: 1;
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    /* Payment Card */
+    .payment-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+    
+    .payment-number {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .payment-meta {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+        opacity: 0.95;
+    }
+    
+    .payment-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .payment-amount {
+        font-size: 2.2rem;
+        font-weight: bold;
+        text-align: center;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        margin-top: 15px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .status-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 15px;
+    }
+    
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 0.9em;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .badge-pending { background-color: #ffc107; color: #000; }
+    .badge-completed { background-color: #28a745; color: white; }
+    .badge-cancelled { background-color: #dc3545; color: white; }
+    .badge-bounced { background-color: #6c757d; color: white; }
+    
+    .method-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Info Cards */
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .info-card h6 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 15px;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+        text-align: right;
+    }
+    
+    /* Alerts */
+    .status-alert {
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        color: #856404;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        border-color: #28a745;
+        color: #155724;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        border-color: #17a2b8;
+        color: #0c5460;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        min-width: 140px;
+        padding: 12px 20px;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .container {
+            padding: 10px;
+        }
+        
+        .page-header {
+            margin-bottom: 15px;
+        }
+        
+        .page-title {
+            font-size: 1.2rem;
+        }
+        
+        .payment-card {
+            padding: 20px 15px;
+        }
+        
+        .payment-number {
+            font-size: 1.1rem;
+        }
+        
+        .payment-meta {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .payment-amount {
+            font-size: 1.8rem;
+            padding: 15px;
+        }
+        
+        .status-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .info-card {
+            padding: 15px;
+        }
+        
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        
+        .info-value {
+            text-align: left;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .action-buttons .btn {
+            width: 100%;
+            min-width: auto;
+        }
+    }
+    
+    /* Attachments Section */
+    .attachments-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .attachments-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .attachment-item {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: transform 0.2s;
+        border: 2px solid #dee2e6;
+    }
+    
+    .attachment-item:hover {
+        transform: scale(1.03);
+        border-color: #667eea;
+    }
+    
+    .attachment-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        display: block;
+    }
+    
+    .attachment-info {
+        padding: 10px;
+        background: white;
+    }
+    
+    .attachment-description {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .attachment-date {
+        font-size: 0.75rem;
+        color: #adb5bd;
+    }
+    
+    /* Lightbox Modal */
+    .lightbox-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.95);
+        overflow: auto;
+    }
+    
+    .lightbox-content {
+        position: relative;
+        margin: auto;
+        padding: 20px;
+        max-width: 90%;
+        max-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+    
+    .lightbox-image {
+        max-width: 100%;
+        max-height: 85vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    
+    .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10000;
+        background: rgba(0,0,0,0.5);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+    
+    .lightbox-close:hover {
+        background: rgba(102, 126, 234, 0.9);
+        transform: rotate(90deg);
+    }
+    
+    .lightbox-caption {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        background: rgba(0,0,0,0.7);
+        padding: 15px 30px;
+        border-radius: 25px;
+        font-size: 1rem;
+        max-width: 80%;
+        text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+        .attachments-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .lightbox-close {
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .lightbox-caption {
+            font-size: 0.85rem;
+            padding: 10px 20px;
+        }
+    }
+    
+    @media print {
+        .back-btn {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+        }
+        
+        .back-btn span {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .action-buttons {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header with Back Button -->
+    <div class="page-header">
+        <a href="{{ back_url }}" class="back-btn" title="{{ back_label }}">
+            <i class="fas fa-arrow-left"></i>
+            <span>{{ back_label }}</span>
+        </a>
+        <h1 class="page-title">Settlement Details</h1>
+    </div>
+
+    <!-- Main Settlement Card -->
+    <div class="payment-card">
+        <div class="payment-number">{{ settlement.settlement_number }}</div>
+        
+        <div class="payment-meta">
+            <span><i class="fas fa-calendar"></i> {{ settlement.settlement_date|date:"M d, Y - h:i A" }}</span>
+            {% if settlement.shop %}
+            <span><i class="fas fa-store"></i> {{ settlement.shop.shop_name }}</span>
+            {% endif %}
+            {% if settlement.bill %}
+            <span><i class="fas fa-file-invoice"></i> {{ settlement.bill.bill_number }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="status-row">
+            <span class="status-badge badge-{{ settlement.settlement_status }}">
+                {% if settlement.settlement_status == 'pending' %}
+                    <i class="fas fa-clock"></i> Pending
+                {% elif settlement.settlement_status == 'unsettled' %}
+                    <i class="fas fa-clock"></i> Pending
+                {% elif settlement.settlement_status == 'completed' %}
+                    <i class="fas fa-check-circle"></i> Completed
+                {% elif settlement.settlement_status == 'cancelled' %}
+                    <i class="fas fa-times-circle"></i> Cancelled
+                {% elif settlement.settlement_status == 'bounced' %}
+                    <i class="fas fa-exclamation-circle"></i> Bounced
+                {% endif %}
+            </span>
+            <span class="method-badge">{{ settlement.get_settlement_method_display }}</span>
+        </div>
+        
+        <div class="payment-amount">
+            Rs. {{ settlement.amount|floatformat:2|intcomma }}
+        </div>
+    </div>
+
+    <!-- Status Alerts -->
+    {% if settlement.settlement_status == 'pending' or settlement.settlement_status == 'unsettled' %}
+    <div class="status-alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+            <strong>Verification Required</strong><br>
+            <small>This settlement is awaiting verification by distributor.</small>
+        </div>
+    </div>
+    {% elif settlement.settlement_status == 'completed' %}
+    <div class="status-alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <div>
+            <strong>Settlement Verified</strong><br>
+            <small>Verified by {{ settlement.verified_by.get_full_name }} on {{ settlement.verified_at|date:"M d, Y - h:i A" }}</small>
+        </div>
+    </div>
+    {% elif settlement.settlement_status == 'cancelled' %}
+    <div class="status-alert alert-warning">
+        <i class="fas fa-times-circle"></i>
+        <div>
+            <strong>Settlement Cancelled</strong><br>
+            <small>This settlement has been cancelled and is no longer active.</small>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Settlement Details -->
+    <div class="info-card">
+        <h6>Settlement Information</h6>
+        
+        {% if settlement.shop %}
+        <div class="info-row">
+            <span class="info-label">Shop</span>
+            <span class="info-value">
+                <a href="{% url 'shops:detail' settlement.shop.pk %}" style="color: #667eea; text-decoration: none;">
+                    <i class="fas fa-store me-1"></i>{{ settlement.shop.shop_name }}
+                </a>
+            </span>
+        </div>
+        {% endif %}
+        
+        {% if settlement.bill %}
+        <div class="info-row">
+            <span class="info-label">Related Bill</span>
+            <span class="info-value">
+                <a href="{% url 'sales:detail' settlement.bill.pk %}" style="color: #667eea; text-decoration: none;">
+                    <i class="fas fa-file-invoice me-1"></i>{{ settlement.bill.bill_number }}
+                </a>
+            </span>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <span class="info-label">Received By</span>
+            <span class="info-value">{{ settlement.received_by.get_full_name|default:"System" }}</span>
+        </div>
+        
+        {% if settlement.settlement_method == 'return_adjustment' and settlement.return_ref %}
+        <div class="info-row">
+            <span class="info-label">Related Return</span>
+            <span class="info-value">
+                <a href="{% url 'sales:return_detail' settlement.return_ref.pk %}" style="color: #667eea; text-decoration: none;">
+                    <i class="fas fa-undo me-1"></i>{{ settlement.return_ref.return_number }}
+                </a>
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Return Amount</span>
+            <span class="info-value">Rs. {{ settlement.return_ref.total_amount|floatformat:2|intcomma }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Return Status</span>
+            <span class="info-value">
+                {% if settlement.return_ref.settlement_status == 'cancelled' %}
+                    <span class="badge bg-danger">Cancelled</span>
+                {% elif settlement.return_ref.settlement_status == 'fully_applied' %}
+                    <span class="badge bg-secondary">Fully Applied</span>
+                {% elif settlement.return_ref.settlement_status == 'partially_applied' %}
+                    <span class="badge bg-warning text-dark">Partially Applied</span>
+                {% elif settlement.return_ref.settlement_status == 'available' %}
+                    <span class="badge bg-info">Available</span>
+                {% elif settlement.return_ref.settlement_status == 'settled_cash' %}
+                    <span class="badge bg-success">Cash Paid</span>
+                {% elif settlement.return_ref.settlement_status == 'unsettled' %}
+                    <span class="badge bg-warning">Awaiting Settlement</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+        
+        {% if settlement.settlement_method == 'cheque' %}
+        <div class="info-row">
+            <span class="info-label">Cheque Number</span>
+            <span class="info-value">{{ settlement.reference_number|default:"N/A" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Cheque Date</span>
+            <span class="info-value">{% if settlement.cheque_date %}{{ settlement.cheque_date|date:"M d, Y" }}{% else %}N/A{% endif %}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Bank Name</span>
+            <span class="info-value">{% if settlement.bank_name %}{{ settlement.bank_name }}{% else %}<span class="text-muted">Not Provided</span>{% endif %}</span>
+        </div>
+        {% elif settlement.settlement_method == 'bank_transfer' %}
+        <div class="info-row">
+            <span class="info-label">Reference Number</span>
+            <span class="info-value">{{ settlement.reference_number|default:"N/A" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Bank Name</span>
+            <span class="info-value">{% if settlement.bank_name %}{{ settlement.bank_name }}{% else %}<span class="text-muted">Not Provided</span>{% endif %}</span>
+        </div>
+        {% endif %}
+        
+        {% if settlement.notes %}
+        <div class="info-row">
+            <span class="info-label">Notes</span>
+            <span class="info-value">{{ settlement.notes }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <span class="info-label">Created</span>
+            <span class="info-value">{{ settlement.created_at|date:"M d, Y - h:i A" }}</span>
+        </div>
+    </div>
+
+    <!-- Settlement Attachments -->
+    {% if settlement.attachments.exists %}
+    <div class="attachments-card">
+        <h6>
+            <i class="fas fa-paperclip me-2"></i>
+            {% if settlement.settlement_method == 'cheque' %}
+                Cheque Images
+            {% elif settlement.settlement_method == 'bank_transfer' %}
+                Bank Transfer Receipts
+            {% else %}
+                Attachments
+            {% endif %}
+        </h6>
+        
+        <div class="attachments-grid">
+            {% for attachment in settlement.attachments.all %}
+            <div class="attachment-item" data-url="{{ attachment.file.url }}" data-desc="{{ attachment.description|default:"Attachment" }}" data-date="{{ attachment.uploaded_at|date:"M d, Y - h:i A" }}" onclick="openLightbox(this.dataset.url, this.dataset.desc, this.dataset.date)">
+                <img src="{{ attachment.file.url }}" alt="{{ attachment.description|default:"Attachment" }}" class="attachment-image">
+                <div class="attachment-info">
+                    <div class="attachment-description">
+                        {{ attachment.description|default:"No description" }}
+                    </div>
+                    <div class="attachment-date">
+                        <i class="fas fa-clock me-1"></i>{{ attachment.uploaded_at|date:"M d, Y" }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <!-- Print Options -->
+        <a href="{% url 'sales:settlement_mobile_print' settlement.pk %}" class="btn btn-success">
+            <i class="fas fa-mobile-alt me-1"></i> Mobile Print
+        </a>
+        <button onclick="window.print()" class="btn btn-info">
+            <i class="fas fa-print me-1"></i> Print
+        </button>
+        
+        <!-- Verification Actions (Office/Admin Only) -->
+        {% if settlement.settlement_status in 'pending,unsettled' and request.user.user_type != 'sales_rep' %}
+            {% if settlement.settlement_method == 'cheque' %}
+                {% if not settlement.cheque_collected %}
+                    <!-- Mark Cheque as Collected (first step for cheque processing) -->
+                    <form method="post" action="{% url 'sales:mark_cheque_collected' settlement.pk %}" style="display:inline;" onsubmit="return confirm('Confirm that you have physically received this cheque from the sales rep?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-hand-holding me-1"></i> Mark Cheque Collected
+                        </button>
+                    </form>
+                {% else %}
+                    <!-- Cheque Processing Buttons (after collection) -->
+                    <a href="{% url 'sales:clear_cheque' settlement.pk %}" class="btn btn-success">
+                        <i class="fas fa-check-double me-1"></i> Clear Cheque
+                    </a>
+                    <a href="{% url 'sales:bounce_cheque' settlement.pk %}" class="btn btn-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Bounce Cheque
+                    </a>
+                {% endif %}
+            {% elif settlement.settlement_method == 'bank_transfer' %}
+                <a href="{% url 'sales:confirm_bank_transfer' settlement.pk %}" class="btn btn-success">
+                    <i class="fas fa-check-circle me-1"></i> Confirm Transfer
+                </a>
+                <a href="{% url 'sales:reject_bank_transfer' settlement.pk %}" class="btn btn-warning">
+                    <i class="fas fa-times-circle me-1"></i> Reject Transfer
+                </a>
+            {% else %}
+                <a href="{% url 'sales:verify_settlement' settlement.pk %}" class="btn btn-success">
+                    <i class="fas fa-check me-1"></i> Verify Settlement
+                </a>
+            {% endif %}
+        {% endif %}
+        
+        <!-- Cancel Button - Sales rep can cancel same-day payments, Office/Admin can cancel any -->
+        {% if settlement.settlement_status != 'cancelled' %}
+            {% if settlement.settlement_method == 'return_adjustment' %}
+                {# Return adjustment settlements cannot be cancelled directly #}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Return Adjustment Settlement</strong><br>
+                    <small>This settlement is linked to a sales return and cannot be cancelled directly. To reverse this settlement, please cancel the associated return transaction.</small>
+                </div>
+            {% else %}
+                {% if request.user.user_type == 'sales_rep' %}
+                    {% if settlement.received_by == request.user %}
+                        {% now "Y-m-d" as today %}
+                        {% if settlement.settlement_date|date:"Y-m-d" == today %}
+                        <a href="{% url 'sales:cancel_settlement' settlement.pk %}" class="btn btn-danger">
+                            <i class="fas fa-times me-1"></i> Cancel Settlement
+                        </a>
+                        {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <small>You can only cancel settlements made today. Please contact distributor to cancel older settlements.</small>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    {# Office and Admin can cancel any settlement #}
+                    <a href="{% url 'sales:cancel_settlement' settlement.pk %}" class="btn btn-danger">
+                        <i class="fas fa-times me-1"></i> Cancel Settlement
+                    </a>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div id="lightboxModal" class="lightbox-modal" onclick="closeLightbox(event)">
+    <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+    <div class="lightbox-content">
+        <img id="lightboxImage" class="lightbox-image" src="" alt="">
+    </div>
+    <div id="lightboxCaption" class="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(imageUrl, description, date) {
+    const modal = document.getElementById('lightboxModal');
+    const img = document.getElementById('lightboxImage');
+    const caption = document.getElementById('lightboxCaption');
+    
+    modal.style.display = 'block';
+    img.src = imageUrl;
+    caption.innerHTML = `<strong>${description}</strong><br><small>${date}</small>`;
+    
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(event) {
+    const modal = document.getElementById('lightboxModal');
+    if (event.target === modal || event.target.classList.contains('lightbox-close')) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Close lightbox on ESC key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('lightboxModal');
+        if (modal.style.display === 'block') {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+});
+</script>
+{% endblock %}
+
+
+
+

@@ -1,0 +1,1231 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Commission Dashboard - {{ selected_user.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
+        --danger-red: #ef4444;
+        --info-cyan: #0891b2;
+    }
+    
+    body {
+        background: #f3f4f6;
+    }
+    
+    .page-header {
+        background: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--card-color, var(--primary-blue));
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card.balance {
+        --card-color: var(--primary-blue);
+    }
+    
+    .stat-card.commission, .stat-card.earned {
+        --card-color: var(--success-green);
+    }
+    
+    .stat-card.collected {
+        --card-color: var(--info-cyan);
+    }
+    
+    .stat-card.returns, .stat-card.payout {
+        --card-color: var(--danger-red);
+    }
+    
+    .stat-card.opening {
+        --card-color: #6366f1;
+    }
+    
+    .stat-card.closing {
+        --card-color: #1e40af;
+    }
+    
+    .stat-card.rate {
+        --card-color: #8b5cf6;
+    }
+    
+    .stat-card h6 {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card h2 {
+        color: #111827;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-card .change {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .stat-card .change.positive {
+        color: var(--success-green);
+    }
+    
+    .stat-card .change.negative {
+        color: var(--danger-red);
+    }
+    
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .transaction-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .transaction-table table {
+        margin: 0;
+        width: 100%;
+        table-layout: auto;
+    }
+    
+    .transaction-table .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    .transaction-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6b7280;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .transaction-table tr {
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .transaction-table tr:hover {
+        background: #f9fafb;
+    }
+    
+    .badge-bill {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .badge-payment {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-cancelled {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .badge-return {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-writeoff {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .export-buttons .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 0.35rem 0;
+            margin-bottom: 0.4rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        
+        .page-header .container-fluid {
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+        }
+        
+        .page-header .row {
+            flex-wrap: nowrap;
+            align-items: center !important;
+        }
+        
+        .page-header h2 {
+            font-size: 1.05rem;
+            line-height: 1.2;
+            margin-bottom: 0 !important;
+            font-weight: 700;
+        }
+        
+        .page-header h2 .fas {
+            font-size: 0.9rem;
+        }
+        
+        .page-header p,
+        .page-header .mobile-user-name {
+            font-size: 0.72rem;
+            margin-top: 0.1rem !important;
+            margin-bottom: 0 !important;
+            line-height: 1.3;
+            color: #4b5563;
+        }
+        
+        .page-header .col-md-6 {
+            margin-bottom: 0;
+        }
+        
+        /* Compact icon buttons on mobile */
+        .page-header .btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            min-height: unset;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .page-header .d-flex {
+            gap: 0.3rem;
+        }
+        
+        .stat-card {
+            padding: 0.5rem 0.6rem;
+            margin-bottom: 0;
+            border-radius: 8px;
+            border-left-width: 3px;
+        }
+        
+        .stat-card h2 {
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 700;
+        }
+        
+        .stat-card h6 {
+            font-size: 0.6rem;
+            margin-bottom: 0.15rem;
+            letter-spacing: 0.3px;
+            font-weight: 700;
+            color: #4b5563;
+        }
+        
+        .stat-card h6 .fas {
+            margin-right: 0.15rem;
+            font-size: 0.55rem;
+        }
+        
+        .stat-card small {
+            font-size: 0.6rem;
+            line-height: 1.3;
+            color: #6b7280;
+        }
+        
+        .stat-card .change {
+            font-size: 0.58rem;
+            line-height: 1.3;
+            margin-top: 0.05rem;
+        }
+        
+        .stat-card.text-center h2 {
+            font-size: 0.88rem;
+            margin-bottom: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stat-card.text-center {
+            padding: 0.4rem 0.3rem;
+            height: auto;
+        }
+        
+        .stat-card.text-center small {
+            font-size: 0.55rem;
+            white-space: nowrap;
+        }
+        
+        /* Rs. prefix visible on mobile */
+        .rs-prefix {
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+        
+        /* Mobile balance flow - single compact card */
+        .balance-flow-mobile {
+            background: white;
+            border-radius: 10px;
+            padding: 0.5rem 0.65rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 3px solid var(--primary-blue);
+        }
+        
+        .balance-flow-mobile .flow-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+        }
+        
+        .balance-flow-mobile .flow-row:not(:last-child) {
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .balance-flow-mobile .flow-label {
+            font-size: 0.75rem;
+            color: #4b5563;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .balance-flow-mobile .flow-label .fas {
+            margin-right: 0.2rem;
+            font-size: 0.65rem;
+        }
+        
+        .balance-flow-mobile .flow-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .container-fluid {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            padding-bottom: 1rem;
+        }
+        
+        .row.g-3 {
+            --bs-gutter-x: 0.35rem;
+            --bs-gutter-y: 0.35rem;
+        }
+        
+        .chart-card {
+            padding: 0.75rem;
+        }
+        
+        .chart-card h5 {
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem !important;
+        }
+        
+        #commissionChart {
+            max-height: 180px;
+        }
+        
+        /* Icon spacing on mobile */
+        .fas, .far, .fab {
+            margin-right: 0.25rem;
+        }
+        
+        /* Mobile Transaction Cards */
+        .mobile-transaction-card {
+            background: white;
+            border-radius: 10px;
+            padding: 0.85rem;
+            margin-bottom: 0.6rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-left: 4px solid #e5e7eb;
+        }
+        
+        .mobile-transaction-card.positive {
+            border-left-color: var(--success-green);
+        }
+        
+        .mobile-transaction-card.negative {
+            border-left-color: var(--danger-red);
+        }
+        
+        .mobile-transaction-card .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .mobile-transaction-card .transaction-type {
+            flex: 1;
+        }
+        
+        .mobile-transaction-card .transaction-type .badge {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.5rem;
+        }
+        
+        .mobile-transaction-card .transaction-date {
+            text-align: right;
+            font-size: 0.68rem;
+            line-height: 1.4;
+        }
+        
+        .mobile-transaction-card .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.2rem 0;
+            font-size: 0.8rem;
+        }
+        
+        .mobile-transaction-card .info-label {
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 0.72rem;
+        }
+        
+        .mobile-transaction-card .info-value {
+            font-weight: 600;
+            text-align: right;
+            font-size: 0.78rem;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .mobile-transaction-card .info-value a {
+            font-size: 0.78rem;
+        }
+        
+        .mobile-transaction-card .commission-highlight {
+            background: #f0fdf4;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            border: 1px solid #86efac;
+        }
+        
+        .mobile-transaction-card .commission-highlight.negative {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+        
+        .mobile-transaction-card .commission-rate-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .mobile-transaction-card .commission-amount {
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+        
+        .mobile-transaction-card .commission-amount.text-earned { color: #10b981; }
+        .mobile-transaction-card .commission-amount.text-deducted { color: #ef4444; }
+        .mobile-transaction-card .commission-amount.text-zero { color: #6b7280; }
+        
+        .mobile-transaction-card .commission-balance-row {
+            font-size: 0.72rem;
+            color: #6b7280;
+            padding-top: 0.4rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .mobile-transaction-card .running-balance-value {
+            font-weight: 600;
+            color: #2563eb;
+        }
+        
+        .mobile-transactions h5 {
+            font-size: 1rem;
+            position: sticky;
+            top: 0;
+            background: #f3f4f6;
+            z-index: 5;
+            padding: 0.5rem 0;
+            margin: -0.5rem 0 0.75rem 0;
+        }
+        
+        .mobile-transactions .p-3 {
+            padding: 0.75rem !important;
+        }
+        
+        /* Filter section mobile improvements */
+        .card-header[data-bs-toggle] {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            min-height: 44px;
+        }
+        
+        /* Mobile user name below header */
+        .mobile-user-name {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        /* Mini stat label on mobile (additional stats row) */
+        .mini-stat-label {
+            font-size: 0.65rem;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.15rem;
+        }
+        
+        .mini-stat-label .fas {
+            margin-right: 0.15rem;
+            font-size: 0.55rem;
+        }
+        
+        /* Reduce running balance font for better fit */
+        .mobile-transaction-card .info-row:last-child .info-value {
+            font-size: 0.72rem;
+        }
+        
+        /* Tighten transaction card padding */
+        .row.g-0 > .col-12 > .transaction-table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        /* Better spacing between settings/export buttons */
+        .page-header .btn {
+            white-space: nowrap;
+        }
+        
+        .card.mb-3 {
+            margin-bottom: 0.4rem !important;
+        }
+    }
+    
+    /* Desktop/Mobile View Toggle (outside media query) */
+    .desktop-table {
+        display: table;
+    }
+    
+    .mobile-transactions {
+        display: none;
+    }
+    
+    @media (max-width: 768px) {
+        .desktop-table {
+            display: none !important;
+        }
+        
+        .mobile-transactions {
+            display: block !important;
+        }
+    }
+    
+    /* Touch-friendly inputs */
+    @media (max-width: 768px) {
+        .form-select, .form-control {
+            min-height: 42px;
+            font-size: 0.875rem;
+        }
+        
+        .card-header {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.875rem;
+        }
+        
+        .card-body.collapse.show .row.g-3 {
+            --bs-gutter-y: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col col-md-6">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-line text-primary"></i>
+                    <span class="d-none d-md-inline">Commission Dashboard</span>
+                    <span class="d-md-none">Commission</span>
+                </h2>
+                <p class="text-muted mb-0 mt-1 d-none d-md-block">
+                    {{ selected_user.get_full_name }}
+                    {% if selected_user.employee_id %}
+                    <span class="badge bg-secondary">{{ selected_user.employee_id }}</span>
+                    {% endif %}
+                </p>
+                <p class="text-muted mb-0 d-md-none mobile-user-name">
+                    <i class="fas fa-user-tie"></i> {{ selected_user.get_full_name }}
+                </p>
+            </div>
+            <div class="col-auto col-md-6">
+                <div class="d-flex justify-content-md-end align-items-center gap-1 gap-md-2 flex-nowrap">
+                    {% if user.is_office_staff %}
+                    <a href="{% url 'sales:commission_settings' %}" class="btn btn-outline-primary btn-sm" title="Settings">
+                        <i class="fas fa-cog"></i><span class="d-none d-md-inline"> Settings</span>
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-success btn-sm" onclick="exportCSV()" title="Export CSV">
+                        <i class="fas fa-file-csv"></i><span class="d-none d-md-inline"> CSV</span>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="exportPDF()" title="Export PDF">
+                        <i class="fas fa-file-pdf"></i><span class="d-none d-md-inline"> PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Filters -->
+    <div class="card mb-3 mb-md-4">
+        <div class="card-header d-md-none" data-bs-toggle="collapse" data-bs-target="#filterCollapse" style="cursor: pointer; background: white; border-bottom: 1px solid #e5e7eb;">
+            <span><i class="fas fa-filter"></i> <strong>Filters</strong></span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="card-body collapse d-md-block" id="filterCollapse">
+            <form method="get" class="row g-2 g-md-3 align-items-end">
+                {% if user.is_office_staff %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold mb-1">
+                        <i class="fas fa-user-tie"></i> Sales Representative
+                    </label>
+                    <select name="user" class="form-select" onchange="this.form.submit()">
+                        {% for rep in all_sales_reps %}
+                        <option value="{{ rep.id }}" {% if rep.id == selected_user.id %}selected{% endif %}>
+                            {{ rep.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold mb-1">
+                        <i class="fas fa-calendar"></i> Month
+                    </label>
+                    <select name="month" class="form-select" onchange="this.form.submit()">
+                        {% for option in month_options %}
+                        <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-12 col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards - Month Specific -->
+    <div class="row g-3 g-md-4 mb-3 mb-md-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card balance">
+                <h6><i class="fas fa-file-invoice-dollar"></i> <span class="d-none d-md-inline">Total Sales</span><span class="d-md-none">Total Sales</span></h6>
+                <h2><span class="rs-prefix">Rs. </span>{{ total_sales|floatformat:2|intcomma }}</h2>
+                <small class="text-muted">{{ bills_count }} bill{{ bills_count|pluralize }}</small>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="stat-card commission">
+                <h6><i class="fas fa-coins"></i> <span class="d-none d-md-inline">Commission Earned</span><span class="d-md-none">Commission</span></h6>
+                <h2><span class="rs-prefix">Rs. </span>{{ total_commission|floatformat:2|intcomma }}</h2>
+                <div class="change {% if commission_change_pct >= 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if commission_change_pct >= 0 %}up{% else %}down{% endif %}"></i>
+                    {{ commission_change_pct|floatformat:1 }}% from last month
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="stat-card collected">
+                <h6><i class="fas fa-hand-holding-usd"></i> <span class="d-none d-md-inline">Collections</span><span class="d-md-none">Collections</span></h6>
+                <h2><span class="rs-prefix">Rs. </span>{{ net_collected|floatformat:2|intcomma }}</h2>
+                <small class="text-muted">Commission: Rs. {{ net_collection_commission|floatformat:2|intcomma }}</small>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="stat-card returns">
+                <h6><i class="fas fa-undo"></i> <span class="d-none d-md-inline">Return Deductions</span><span class="d-md-none">Returns</span></h6>
+                <h2><span class="rs-prefix">Rs. </span>{{ total_returns|floatformat:2|intcomma }}</h2>
+                <small class="text-muted">Deducted: Rs. {{ return_commission|floatformat:2|intcomma }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Balance Flow - Desktop: individual cards -->
+    <div class="d-none d-md-flex row g-3 mb-4">
+        <div class="col-md">
+            <div class="stat-card opening text-center">
+                <h6><i class="fas fa-arrow-right"></i> Opening Balance</h6>
+                <h2>Rs. {{ opening_balance|floatformat:2|intcomma }}</h2>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="stat-card earned text-center">
+                <h6><i class="fas fa-plus-circle text-success"></i> Earned</h6>
+                <h2 class="text-success">Rs. {{ total_commission|floatformat:2|intcomma }}</h2>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="stat-card payout text-center">
+                <h6><i class="fas fa-money-bill-wave text-danger"></i> Payouts</h6>
+                <h2 class="{% if total_payouts > 0 %}text-danger{% endif %}">Rs. {{ total_payouts|floatformat:2|intcomma }}</h2>
+                {% if payouts_count > 0 %}<small class="text-muted">{{ payouts_count }} payout{{ payouts_count|pluralize }}</small>{% endif %}
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="stat-card closing text-center">
+                <h6><i class="fas fa-flag-checkered"></i> Closing Balance</h6>
+                <h2>Rs. {{ closing_balance|floatformat:2|intcomma }}</h2>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="stat-card rate text-center">
+                <h6><i class="fas fa-percentage"></i> Commission Rate</h6>
+                <h2>{{ current_rate }}%</h2>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Balance Flow - Mobile: single compact card -->
+    <div class="d-md-none mb-3">
+        <div class="balance-flow-mobile">
+            <div class="flow-row">
+                <span class="flow-label"><i class="fas fa-arrow-right" style="color:#6366f1"></i> Opening</span>
+                <span class="flow-value">Rs. {{ opening_balance|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="flow-row">
+                <span class="flow-label"><i class="fas fa-plus-circle text-success"></i> Earned</span>
+                <span class="flow-value text-success">+ Rs. {{ total_commission|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="flow-row">
+                <span class="flow-label"><i class="fas fa-money-bill-wave text-danger"></i> Payouts{% if payouts_count > 0 %} ({{ payouts_count }}){% endif %}</span>
+                <span class="flow-value {% if total_payouts > 0 %}text-danger{% endif %}">- Rs. {{ total_payouts|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="flow-row" style="background:#f0f9ff; margin:0 -0.75rem; padding:0.4rem 0.75rem;">
+                <span class="flow-label" style="color:#1e40af;"><i class="fas fa-flag-checkered"></i> Closing</span>
+                <span class="flow-value" style="font-size:1.05rem; color:#1e40af;">Rs. {{ closing_balance|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="flow-row" style="margin:0 -0.75rem; padding:0.4rem 0.75rem; border-radius: 0 0 8px 8px;">
+                <span class="flow-label" style="color:#7c3aed;"><i class="fas fa-percentage"></i> Rate</span>
+                <span class="flow-value" style="color:#7c3aed;">{{ current_rate }}%</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Commission Chart -->
+    <div class="row g-4 mb-3 mb-md-4">
+        <div class="col-12">
+            <div class="chart-card">
+                <h5 class="mb-3"><i class="fas fa-chart-area"></i> Daily Commission Trend</h5>
+                <canvas id="commissionChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction History -->
+    <div class="row g-0 mb-4">
+        <div class="col-12">
+            <div class="transaction-table">
+                <!-- Mobile Card View -->
+                <div class="mobile-transactions p-3">
+                    <h5 class="mb-3"><i class="fas fa-list"></i> Transactions</h5>
+                    {% for txn in transactions %}
+                    <div class="mobile-transaction-card {% if txn.commission_earned > 0 %}positive{% elif txn.commission_earned < 0 %}negative{% endif %}">
+                        <div class="card-header-row">
+                            <div class="transaction-type">
+                                {% if txn.transaction_type == 'bill_created' %}
+                                <span class="badge badge-bill"><i class="fas fa-file-invoice"></i> Bill</span>
+                                {% elif txn.transaction_type == 'payment_received' %}
+                                <span class="badge badge-payment"><i class="fas fa-money-bill-wave"></i> Payment</span>
+                                {% elif txn.transaction_type == 'payment_cancelled' %}
+                                <span class="badge badge-cancelled"><i class="fas fa-ban"></i> Cancelled</span>
+                                {% elif txn.transaction_type == 'return_processed' %}
+                                <span class="badge badge-return"><i class="fas fa-undo"></i> Sales Return</span>
+                                {% endif %}
+                            </div>
+                            <div class="transaction-date">
+                                <div class="text-muted">{{ txn.transaction_date|date:"d M Y" }}</div>
+                                <div class="text-muted"><i class="far fa-clock"></i> {{ txn.transaction_date|date:"h:i A" }}</div>
+                            </div>
+                        </div>
+                        
+                        {% if txn.bill %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-{% if txn.bill.shop %}store{% else %}user{% endif %}"></i> {% if txn.bill.shop %}Shop{% else %}Customer{% endif %}</span>
+                            <span class="info-value">
+                                {% if txn.bill.shop %}
+                                    {{ txn.bill.shop.shop_name }}
+                                {% else %}
+                                    {{ txn.bill.customer_name|default:"Unregistered Customer" }} <span class="badge bg-secondary">Unregistered</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% elif txn.return_ref %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-store"></i> Customer</span>
+                            <span class="info-value">
+                                {% if txn.return_ref.shop %}
+                                    {{ txn.return_ref.shop.shop_name }}
+                                {% elif txn.return_ref.customer_name %}
+                                    {{ txn.return_ref.customer_name }} <span class="badge bg-secondary">Unregistered</span>
+                                {% else %}
+                                    Unregistered Customer <span class="badge bg-secondary">Unregistered</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if txn.bill %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-file-invoice"></i> Bill</span>
+                            <span class="info-value">
+                                <a href="{% url 'sales:detail' txn.bill.pk %}" class="text-decoration-none">{{ txn.bill.bill_number }}</a>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if txn.return_ref %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-undo text-danger"></i> Return</span>
+                            <span class="info-value">
+                                <a href="{% url 'sales:return_detail' txn.return_ref.pk %}" class="text-decoration-none">{{ txn.return_ref.return_number }}</a>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if txn.settlement %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-receipt"></i> Payment</span>
+                            <span class="info-value">
+                                <a href="{% url 'sales:settlement_detail' txn.settlement.pk %}" class="text-decoration-none">{{ txn.settlement.settlement_number }}</a>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if txn.collected_amount > 0 %}
+                        <div class="info-row">
+                            <span class="info-label">Amount</span>
+                            <span class="info-value">Rs. {{ txn.collected_amount|floatformat:2|intcomma }}</span>
+                        </div>
+                        {% elif txn.sales_amount > 0 %}
+                        <div class="info-row">
+                            <span class="info-label">Amount</span>
+                            <span class="info-value">Rs. {{ txn.sales_amount|floatformat:2|intcomma }}</span>
+                        </div>
+                        {% elif txn.return_amount > 0 %}
+                        <div class="info-row">
+                            <span class="info-label">Amount</span>
+                            <span class="info-value text-danger">Rs. {{ txn.return_amount|floatformat:2|intcomma }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="commission-highlight {% if txn.commission_earned < 0 %}negative{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="commission-rate-label">Commission @ {{ txn.applicable_rate }}%</span>
+                                <span class="commission-amount {% if txn.commission_earned > 0 %}text-earned{% elif txn.commission_earned < 0 %}text-deducted{% else %}text-zero{% endif %}">
+                                    {% if txn.commission_earned > 0 %}+{% endif %}Rs. {{ txn.commission_earned|floatformat:2|intcomma }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center commission-balance-row">
+                                <span>Running Balance</span>
+                                <span class="running-balance-value">Rs. {{ txn.running_balance|floatformat:2|intcomma }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3 d-block opacity-25"></i>
+                        <h5 class="fw-normal">No transactions found</h5>
+                        <p class="mb-0">Try selecting a different month</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Desktop Table View -->
+                <div class="table-responsive desktop-table">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">Date & Time</th>
+                                <th style="width: 12%;">Transaction Type</th>
+                                <th style="width: 25%;">References</th>
+                                <th style="width: 18%;">Shop</th>
+                                <th class="text-end" style="width: 10%;">Amount</th>
+                                <th class="text-center" style="width: 8%;">Rate</th>
+                                <th class="text-end" style="width: 10%;">Commission</th>
+                                <th class="text-end" style="width: 10%;">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in transactions %}
+                            <tr class="{% if txn.settlement and txn.settlement.settlement_status == 'cancelled' %}table-warning{% endif %}">
+                                <td>
+                                    <div class="fw-bold text-dark">{{ txn.transaction_date|date:"d M Y" }}</div>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock"></i> {{ txn.transaction_date|date:"h:i A" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if txn.transaction_type == 'bill_created' %}
+                                    <span class="badge badge-bill px-3 py-2">
+                                        <i class="fas fa-file-invoice"></i> Bill Created
+                                    </span>
+                                    {% elif txn.transaction_type == 'payment_received' %}
+                                    <span class="badge badge-payment px-3 py-2">
+                                        <i class="fas fa-money-bill-wave"></i> Payment Received
+                                    </span>
+                                    {% elif txn.transaction_type == 'payment_cancelled' %}
+                                    <span class="badge badge-cancelled px-3 py-2">
+                                        <i class="fas fa-ban"></i> Payment Cancelled
+                                    </span>
+                                    {% elif txn.transaction_type == 'return_processed' %}
+                                    <span class="badge badge-return px-3 py-2">
+                                        <i class="fas fa-undo"></i> Sales Return
+                                    </span>
+                                    {% elif txn.transaction_type == 'return_cancelled' %}
+                                    <span class="badge badge-cancelled px-3 py-2">
+                                        <i class="fas fa-undo-alt"></i> Return Cancelled
+                                    </span>
+                                    {% elif txn.transaction_type == 'writeoff_executed' %}
+                                    <span class="badge badge-writeoff px-3 py-2">
+                                        <i class="fas fa-times-circle"></i> Write-off
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1">
+                                        {% if txn.bill %}
+                                        <div>
+                                            <i class="fas fa-file-invoice text-primary"></i>
+                                            <small class="text-muted">Bill:</small>
+                                            <a href="{% url 'sales:detail' txn.bill.pk %}" class="fw-bold text-decoration-none">
+                                                {{ txn.bill.bill_number }}
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if txn.settlement %}
+                                        <div>
+                                            <i class="fas fa-receipt text-success"></i>
+                                            <small class="text-muted">Payment:</small>
+                                            <a href="{% url 'sales:settlement_detail' txn.settlement.pk %}" class="fw-bold text-decoration-none">
+                                                {{ txn.settlement.settlement_number }}
+                                            </a>
+                                            
+                                            {% if txn.settlement.settlement_method == 'cash' %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">💵 Cash</span>
+                                            {% elif txn.settlement.settlement_method == 'cheque' %}
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info">📝 Cheque</span>
+                                            {% elif txn.settlement.settlement_method == 'bank_transfer' %}
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">🏦 Bank Transfer</span>
+                                            {% elif txn.settlement.settlement_method == 'return_adjustment' %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">🔄 Return Adjustment</span>
+                                            {% endif %}
+                                            
+                                            {% if txn.settlement.settlement_status == 'completed' %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">✓ Completed</span>
+                                            {% elif txn.settlement.settlement_status == 'pending' %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">⏳ Pending</span>
+                                            {% elif txn.settlement.settlement_status == 'cancelled' %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">✕ Cancelled</span>
+                                            {% elif txn.settlement.settlement_status == 'bounced' %}
+                                            <span class="badge bg-dark bg-opacity-10 text-dark border border-dark">⊘ Bounced</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if txn.transaction_type == 'return_processed' %}
+                                        <div>
+                                            <i class="fas fa-undo text-danger"></i>
+                                            <small class="text-muted">Return:</small>
+                                            {% if txn.return_ref %}
+                                            <a href="{% url 'sales:return_detail' txn.return_ref.pk %}" class="fw-bold text-decoration-none">
+                                                {{ txn.return_ref.return_number }}
+                                            </a>
+                                            {% elif txn.notes %}
+                                            <a href="#" class="fw-bold text-decoration-none" 
+                                               onclick="event.preventDefault(); 
+                                                        const returnNum = '{{ txn.notes|escapejs }}'.match(/Return (RN-\d{8}-\d{3})/); 
+                                                        if (returnNum && returnNum[1]) {
+                                                          fetch('/sales/api/return-by-number/' + returnNum[1] + '/')
+                                                            .then(r => r.json())
+                                                            .then(d => window.location.href = '/sales/returns/' + d.id + '/')
+                                                            .catch(() => alert('Return not found'));
+                                                        }">
+                                                <span>{{ txn.notes|slice:"7:22" }}</span>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if txn.transaction_type == 'return_cancelled' %}
+                                        <div>
+                                            <i class="fas fa-undo-alt text-danger"></i>
+                                            <small class="text-muted">Return:</small>
+                                            {% if txn.return_ref %}
+                                            <a href="{% url 'sales:return_detail' txn.return_ref.pk %}" class="fw-bold text-decoration-none">
+                                                {{ txn.return_ref.return_number }}
+                                            </a>
+                                            {% elif txn.notes %}
+                                            <a href="#" class="fw-bold text-decoration-none" 
+                                               onclick="event.preventDefault(); 
+                                                        const match = '{{ txn.notes|escapejs }}'.match(/Return (RN-\d{8}-\d{3})/); 
+                                                        if (match && match[1]) {
+                                                          fetch('/sales/api/return-by-number/' + match[1] + '/')
+                                                            .then(r => r.json())
+                                                            .then(d => window.location.href = '/sales/returns/' + d.id + '/')
+                                                            .catch(() => alert('Return not found'));
+                                                        }">
+                                                <script>document.write('{{ txn.notes|escapejs }}'.match(/RN-\d{8}-\d{3}/)?.[0] || '');</script>
+                                            </a>
+                                            {% endif %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">✕ Cancelled</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if txn.payout_history %}
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                                <i class="fas fa-money-bill-wave me-1"></i>Payout
+                                            </span>
+                                            <a href="{% url 'sales:payout_history_detail' txn.payout_history.id %}" 
+                                               class="text-decoration-none fw-semibold text-success">
+                                                {{ txn.payout_history.payout_number }}
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if not txn.bill and not txn.settlement and not txn.payout_history and txn.transaction_type != 'return_processed' and txn.transaction_type != 'return_cancelled' %}
+                                        <span class="text-muted fst-italic">No references</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if txn.bill %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-{% if txn.bill.shop %}store{% else %}user{% endif %} text-info"></i>
+                                        <div>
+                                            {% if txn.bill.shop %}
+                                                <div class="fw-semibold">{{ txn.bill.shop.shop_name }}</div>
+                                                <small class="text-muted">{{ txn.bill.shop.shop_code }}</small>
+                                            {% else %}
+                                                <div class="fw-semibold">{{ txn.bill.customer_name|default:"Unregistered Customer" }}</div>
+                                                <small class="text-muted"><span class="badge bg-secondary">Unregistered</span></small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% elif txn.return_ref %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-{% if txn.return_ref.shop %}store{% else %}user{% endif %} text-info"></i>
+                                        <div>
+                                            {% if txn.return_ref.shop %}
+                                                <div class="fw-semibold">{{ txn.return_ref.shop.shop_name }}</div>
+                                                <small class="text-muted">{{ txn.return_ref.shop.shop_code }}</small>
+                                            {% elif txn.return_ref.customer_name %}
+                                                <div class="fw-semibold">{{ txn.return_ref.customer_name }}</div>
+                                                <small class="text-muted"><span class="badge bg-secondary">Unregistered</span></small>
+                                            {% else %}
+                                                <div class="fw-semibold">Unregistered Customer</div>
+                                                <small class="text-muted"><span class="badge bg-secondary">Unregistered</span></small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if txn.collected_amount > 0 %}
+                                    <div class="fw-semibold text-dark">Rs. {{ txn.collected_amount|floatformat:2|intcomma }}</div>
+                                    <small class="text-muted">Collected</small>
+                                    {% elif txn.sales_amount > 0 %}
+                                    <div class="fw-semibold text-dark">Rs. {{ txn.sales_amount|floatformat:2|intcomma }}</div>
+                                    <small class="text-muted">Billed</small>
+                                    {% elif txn.return_amount > 0 %}
+                                    <div class="fw-semibold text-danger">Rs. {{ txn.return_amount|floatformat:2|intcomma }}</div>
+                                    <small class="text-muted">Returned</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary bg-opacity-75">{{ txn.applicable_rate }}%</span>
+                                </td>
+                                <td class="text-end">
+                                    {% if txn.commission_earned > 0 %}
+                                    <div class="fw-bold text-success d-flex align-items-center justify-content-end gap-1">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>+Rs. {{ txn.commission_earned|floatformat:2|intcomma }}</span>
+                                    </div>
+                                    <small class="text-muted">Earned</small>
+                                    {% elif txn.commission_earned < 0 %}
+                                    <div class="fw-bold text-danger d-flex align-items-center justify-content-end gap-1">
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Rs. {{ txn.commission_earned|floatformat:2|intcomma }}</span>
+                                    </div>
+                                    <small class="text-muted">Deducted</small>
+                                    {% else %}
+                                    <div class="fw-semibold text-muted">Rs. 0.00</div>
+                                    <small class="text-muted">No impact</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="fw-bold text-primary" style="font-size: 1.05rem;">Rs. {{ txn.running_balance|floatformat:2|intcomma }}</div>
+                                    <small class="text-muted">Running</small>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3 d-block opacity-25"></i>
+                                    <h5 class="fw-normal">No transactions found for this period</h5>
+                                    <p class="mb-0">Try selecting a different month or sales representative</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- End Desktop Table View -->
+                
+                {% if total_transactions > 100 %}
+                <div class="p-3 bg-light border-top text-center">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    <small class="text-muted">
+                        Showing 100 of <strong>{{ total_transactions }}</strong> transactions. 
+                        <a href="{% url 'sales:export_commission_csv' %}?user={{ selected_user.id }}&month={{ selected_month }}" class="text-primary fw-semibold text-decoration-none">
+                            <i class="fas fa-download"></i> Export all to CSV
+                        </a>
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ chart_dates|json_script:"chart-dates" }}
+{{ chart_commission|json_script:"chart-commission" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Commission Chart
+    const ctx = document.getElementById('commissionChart').getContext('2d');
+    const chartData = {
+        labels: JSON.parse(document.getElementById('chart-dates').textContent),
+        datasets: [{
+            label: 'Daily Commission',
+            data: JSON.parse(document.getElementById('chart-commission').textContent),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    const isMobile = window.innerWidth < 768;
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: !isMobile,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Commission: Rs. ' + context.parsed.y.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 15,
+                        font: { size: 11 }
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rs. ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Export functions
+    function exportCSV() {
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = "{% url 'sales:export_commission_csv' %}?" + params.toString();
+    }
+    
+    function exportPDF() {
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = "{% url 'sales:export_commission_pdf' %}?" + params.toString();
+    }
+</script>
+{% endblock %}

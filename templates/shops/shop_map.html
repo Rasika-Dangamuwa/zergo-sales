@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Shop Map — Zergo{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+    --brand: #0078D7; --brand-dark: #005BA1;
+    --emerald: #10b981; --amber: #f59e0b; --rose: #ef4444;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155; --s800: #1e293b;
+    --sh1: 0 1px 3px rgba(0,0,0,.08); --sh2: 0 4px 16px rgba(0,0,0,.1);
+    --r: 12px;
+}
+
+/* ===== FULL-SCREEN MAP LAYOUT ===== */
+.map-page { position: relative; height: calc(100vh - 56px); overflow: hidden; }
+#shopMap { width: 100%; height: 100%; }
+
+/* ===== TOP BAR (floating) ===== */
+.top-bar {
+    position: absolute; top: 10px; left: 10px; right: 10px; z-index: 800;
+    display: flex; align-items: center; gap: .5rem;
+}
+.tb-back {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border: none; box-shadow: var(--sh2); display: flex; align-items: center; justify-content: center;
+    color: var(--s700); font-size: .85rem; cursor: pointer; text-decoration: none; flex-shrink: 0;
+}
+.tb-back:hover { background: var(--brand); color: #fff; }
+.tb-search {
+    flex: 1; position: relative;
+}
+.tb-search input {
+    width: 100%; padding: .55rem .75rem .55rem 2.2rem;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border: none; border-radius: 10px; box-shadow: var(--sh2);
+    font-size: .78rem; color: var(--s800); outline: none;
+}
+.tb-search input:focus { box-shadow: 0 0 0 2px var(--brand), var(--sh2); }
+.tb-search i { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--s400); font-size: .72rem; }
+.tb-search .clear-btn {
+    position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--s400); font-size: .7rem; cursor: pointer;
+    display: none; padding: 0;
+}
+.tb-search .clear-btn.show { display: block; }
+
+/* ===== STATS BAR (floating bottom) ===== */
+.stats-bar {
+    position: absolute; bottom: 20px; left: 10px; right: 10px; z-index: 800;
+    display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+}
+.stats-bar::-webkit-scrollbar { display: none; }
+.sb-card {
+    flex-shrink: 0; background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: .45rem .65rem; box-shadow: var(--sh2);
+    display: flex; align-items: center; gap: .4rem; cursor: pointer;
+    transition: transform .15s, background .2s; min-width: 0;
+}
+.sb-card:active { transform: scale(.96); }
+.sb-card.active { background: var(--brand); }
+.sb-card.active .sb-v, .sb-card.active .sb-l, .sb-card.active .sb-ico { color: #fff !important; }
+.sb-ico { font-size: .7rem; flex-shrink: 0; }
+.sb-txt { display: flex; flex-direction: column; min-width: 0; }
+.sb-v { font-size: .78rem; font-weight: 700; color: var(--s800); line-height: 1.1; white-space: nowrap; }
+.sb-l { font-size: .52rem; color: var(--s500); text-transform: uppercase; letter-spacing: .3px; font-weight: 600; white-space: nowrap; }
+
+/* ===== MAP CONTROLS (right side) ===== */
+.map-ctrls {
+    position: absolute; top: 60px; right: 10px; z-index: 800;
+    display: flex; flex-direction: column; gap: .35rem;
+}
+.mc-btn {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border: none; box-shadow: var(--sh2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--s700); font-size: .75rem;
+    transition: background .15s, color .15s;
+}
+.mc-btn:hover, .mc-btn.on { background: var(--brand); color: #fff; }
+
+/* ===== LEGEND ===== */
+.map-legend {
+    position: absolute; bottom: 90px; left: 10px; z-index: 800;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: .5rem .7rem; box-shadow: var(--sh2);
+    font-size: .62rem; max-width: 155px;
+}
+.map-legend.collapsed .lg-body { display: none; }
+.map-legend.collapsed { padding: .35rem .55rem; }
+.lg-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: .4rem;
+    cursor: pointer; font-weight: 700; color: var(--s700); font-size: .65rem; user-select: none;
+}
+.lg-toggle i { font-size: .5rem; color: var(--s400); transition: transform .2s; }
+.map-legend.collapsed .lg-toggle i { transform: rotate(180deg); }
+.lg-body { margin-top: .4rem; }
+.lg-item { display: flex; align-items: center; gap: .4rem; padding: .12rem 0; color: var(--s600); }
+.lg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.lg-dot.lv3 { background: var(--emerald); }
+.lg-dot.lv2 { background: var(--brand); }
+.lg-dot.lv1 { background: var(--s400); }
+.lg-dot.user { background: var(--rose); }
+.lg-ring { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--amber); background: transparent; }
+
+/* ===== CUSTOM MARKERS ===== */
+.custom-marker-wrap { background: none !important; border: none !important; }
+.shop-pin {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: transform .15s;
+    position: relative;
+}
+.shop-pin i { transform: rotate(45deg); font-size: .65rem; color: #fff; }
+.shop-pin.lv3 { background: var(--emerald); }
+.shop-pin.lv2 { background: var(--brand); }
+.shop-pin.lv1 { background: var(--s400); }
+.shop-pin.has-pending { box-shadow: 0 0 0 3px rgba(245,158,11,.6), 0 2px 8px rgba(0,0,0,.25); }
+.shop-pin.is-new::after {
+    content: '★'; position: absolute; top: -8px; right: -8px;
+    transform: rotate(45deg); font-size: .55rem; color: #facc15;
+    text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+
+/* User location pulsing dot */
+.user-pulse {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--rose); border: 3px solid #fff;
+    box-shadow: 0 0 0 0 rgba(239,68,68,.5);
+    animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); }
+    100% { box-shadow: 0 0 0 18px rgba(239,68,68,0); }
+}
+
+/* ===== POPUP ===== */
+.leaflet-popup-content-wrapper { border-radius: 14px !important; padding: 0 !important; box-shadow: 0 8px 30px rgba(0,0,0,.15) !important; overflow: visible !important; }
+.leaflet-popup-content { margin: 0 !important; width: 280px !important; overflow: hidden; border-radius: 14px; }
+.leaflet-popup-close-button { color: rgba(255,255,255,.7) !important; font-size: 18px !important; top: 6px !important; right: 8px !important; z-index: 10 !important; }
+.pp { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.pp-hd {
+    padding: .75rem 1rem; color: #fff;
+}
+.pp-hd.lv3 { background: linear-gradient(135deg, #059669, #047857); }
+.pp-hd.lv2 { background: linear-gradient(135deg, #0078D7, #005BA1); }
+.pp-hd.lv1 { background: linear-gradient(135deg, #64748b, #475569); }
+.pp-row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: .4rem; }
+.pp-nm { font-weight: 700; font-size: .95rem; line-height: 1.25; }
+.pp-lv {
+    flex-shrink: 0; font-size: .58rem; font-weight: 700; padding: .18rem .5rem;
+    border-radius: 4px; text-transform: uppercase; background: rgba(255,255,255,.25);
+}
+.pp-cd { font-size: .74rem; opacity: .85; margin-top: .12rem; }
+.pp-bd { padding: .65rem 1rem; font-size: .82rem; color: #374151; }
+.pp-info { display: flex; align-items: center; gap: .45rem; padding: .18rem 0; }
+.pp-info i { width: 16px; text-align: center; color: var(--brand); font-size: .72rem; }
+.pp-info a { color: var(--brand); text-decoration: none; font-weight: 500; }
+.pp-div { height: 1px; background: #e5e7eb; margin: .45rem 0; }
+.pp-tags { display: flex; flex-wrap: wrap; gap: .35rem; padding: .15rem 0; }
+.pp-tag { font-size: .68rem; font-weight: 600; padding: .18rem .5rem; border-radius: 5px; }
+.pp-tag.bills { background: #fef3c7; color: #92400e; }
+.pp-tag.pay { background: #dbeafe; color: #1e40af; }
+.pp-tag.out { background: #fee2e2; color: #991b1b; }
+.pp-tag.new-tag { background: #d1fae5; color: #065f46; }
+.pp-visit { font-size: .74rem; color: #6b7280; padding: .18rem 0; }
+.pp-visit i { font-size: .62rem; margin-right: .2rem; }
+.pp-ft { padding: .6rem 1rem .85rem; display: flex; gap: .5rem; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+.pp-btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center;
+    padding: .5rem .75rem; min-height: 36px;
+    background: linear-gradient(135deg, #0078D7, #005BA1); color: #fff !important;
+    font-size: .82rem; font-weight: 600; border-radius: 8px;
+    text-decoration: none !important; text-align: center;
+    gap: .35rem; letter-spacing: .01em;
+}
+.pp-btn:hover { opacity: .88; color: #fff !important; }
+.pp-btn.sec { flex: 0 0 40px; width: 40px; height: 36px; padding: 0; background: #e2e8f0; color: #475569 !important; font-size: .9rem; }
+.pp-btn.sec:hover { background: #cbd5e1; color: #334155 !important; }
+.pp-btn.dis { background: #e5e7eb; color: #9ca3af !important; pointer-events: none; }
+
+/* ===== NO RESULTS ===== */
+.no-results {
+    display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 800; background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border-radius: 14px; padding: 1.2rem 1.8rem; box-shadow: var(--sh2);
+    text-align: center;
+}
+.no-results .nr-icon { font-size: 2rem; color: var(--s300); margin-bottom: .5rem; }
+.no-results .nr-text { font-size: .82rem; color: var(--s600); font-weight: 600; }
+.no-results .nr-sub { font-size: .68rem; color: var(--s400); margin-top: .15rem; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .map-page { height: calc(100vh - 52px); }
+    .top-bar { top: 8px; left: 8px; right: 8px; gap: .35rem; }
+    .tb-back { width: 34px; height: 34px; font-size: .78rem; }
+    .tb-search input { padding: .48rem .65rem .48rem 2rem; font-size: .74rem; border-radius: 8px; }
+    .stats-bar { bottom: 14px; left: 8px; right: 8px; gap: .3rem; }
+    .sb-card { padding: .4rem .55rem; border-radius: 8px; }
+    .sb-v { font-size: .72rem; }
+    .sb-l { font-size: .48rem; }
+    .map-ctrls { top: 54px; right: 8px; }
+    .mc-btn { width: 34px; height: 34px; }
+    .map-legend { bottom: 72px; left: 8px; font-size: .58rem; }
+    .leaflet-popup-content { width: 260px !important; }
+}
+
+@media (max-width: 400px) {
+    .sb-card { padding: .35rem .45rem; }
+    .sb-v { font-size: .65rem; }
+    .sb-l { font-size: .44rem; }
+    .mc-btn { width: 32px; height: 32px; font-size: .7rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-page">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="top-bar">
+        <a href="{% url 'shops:list' %}" class="tb-back" title="Back to list">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div class="tb-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="mapSearch" placeholder="Search shops by name, code, city..." autocomplete="off" />
+            <button class="clear-btn" id="searchClear" onclick="document.getElementById('mapSearch').value='';this.classList.remove('show');searchTerm='';loadMarkers();"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <!-- ===== MAP CONTROLS (right) ===== -->
+    <div class="map-ctrls">
+        <button class="mc-btn" id="btnFitAll" title="Show all shops"><i class="fas fa-expand-arrows-alt"></i></button>
+        <button class="mc-btn" id="btnMyLoc" title="My location"><i class="fas fa-crosshairs"></i></button>
+        <button class="mc-btn" id="btnLayers" title="Toggle satellite"><i class="fas fa-layer-group"></i></button>
+    </div>
+
+    <!-- ===== LEGEND ===== -->
+    <div class="map-legend" id="mapLegend">
+        <div class="lg-toggle" onclick="document.getElementById('mapLegend').classList.toggle('collapsed')">
+            <span><i class="fas fa-layer-group me-1"></i>Legend</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="lg-body">
+            <div class="lg-item"><span class="lg-dot lv3"></span> Full Access</div>
+            <div class="lg-item"><span class="lg-dot lv2"></span> Standard</div>
+            <div class="lg-item"><span class="lg-dot lv1"></span> View Only</div>
+            <div class="lg-item"><span class="lg-dot user"></span> Your Location</div>
+            <div class="lg-item"><span class="lg-ring"></span> Has Pending</div>
+        </div>
+    </div>
+
+    <!-- ===== STATS BAR (bottom) ===== -->
+    <div class="stats-bar">
+        <div class="sb-card active" data-filter="all">
+            <i class="sb-ico fas fa-store" style="color:var(--brand)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">{{ total_shops }}</span>
+                <span class="sb-l">On Map</span>
+            </div>
+        </div>
+        {% if total_pending > 0 %}
+        <div class="sb-card" data-filter="pending">
+            <i class="sb-ico fas fa-clock" style="color:var(--amber)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">{{ total_pending }}</span>
+                <span class="sb-l">Pending</span>
+            </div>
+        </div>
+        {% endif %}
+        {% if total_outstanding > 0 %}
+        <div class="sb-card" data-filter="outstanding">
+            <i class="sb-ico fas fa-exclamation-circle" style="color:var(--rose)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">Rs. {{ total_outstanding|floatformat:0|intcomma }}</span>
+                <span class="sb-l">Outstanding</span>
+            </div>
+        </div>
+        {% endif %}
+        <div class="sb-card" data-filter="visited">
+            <i class="sb-ico fas fa-check-circle" style="color:var(--emerald)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">{{ visited_today_count }}</span>
+                <span class="sb-l">Visited Today</span>
+            </div>
+        </div>
+        {% if never_visited_count > 0 %}
+        <div class="sb-card" data-filter="never">
+            <i class="sb-ico fas fa-map-marker-alt" style="color:var(--s400)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">{{ never_visited_count }}</span>
+                <span class="sb-l">Never Visited</span>
+            </div>
+        </div>
+        {% endif %}
+        {% if no_location_count > 0 %}
+        <div class="sb-card" onclick="alert('{{ no_location_count }} shop{{ no_location_count|pluralize }} have no GPS coordinates.\nEdit each shop to add location.')">
+            <i class="sb-ico fas fa-map-pin" style="color:var(--s300)"></i>
+            <div class="sb-txt">
+                <span class="sb-v">{{ no_location_count }}</span>
+                <span class="sb-l">No Location</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ===== NO RESULTS ===== -->
+    <div class="no-results" id="noResults">
+        <div class="nr-icon"><i class="fas fa-search-location"></i></div>
+        <div class="nr-text">No shops found</div>
+        <div class="nr-sub">Try a different search or filter</div>
+    </div>
+
+    <!-- ===== THE MAP ===== -->
+    <div id="shopMap"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{{ shops_json|json_script:"shops-data" }}
+<script>
+(function() {
+    'use strict';
+
+    // ===== DATA =====
+    const SHOPS = JSON.parse(document.getElementById('shops-data').textContent);
+    let activeFilter = 'all';
+    let searchTerm = '';
+    let userMarker = null;
+    let isSatellite = false;
+
+    // ===== MAP INIT =====
+    const map = L.map('shopMap', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([7.8731, 80.7718], 8);
+
+    // Tile layers
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    });
+
+    // Attribution (small)
+    L.control.attribution({ position: 'bottomright', prefix: false })
+        .addAttribution('© <a href="https://openstreetmap.org" target="_blank">OSM</a>')
+        .addTo(map);
+
+    // Zoom control bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // ===== MARKERS =====
+    const markersLayer = L.layerGroup().addTo(map);
+    const allMarkers = [];
+
+    function createMarkerIcon(shop) {
+        const lvClass = 'lv' + shop.level;
+        const pendClass = shop.pending > 0 ? ' has-pending' : '';
+        const newClass = shop.is_new ? ' is-new' : '';
+        return L.divIcon({
+            html: '<div class="shop-pin ' + lvClass + pendClass + newClass + '"><i class="fas fa-store"></i></div>',
+            className: 'custom-marker-wrap',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -28]
+        });
+    }
+
+    function buildPopup(s) {
+        const lvLabel = s.level === 3 ? 'FULL' : s.level === 2 ? 'STD' : 'VIEW';
+        const lvHdClass = 'lv' + s.level;
+
+        let tags = '';
+        if (s.is_new) tags += '<span class="pp-tag new-tag">★ NEW</span>';
+        if (s.pending_bills > 0) tags += '<span class="pp-tag bills">' + s.pending_bills + ' Bill' + (s.pending_bills > 1 ? 's' : '') + '</span>';
+        if (s.pending_payments > 0) tags += '<span class="pp-tag pay">' + s.pending_payments + ' Pay</span>';
+        if (s.outstanding > 0) tags += '<span class="pp-tag out">Rs ' + s.outstanding.toLocaleString() + '</span>';
+
+        let visit = '';
+        if (s.days_since_visit === 0) visit = '<i class="fas fa-check-circle" style="color:var(--emerald)"></i> Visited today';
+        else if (s.days_since_visit === 1) visit = '<i class="fas fa-walking"></i> Yesterday';
+        else if (s.days_since_visit !== null && s.days_since_visit <= 7) visit = '<i class="fas fa-walking"></i> ' + s.days_since_visit + ' days ago';
+        else if (s.days_since_visit !== null) visit = '<i class="fas fa-clock" style="color:var(--amber)"></i> ' + s.days_since_visit + ' days ago';
+        else visit = '<i class="fas fa-times-circle" style="color:var(--s400)"></i> Never visited';
+
+        const canView = s.level >= 2;
+        const btnClass = canView ? '' : ' dis';
+        const btnText = canView ? '<i class="fas fa-eye me-1"></i>View' : '<i class="fas fa-lock me-1"></i>View Only';
+
+        let phoneBtn = '';
+        if (s.phone) {
+            phoneBtn = '<a href="tel:' + s.phone + '" class="pp-btn sec"><i class="fas fa-phone"></i></a>';
+        }
+
+        return '<div class="pp">' +
+            '<div class="pp-hd ' + lvHdClass + '">' +
+                '<div class="pp-row1">' +
+                    '<div><div class="pp-nm">' + s.name + '</div><div class="pp-cd">' + s.code + ' · ' + s.type + '</div></div>' +
+                    '<span class="pp-lv">' + lvLabel + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="pp-bd">' +
+                '<div class="pp-info"><i class="fas fa-user"></i> ' + s.owner + '</div>' +
+                (s.phone ? '<div class="pp-info"><i class="fas fa-phone"></i> <a href="tel:' + s.phone + '">' + s.phone + '</a></div>' : '') +
+                '<div class="pp-info"><i class="fas fa-map-marker-alt"></i> ' + s.address + '</div>' +
+                (tags ? '<div class="pp-div"></div><div class="pp-tags">' + tags + '</div>' : '') +
+                '<div class="pp-div"></div>' +
+                '<div class="pp-visit">' + visit + '</div>' +
+            '</div>' +
+            '<div class="pp-ft">' +
+                '<a href="/shops/' + s.id + '/" class="pp-btn' + btnClass + '">' + btnText + '</a>' +
+                phoneBtn +
+            '</div>' +
+        '</div>';
+    }
+
+    // Make these accessible for the search clear button
+    window.loadMarkers = loadMarkers;
+    window.searchTerm = searchTerm;
+
+    function loadMarkers() {
+        markersLayer.clearLayers();
+        allMarkers.length = 0;
+        let visible = 0;
+
+        const q = (typeof window.searchTerm === 'string' ? window.searchTerm : searchTerm).toLowerCase();
+
+        SHOPS.forEach(function(s) {
+            // Filter
+            if (activeFilter === 'pending' && s.pending <= 0) return;
+            if (activeFilter === 'outstanding' && s.outstanding <= 0) return;
+            if (activeFilter === 'visited' && s.days_since_visit !== 0) return;
+            if (activeFilter === 'never' && s.days_since_visit !== null) return;
+
+            // Search
+            if (q) {
+                const haystack = (s.name + ' ' + s.code + ' ' + s.owner + ' ' + s.city + ' ' + s.type + ' ' + s.phone + ' ' + s.type_key).toLowerCase();
+                if (!haystack.includes(q)) return;
+            }
+
+            const marker = L.marker([s.lat, s.lng], { icon: createMarkerIcon(s) })
+                .bindPopup(buildPopup(s), { maxWidth: 280, closeButton: true });
+            marker._shopData = s;
+            markersLayer.addLayer(marker);
+            allMarkers.push(marker);
+            visible++;
+        });
+
+        // No results overlay
+        document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    function fitAll() {
+        if (allMarkers.length > 0) {
+            const group = L.featureGroup(allMarkers);
+            map.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 15 });
+        }
+    }
+
+    // Initial load
+    loadMarkers();
+    if (allMarkers.length > 0) fitAll();
+
+    // ===== SEARCH =====
+    var searchTimeout;
+    var searchInput = document.getElementById('mapSearch');
+    var searchClearBtn = document.getElementById('searchClear');
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        var val = this.value.trim();
+        searchClearBtn.classList.toggle('show', val.length > 0);
+        searchTimeout = setTimeout(function() {
+            searchTerm = val;
+            window.searchTerm = val;
+            loadMarkers();
+            if (allMarkers.length > 0 && val) fitAll();
+        }, 250);
+    });
+
+    // ===== FILTER (stats bar cards) =====
+    document.querySelectorAll('.sb-card[data-filter]').forEach(function(card) {
+        card.addEventListener('click', function() {
+            var filter = this.dataset.filter;
+            if (!filter) return;
+            document.querySelectorAll('.sb-card[data-filter]').forEach(function(c) { c.classList.remove('active'); });
+            this.classList.add('active');
+            activeFilter = filter;
+            loadMarkers();
+            if (allMarkers.length > 0) fitAll();
+        });
+    });
+
+    // ===== FIT ALL =====
+    document.getElementById('btnFitAll').addEventListener('click', fitAll);
+
+    // ===== MY LOCATION =====
+    document.getElementById('btnMyLoc').addEventListener('click', function() {
+        var btn = this;
+        btn.classList.add('on');
+        if (!navigator.geolocation) {
+            alert('GPS not available');
+            btn.classList.remove('on');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            var lat = pos.coords.latitude, lng = pos.coords.longitude;
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '<div class="user-pulse"></div>',
+                    className: 'custom-marker-wrap',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                }),
+                zIndexOffset: 1000
+            }).addTo(map).bindPopup('<strong style="font-size:.8rem">📍 You are here</strong>');
+            map.setView([lat, lng], 14);
+            setTimeout(function() { btn.classList.remove('on'); }, 500);
+        }, function(err) {
+            alert('Could not get location: ' + err.message);
+            btn.classList.remove('on');
+        }, { enableHighAccuracy: true, timeout: 12000 });
+    });
+
+    // ===== SATELLITE TOGGLE =====
+    document.getElementById('btnLayers').addEventListener('click', function() {
+        if (isSatellite) {
+            map.removeLayer(satelliteLayer);
+            streetLayer.addTo(map);
+        } else {
+            map.removeLayer(streetLayer);
+            satelliteLayer.addTo(map);
+        }
+        isSatellite = !isSatellite;
+        this.classList.toggle('on', isSatellite);
+    });
+
+    // ===== AUTO-LOCATE ON LOAD (silent) =====
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            var lat = pos.coords.latitude, lng = pos.coords.longitude;
+            userMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '<div class="user-pulse"></div>',
+                    className: 'custom-marker-wrap',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                }),
+                zIndexOffset: 1000
+            }).addTo(map).bindPopup('<strong style="font-size:.8rem">📍 You are here</strong>');
+        }, function() {}, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
+    }
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}EOD Report - {{ date }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .eod-detail-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 15px;
+    }
+    
+    .eod-report-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .report-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .header-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 0.95em;
+    }
+    
+    .header-label {
+        font-weight: 600;
+        opacity: 0.9;
+    }
+    
+    .product-section {
+        margin-bottom: 20px;
+    }
+    
+    .size-header {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 10px;
+    }
+    
+    .product-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .product-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .product-item:last-child {
+        border-bottom: none;
+    }
+    
+    .product-name {
+        font-size: 0.95em;
+        color: #495057;
+        flex: 1;
+    }
+    
+    .product-qty {
+        font-weight: 600;
+        color: #0d6efd;
+        font-size: 1em;
+        min-width: 60px;
+        text-align: right;
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 15px;
+    }
+    
+    .summary-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+    
+    .summary-label {
+        font-size: 0.8em;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+    
+    .summary-value {
+        font-size: 1.3em;
+        font-weight: 700;
+        color: #212529;
+    }
+    
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    @media (max-width: 767px) {
+        .eod-detail-container {
+            padding: 10px;
+        }
+        
+        .eod-report-card {
+            padding: 15px;
+        }
+        
+        .report-header {
+            padding: 15px;
+        }
+        
+        .header-row {
+            font-size: 0.85em;
+        }
+        
+        .product-item {
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        
+        .product-name {
+            font-size: 0.85em;
+        }
+        
+        .product-qty {
+            font-size: 0.95em;
+        }
+        
+        .summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .summary-value {
+            font-size: 1.1em;
+        }
+        
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        body {
+            background: white;
+        }
+        
+        .eod-detail-container {
+            max-width: 100%;
+            padding: 0;
+        }
+        
+        .eod-report-card {
+            box-shadow: none;
+            break-inside: avoid;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eod-detail-container">
+    <!-- Action Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <a href="{% url 'sales:eod_date_list' %}" class="btn btn-sm btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-share-alt me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{% url 'sales:eod_export_pdf' date=date|date:'Y-m-d' %}">
+                        <i class="fas fa-file-pdf me-2"></i>Export PDF
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'sales:eod_export_text' date=date|date:'Y-m-d' %}">
+                        <i class="fas fa-file-alt me-2"></i>Export Text
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" id="copyTextBtn">
+                        <i class="fas fa-copy me-2"></i>Copy Text
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#routeModal">
+                        <i class="fas fa-edit me-2"></i>Change Route
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Report Header -->
+    <div class="report-header">
+        <div class="header-row">
+            <span class="header-label">DATE:</span>
+            <span>{{ date|date:"Y/m/d" }}</span>
+        </div>
+        <div class="header-row">
+            <span class="header-label">AREA:</span>
+            <span>{{ area }}</span>
+        </div>
+        <div class="header-row">
+            <span class="header-label">ROUTE:</span>
+            <span>{{ route }}</span>
+        </div>
+        <div class="header-row">
+            <span class="header-label">Sales Rep:</span>
+            <span>{{ user_name }}</span>
+        </div>
+    </div>
+    
+    <!-- Product Breakdown -->
+    <div class="eod-report-card">
+        <h5 class="text-primary mb-3">
+            <i class="fas fa-box-open me-2"></i>Product Breakdown
+        </h5>
+        
+        {% if product_breakdown %}
+            {% for size, products in product_breakdown.items %}
+            <div class="product-section">
+                <div class="size-header">
+                    {{ size }}
+                </div>
+                <ul class="product-list">
+                    {% for product in products %}
+                    <li class="product-item">
+                        <span class="product-name">{{ product.name }}</span>
+                        <span class="product-qty">{{ product.quantity|floatformat:0 }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-inbox fa-2x mb-2"></i>
+            <p>No products sold on this date</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Summary -->
+    <div class="eod-report-card">
+        <h5 class="text-primary mb-3">
+            <i class="fas fa-chart-line me-2"></i>Summary
+        </h5>
+        
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-label">TOTAL SALE</div>
+                <div class="summary-value text-success">{{ total_sale|floatformat:2|intcomma }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">TOTAL PACK</div>
+                <div class="summary-value text-primary">{{ total_pack|floatformat:2|intcomma }}</div>
+                <small class="text-muted d-block mt-1">@ Rs. {{ case_value|intcomma }}</small>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">P/C (Bills)</div>
+                <div class="summary-value text-info">{{ bill_count }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">N/O (New Outlets)</div>
+                <div class="summary-value text-warning">{{ new_outlets|stringformat:"02d" }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">FOC GIVEN</div>
+                <div class="summary-value text-info">{{ total_foc_given|floatformat:2|intcomma }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">CREDIT</div>
+                <div class="summary-value text-primary">{{ total_credit|floatformat:2|intcomma }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">CHEQUE</div>
+                <div class="summary-value text-success">{{ total_cheque|floatformat:2|intcomma }}</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="summary-label">RETURNS</div>
+                <div class="summary-value text-danger">{{ total_return_value|floatformat:2|intcomma }}</div>
+                <small class="text-muted d-block mt-1">{{ return_count }} return{{ return_count|pluralize }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Route Modal -->
+<div class="modal fade" id="routeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Route</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'sales:eod_update_route' date=date|date:'Y-m-d' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <label class="form-label">Route</label>
+                    <input type="text" name="route" class="form-control" value="{{ route }}" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Route</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Copy Text Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="copyToast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body"><i class="fas fa-check me-1"></i>Copied to clipboard!</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('copyTextBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+
+    var lines = [];
+    lines.push('DATE: {{ date|date:"Y/m/d" }}');
+    lines.push('AREA: {{ area }}');
+    lines.push('ROUTE: {{ route }}');
+    lines.push('Sales Rep: {{ user_name }}');
+    lines.push('');
+
+    {% if product_breakdown %}
+    {% for size, products in product_breakdown.items %}
+    lines.push('{{ size }}');
+    {% for product in products %}
+    lines.push('{{ product.name }}: {{ product.quantity|floatformat:0 }}');
+    {% endfor %}
+    lines.push('');
+    {% endfor %}
+    {% endif %}
+
+    lines.push('');
+    lines.push('TOTAL SALE: Rs. {{ total_sale|floatformat:2|intcomma }}');
+    lines.push('TOTAL PACK: {{ total_pack|floatformat:2|intcomma }}');
+    lines.push('P/C: {{ bill_count }}');
+    lines.push('N/O: {{ new_outlets|stringformat:"02d" }}');
+    lines.push('FOC GIVEN: Rs. {{ total_foc_given|floatformat:2|intcomma }}');
+    lines.push('CREDIT: Rs. {{ total_credit|floatformat:2|intcomma }}');
+    lines.push('CHEQUE: Rs. {{ total_cheque|floatformat:2|intcomma }}');
+    lines.push('RETURNS: Rs. {{ total_return_value|floatformat:2|intcomma }}');
+    lines.push('({{ return_count }} return{{ return_count|pluralize }})');
+
+    var text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(function() {
+        var toast = new bootstrap.Toast(document.getElementById('copyToast'), {delay: 2000});
+        toast.show();
+    }).catch(function() {
+        // Fallback for older browsers
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        var toast = new bootstrap.Toast(document.getElementById('copyToast'), {delay: 2000});
+        toast.show();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Money Account{% if is_viewing_others %} - {{ viewing_user.get_full_name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-wallet me-2"></i>
+            Money Account{% if is_viewing_others %} - {{ viewing_user.get_full_name }}{% endif %}
+        </h2>
+        {% if user.is_office_staff %}
+        <a href="{% url 'accounts:all_money_accounts' %}" class="btn btn-secondary">
+            <i class="fas fa-list me-1"></i> All Accounts
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- User Selector for Admin/Office -->
+    {% if user.is_office_staff %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Select User</label>
+                    <select name="user_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- My Account --</option>
+                        {% for usr in all_users %}
+                        <option value="{{ usr.id }}" {% if viewing_user.id == usr.id %}selected{% endif %}>
+                            {{ usr.get_full_name }} ({{ usr.get_user_type_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Account Balance Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card {% if account.current_balance >= 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <h6 class="text-muted">Balance Due</h6>
+                    <h3 class="mb-0 {% if account.current_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        Rs. {{ account.current_balance|floatformat:2|intcomma }}
+                    </h3>
+                    <small class="text-muted">
+                        {% if account.current_balance > 0 %}
+                        Payable to {{ viewing_user.get_full_name }}
+                        {% elif account.current_balance < 0 %}
+                        Prepayment overdrawn
+                        {% else %}
+                        Fully settled
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Earned</h6>
+                    <h3 class="mb-0 text-info">
+                        Rs. {{ account.total_credited|floatformat:2|intcomma }}
+                    </h3>
+                    <small class="text-muted">Commissions earned</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Paid</h6>
+                    <h3 class="mb-0 text-primary">
+                        Rs. {{ account.total_debited|floatformat:2|intcomma }}
+                    </h3>
+                    <small class="text-muted">Payments disbursed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Advances Drawn</h6>
+                    <h3 class="text-warning mb-0">
+                        Rs. {{ account.outstanding_advance|floatformat:2|intcomma }}
+                    </h3>
+                    <small class="text-muted">Prepayments received</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- This Month Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>This Month</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6 class="text-success">Earned</h6>
+                            <h4>Rs. {{ month_credits|floatformat:2|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-danger">Paid</h6>
+                            <h4>Rs. {{ month_debits|floatformat:2|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-warning">Advances</h6>
+                            <h4>Rs. {{ month_advances|floatformat:2|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-primary">Net</h6>
+                            <h4 class="{% if month_net >= 0 %}text-success{% else %}text-danger{% endif %}">Rs. {{ month_net|floatformat:2|intcomma }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    {% if user.is_office_staff %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'accounts:add_credit' %}" class="btn btn-success">
+                            <i class="fas fa-plus-circle me-1"></i> Credit Commission
+                        </a>
+                        <a href="{% url 'accounts:add_debit' %}{% if is_viewing_others %}?user_id={{ viewing_user.id }}{% endif %}" class="btn btn-danger">
+                            <i class="fas fa-minus-circle me-1"></i> Deduct Amount
+                        </a>
+                        <a href="{% url 'accounts:make_payment' %}{% if is_viewing_others %}?user_id={{ viewing_user.id }}{% endif %}" class="btn btn-primary">
+                            <i class="fas fa-money-bill-wave me-1"></i> Disburse Payment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Request Advance Button -->
+    {% if not user.is_office_staff %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Draw Advance</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Need early payment against future earnings? Submit an advance request.</p>
+                    <a href="{% url 'accounts:request_advance' %}" class="btn btn-warning">
+                        <i class="fas fa-paper-plane me-1"></i> Request Advance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pending Advance Requests -->
+    {% if pending_advances %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Pending Advance Requests</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Request No.</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in pending_advances %}
+                                <tr>
+                                    <td><strong>{{ req.request_number }}</strong></td>
+                                    <td>{{ req.request_date|date:"M d, Y" }}</td>
+                                    <td>Rs. {{ req.requested_amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ req.reason|truncatewords:15 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Approved But Not Paid Advances -->
+    {% if approved_advances %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Approved - Awaiting Disbursement</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Request No.</th>
+                                    <th>Approved Date</th>
+                                    <th>Approved Amount</th>
+                                    <th>Approved By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in approved_advances %}
+                                <tr>
+                                    <td><strong>{{ req.request_number }}</strong></td>
+                                    <td>{{ req.approved_at|date:"M d, Y" }}</td>
+                                    <td>Rs. {{ req.approved_amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ req.approved_by.get_full_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Transactions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Transactions</h5>
+                    <a href="{% url 'accounts:transaction_history' %}{% if is_viewing_others %}?user_id={{ viewing_user.id }}{% endif %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Transaction No.</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for txn in recent_transactions %}
+                                <tr>
+                                    <td><strong>{{ txn.transaction_number }}</strong></td>
+                                    <td>{{ txn.transaction_date|date:"M d, Y g:i A" }}</td>
+                                    <td>
+                                        {% if txn.transaction_type in 'credit,commission_payment,bonus,adjustment_credit' %}
+                                        <span class="badge bg-success">{{ txn.get_transaction_type_display }}</span>
+                                        {% elif txn.transaction_type == 'advance_given' %}
+                                        <span class="badge bg-warning">{{ txn.get_transaction_type_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ txn.get_transaction_type_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ txn.description|truncatewords:10 }}</td>
+                                    <td class="text-end">
+                                        {% if txn.transaction_type in 'credit,commission_payment,bonus,adjustment_credit' %}
+                                        <span class="text-success">+Rs. {{ txn.amount|floatformat:2|intcomma }}</span>
+                                        {% else %}
+                                        <span class="text-danger">-Rs. {{ txn.amount|floatformat:2|intcomma }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if txn.advance_request %}
+                                        <small class="text-muted">{{ txn.advance_request.request_number }}</small>
+                                        {% elif txn.transaction_type == 'commission_payment' and txn.reference_number %}
+                                        <a href="{% url 'sales:payout_by_number' txn.reference_number %}" class="text-decoration-none">
+                                            <small><i class="fas fa-receipt me-1"></i>{{ txn.reference_number }}</small>
+                                        </a>
+                                        {% elif txn.commission_reference %}
+                                        <small class="text-muted">{{ txn.commission_reference }}</small>
+                                        {% elif txn.reference_number %}
+                                        <small class="text-muted">{{ txn.reference_number }}</small>
+                                        {% else %}
+                                        <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No transactions yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

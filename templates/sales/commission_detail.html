@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Commission Detail - {{ month_display }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .summary-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem;
+    }
+    
+    .metric-box {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: #f9fafb;
+        border-left: 4px solid;
+    }
+    
+    .metric-box.collected {
+        border-left-color: #10b981;
+    }
+    
+    .metric-box.returns {
+        border-left-color: #ef4444;
+    }
+    
+    .metric-box.commission {
+        border-left-color: #667eea;
+    }
+    
+    .metric-box.rate {
+        border-left-color: #f59e0b;
+    }
+    
+    .metric-box h6 {
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-box h3 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .data-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .data-table th {
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+    
+    .data-table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+    
+    .breakdown-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .breakdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .method-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    
+    .method-icon.cash {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .method-icon.cheque {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .method-icon.bank {
+        background: #e0e7ff;
+        color: #4338ca;
+    }
+    
+    .method-icon.credit {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-file-invoice-dollar"></i> Commission Details
+                {% if is_manager and viewing_user.id != user.id %}
+                <small class="text-muted">- {{ viewing_user.get_full_name }}</small>
+                {% endif %}
+            </h2>
+            <h4 class="text-muted">{{ month_display }}</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:sales_rep' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'sales:commission_dashboard' %}{% if is_manager and selected_user_id %}?user_id={{ selected_user_id }}{% endif %}">Commissions</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ month_display }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'sales:commission_detail' month %}?recalculate=true{% if is_manager and selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="btn btn-warning" onclick="return confirm('Recalculate commission for this month?')">
+                <i class="fas fa-sync"></i> Recalculate
+            </a>
+            <a href="{% url 'sales:commission_dashboard' %}{% if is_manager and selected_user_id %}?user_id={{ selected_user_id }}{% endif %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-box collected">
+                <h6>Total Collected</h6>
+                <h3 class="text-success">Rs. {{ commission_record.collected_amount|floatformat:2|intcomma }}</h3>
+                <small class="text-muted">{{ payments.count }} payment(s)</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box returns">
+                <h6>Total Returns</h6>
+                <h3 class="text-danger">Rs. {{ commission_record.returns_amount|floatformat:2|intcomma }}</h3>
+                <small class="text-muted">{{ returns.count }} return(s)</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box rate">
+                <h6>Commission Rate</h6>
+                <h3 class="text-warning">{{ commission_record.commission_rate }}%</h3>
+                <small class="text-muted">On net collected</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-box commission">
+                <h6>Commission Amount</h6>
+                <h3 style="color: #667eea;">Rs. {{ commission_record.commission_amount|floatformat:2|intcomma }}</h3>
+                <small class="badge {% if commission_record.settlement_status == 'settled' %}bg-success{% else %}bg-danger{% endif %}">
+                    {{ commission_record.get_settlement_status_display }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Breakdown by Method -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card summary-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Payment Method Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    {% for item in payment_breakdown %}
+                    <div class="breakdown-item">
+                        <div class="d-flex align-items-center">
+                            <div class="method-icon {{ item.payment_method }}">
+                                <i class="fas fa-{% if item.payment_method == 'cash' %}money-bill{% elif item.payment_method == 'cheque' %}money-check{% elif item.payment_method == 'bank_transfer' %}university{% else %}credit-card{% endif %}"></i>
+                            </div>
+                            <div>
+                                <strong>{{ item.payment_method|title }}</strong>
+                                <small class="text-muted d-block">{{ item.count }} payment(s)</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <h5 class="mb-0">Rs. {{ item.total|floatformat:2|intcomma }}</h5>
+                            <small class="text-muted">
+                                {% widthratio item.total commission_record.collected_amount 100 %}% of total
+                            </small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-center text-muted py-3">No payments in this month</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for different sections -->
+    <ul class="nav nav-tabs mb-3" id="commissionTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">
+                <i class="fas fa-money-bill-wave"></i> Payments ({{ payments.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="returns-tab" data-bs-toggle="tab" data-bs-target="#returns" type="button" role="tab">
+                <i class="fas fa-undo"></i> Returns ({{ returns.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="writeoffs-tab" data-bs-toggle="tab" data-bs-target="#writeoffs" type="button" role="tab">
+                <i class="fas fa-file-invoice-dollar"></i> Write-Offs ({{ write_offs.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="bills-tab" data-bs-toggle="tab" data-bs-target="#bills" type="button" role="tab">
+                <i class="fas fa-receipt"></i> Bills ({{ bills.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="commissionTabsContent">
+        <!-- Payments Tab -->
+        <div class="tab-pane fade show active" id="payments" role="tabpanel">
+            <div class="data-table">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>BILL NO</th>
+                            <th>SHOP</th>
+                            <th>METHOD</th>
+                            <th class="text-end">AMOUNT</th>
+                            <th class="text-center">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.payment_date|date:"d M Y, h:i A" }}</td>
+                            <td><strong>{{ payment.bill.bill_number }}</strong></td>
+                            <td>{{ payment.bill.shop.shop_name }}</td>
+                            <td>
+                                <span class="badge bg-{{ payment.payment_method }}">
+                                    {{ payment.get_payment_method_display }}
+                                </span>
+                            </td>
+                            <td class="text-end"><strong class="text-success">Rs. {{ payment.amount|floatformat:2|intcomma }}</strong></td>
+                            <td class="text-center">
+                                <a href="{% url 'sales:settlement_detail' payment.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                No payments in this month
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f9fafb;">
+                            <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong class="text-success">Rs. {{ total_payments_amount|floatformat:2|intcomma }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Returns Tab -->
+        <div class="tab-pane fade" id="returns" role="tabpanel">
+            <div class="data-table">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>RETURN NO</th>
+                            <th>BILL NO</th>
+                            <th>SHOP</th>
+                            <th class="text-end">AMOUNT</th>
+                            <th class="text-center">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for return in returns %}
+                        <tr>
+                            <td>{{ return.created_at|date:"d M Y, h:i A" }}</td>
+                            <td><strong>{{ return.return_number }}</strong></td>
+                            <td>{% if return.sale %}{{ return.sale.sale_number }}{% elif return.bill %}{{ return.bill.bill_number }}{% else %}-{% endif %}</td>
+                            <td>{{ return.shop.shop_name }}</td>
+                            <td class="text-end"><strong class="text-danger">Rs. {{ return.total_amount|floatformat:2|intcomma }}</strong></td>
+                            <td class="text-center">
+                                <a href="{% url 'sales:return_detail' return.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                No returns in this month
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f9fafb;">
+                            <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong class="text-danger">Rs. {{ total_returns_amount|floatformat:2|intcomma }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Write-Offs Tab -->
+        <div class="tab-pane fade" id="writeoffs" role="tabpanel">
+            <div class="data-table">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>WRITE-OFF NO</th>
+                            <th>BILL NO</th>
+                            <th>SHOP</th>
+                            <th>REASON</th>
+                            <th class="text-end">AMOUNT</th>
+                            <th class="text-center">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for write_off in write_offs %}
+                        <tr>
+                            <td>{{ write_off.executed_at|date:"d M Y" }}</td>
+                            <td>
+                                <strong class="text-danger">{{ write_off.write_off_number }}</strong>
+                            </td>
+                            <td>
+                                <a href="{% url 'sales:detail' write_off.bill.pk %}">{{ write_off.bill.bill_number }}</a>
+                            </td>
+                            <td>{{ write_off.shop.shop_name }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ write_off.get_reason_display }}</span>
+                            </td>
+                            <td class="text-end"><strong class="text-dark">Rs. {{ write_off.write_off_amount|floatformat:2|intcomma }}</strong></td>
+                            <td class="text-center">
+                                <a href="{% url 'sales:write_off_detail' write_off.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                                No bad debt write-offs in this month
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f9fafb;">
+                            <td colspan="5" class="text-end"><strong>TOTAL WRITTEN OFF:</strong></td>
+                            <td class="text-end"><strong class="text-dark">Rs. {{ total_write_offs_amount|floatformat:2|intcomma }}</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr style="background: #fff3cd;">
+                            <td colspan="7" class="text-center py-2">
+                                <i class="fas fa-info-circle text-warning me-2"></i>
+                                <strong>Note:</strong> Write-offs represent bad debts that were never collected. No commission is earned on these amounts.
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bills Tab -->
+        <div class="tab-pane fade" id="bills" role="tabpanel">
+            <div class="data-table">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>BILL NO</th>
+                            <th>SHOP</th>
+                            <th class="text-end">TOTAL</th>
+                            <th class="text-end">PAID</th>
+                            <th class="text-end">BALANCE</th>
+                            <th class="text-center">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bills %}
+                        <tr>
+                            <td>{{ bill.bill_date|date:"d M Y, h:i A" }}</td>
+                            <td><strong>{{ bill.bill_number }}</strong></td>
+                            <td>{{ bill.shop.shop_name }}</td>
+                            <td class="text-end"><strong>Rs. {{ bill.total_amount|floatformat:2|intcomma }}</strong></td>
+                            <td class="text-end"><strong class="text-success">Rs. {{ bill.paid_amount|floatformat:2|intcomma }}</strong></td>
+                            <td class="text-end">
+                                {% if bill.balance_amount > 0 %}
+                                <strong class="text-danger">Rs. {{ bill.balance_amount|floatformat:2|intcomma }}</strong>
+                                {% else %}
+                                <span class="badge bg-success">Paid</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                No bills in this month
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f9fafb;">
+                            <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong>Rs. {{ total_bills_amount|floatformat:2|intcomma }}</strong></td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Calculation Explanation -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-calculator"></i> Commission Calculation</h5>
+                <p class="mb-2"><strong>Formula:</strong> (Collected Amount - Returns Amount) × Commission Rate</p>
+                <p class="mb-0">
+                    <strong>Your Commission:</strong>
+                    (Rs. {{ commission_record.collected_amount|floatformat:2|intcomma }} - Rs. {{ commission_record.returns_amount|floatformat:2|intcomma }}) × {{ commission_record.commission_rate }}%
+                    = <strong class="text-primary">Rs. {{ commission_record.commission_amount|floatformat:2|intcomma }}</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Shop Map - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: calc(100vh - 200px);
+        min-height: 400px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .map-controls {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .shop-marker-popup {
+        min-width: 200px;
+    }
+    
+    .shop-marker-popup h6 {
+        margin-bottom: 0.5rem;
+        color: #2563eb;
+    }
+    
+    .shop-marker-popup .info-line {
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 768px) {
+        #map {
+            height: calc(100vh - 250px);
+            border-radius: 0;
+        }
+        
+        .map-controls {
+            padding: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold mb-0">Shop Map</h2>
+            <p class="text-muted mb-0 small">{{ shops.count }} shops with location</p>
+        </div>
+        <a href="{% url 'shops:list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-list me-2"></i>List View
+        </a>
+    </div>
+    
+    <div class="map-controls">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-sm btn-primary" id="centerMapBtn">
+                <i class="fas fa-crosshairs me-1"></i>My Location
+            </button>
+            <button class="btn btn-sm btn-outline-primary" id="fitAllBtn">
+                <i class="fas fa-expand me-1"></i>Show All
+            </button>
+            <span class="text-muted small ms-auto">
+                <i class="fas fa-map-marker-alt text-primary me-1"></i>
+                <span id="shopsCount">{{ shops.count }}</span> shops
+            </span>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let map;
+let markersLayer;
+let userMarker;
+
+// Initialize map
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map centered on Sri Lanka
+    map = L.map('map').setView([7.8731, 80.7718], 8);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Create layer group for markers
+    markersLayer = L.layerGroup().addTo(map);
+    
+    // Load shops
+    loadShops();
+    
+    // Center on user location button
+    document.getElementById('centerMapBtn').addEventListener('click', centerOnUserLocation);
+    
+    // Fit all shops button
+    document.getElementById('fitAllBtn').addEventListener('click', fitAllShops);
+});
+
+function loadShops() {
+    fetch('{% url "shops:shops_geojson" %}')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Shops data received:', data);
+            
+            if (!data || !data.features) {
+                throw new Error('Invalid data format received');
+            }
+            
+            markersLayer.clearLayers();
+            
+            if (data.features.length === 0) {
+                console.log('No shops with location data found');
+                return;
+            }
+            
+            data.features.forEach(feature => {
+                const coords = feature.geometry.coordinates;
+                const props = feature.properties;
+                
+                // Create custom icon
+                const shopIcon = L.divIcon({
+                    html: '<i class="fas fa-shop fa-2x text-primary"></i>',
+                    className: 'custom-marker',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+                
+                // Create marker
+                const marker = L.marker([coords[1], coords[0]], { icon: shopIcon })
+                    .bindPopup(`
+                        <div class="shop-marker-popup">
+                            <h6 class="fw-bold">${props.shop_name}</h6>
+                            <div class="info-line">
+                                <i class="fas fa-user me-1"></i>${props.owner_name}
+                            </div>
+                            <div class="info-line">
+                                <i class="fas fa-phone me-1"></i>
+                                <a href="tel:${props.phone_number}">${props.phone_number}</a>
+                            </div>
+                            <div class="info-line">
+                                <i class="fas fa-map-marker-alt me-1"></i>${props.address}, ${props.city}
+                            </div>
+                            <div class="mt-2">
+                                <a href="${props.url}" class="btn btn-sm btn-primary w-100">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
+                            </div>
+                        </div>
+                    `);
+                
+                markersLayer.addLayer(marker);
+            });
+            
+            // Fit map to show all markers
+            if (data.features.length > 0) {
+                fitAllShops();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading shops:', error);
+            console.error('Error details:', error.message);
+            alert('Error loading shop locations: ' + error.message);
+        });
+}
+
+function centerOnUserLocation() {
+    if (navigator.geolocation) {
+        const btn = document.getElementById('centerMapBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Finding...';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Remove previous user marker
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                }
+                
+                // Add user location marker
+                const userIcon = L.divIcon({
+                    html: '<i class="fas fa-circle fa-2x text-success"></i>',
+                    className: 'custom-marker',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                userMarker = L.marker([lat, lon], { icon: userIcon })
+                    .bindPopup('<strong>Your Location</strong>')
+                    .addTo(map);
+                
+                // Center map on user location
+                map.setView([lat, lon], 13);
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i>My Location';
+            },
+            function(error) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i>My Location';
+                alert('Error getting your location: ' + error.message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        alert('Geolocation is not supported by your browser');
+    }
+}
+
+function fitAllShops() {
+    const markers = markersLayer.getLayers();
+    if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+}
+</script>
+
+<style>
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 10px;
+}
+
+.leaflet-popup-content {
+    margin: 10px;
+}
+</style>
+{% endblock %}

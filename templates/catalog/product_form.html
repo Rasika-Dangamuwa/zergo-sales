@@ -1,0 +1,91 @@
+{% extends "tenants/base_platform.html" %}
+
+{% block title %}{{ action }} Product - Catalog{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="dist-table p-4">
+                <h3 class="mb-4">
+                    <i class="fas fa-{% if action == 'Create' %}plus{% else %}edit{% endif %} text-primary me-2"></i>
+                    {{ action }} Global Product
+                </h3>
+                
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Product Code *</label>
+                            {{ form.product_code }}
+                            {% if form.product_code.errors %}<div class="text-danger small mt-1">{{ form.product_code.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Product Name *</label>
+                            {{ form.product_name }}
+                            {% if form.product_name.errors %}<div class="text-danger small mt-1">{{ form.product_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            {{ form.description }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Company / Brand *</label>
+                            {{ form.company }}
+                            {% if form.company.errors %}<div class="text-danger small mt-1">{{ form.company.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            {{ form.category }}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Size *</label>
+                            {{ form.size }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Marked Price (MRP) *</label>
+                            {{ form.marked_price }}
+                            {% if form.marked_price.errors %}<div class="text-danger small mt-1">{{ form.marked_price.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Bottles Per Pack</label>
+                            {{ form.bottles_per_pack }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Barcode</label>
+                            {{ form.barcode }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            {{ form.display_order }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Product Image</label>
+                            {{ form.product_image }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                {{ form.is_active }}
+                                <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-2"></i>{{ action }} Product
+                        </button>
+                        <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

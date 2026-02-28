@@ -1,0 +1,1744 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ shop.shop_name }} — Shop Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981;
+    --amber: #f59e0b;
+    --rose: #ef4444;
+    --sky: #0ea5e9;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-700: #334155;
+    --slate-900: #0f172a;
+    --radius: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow: 0 4px 14px rgba(0,0,0,.08);
+    --shadow-lg: 0 10px 40px rgba(0,0,0,.12);
+}
+* { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; }
+@keyframes newPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.85;transform:scale(1.06)} }
+
+/* ===== HERO ===== */
+.shop-hero {
+    background: var(--brand-gradient);
+    border-radius: var(--radius);
+    padding: 2rem;
+    color: #fff;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.shop-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,.06);
+    border-radius: 50%;
+}
+.shop-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: 10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,.04);
+    border-radius: 50%;
+}
+.hero-inner {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+.hero-photo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255,255,255,.4);
+    flex-shrink: 0;
+}
+.hero-photo-placeholder {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,.25);
+}
+.hero-info h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0 0 .25rem;
+    line-height: 1.2;
+}
+.hero-code {
+    display: inline-block;
+    background: rgba(255,255,255,.18);
+    padding: .15rem .6rem;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    margin-bottom: .5rem;
+}
+.hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+    font-size: .88rem;
+    opacity: .92;
+}
+.hero-meta i {
+    width: 16px;
+    text-align: center;
+    margin-right: .25rem;
+}
+.hero-meta a {
+    color: #fff;
+    text-decoration: none;
+}
+.hero-actions {
+    position: relative;
+    z-index: 1;
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.hero-actions .btn {
+    font-size: .8rem;
+    padding: .4rem .85rem;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+.hero-actions [hidden] { display: none !important; }
+
+/* ===== KPI STRIP ===== */
+.kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.15rem 1.25rem;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--brand);
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+.kpi-card.emerald { border-color: var(--emerald); }
+.kpi-card.amber   { border-color: var(--amber); }
+.kpi-card.rose     { border-color: var(--rose); }
+.kpi-card.sky      { border-color: var(--sky); }
+.kpi-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--slate-500);
+    margin-bottom: .35rem;
+}
+.kpi-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--slate-900);
+    line-height: 1.2;
+}
+.kpi-sub {
+    font-size: .72rem;
+    color: var(--slate-400);
+    margin-top: .2rem;
+}
+.kpi-icon {
+    position: absolute;
+    top: .75rem;
+    right: .85rem;
+    font-size: 1.6rem;
+    opacity: .08;
+}
+
+/* ===== QUICK ACTIONS ===== */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.qa-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.6rem 1rem;
+    text-align: center;
+    text-decoration: none !important;
+    box-shadow: var(--shadow-sm);
+    transition: all .25s;
+    border: 2px solid transparent;
+    color: var(--slate-700);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.qa-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--brand);
+    color: var(--brand);
+}
+.qa-card i {
+    font-size: 2.2rem;
+    display: block;
+    margin-bottom: .6rem;
+}
+.qa-card.c-primary i  { color: var(--brand); }
+.qa-card.c-emerald i  { color: var(--emerald); }
+.qa-card.c-amber i    { color: var(--amber); }
+.qa-card.c-rose i     { color: var(--rose); }
+.qa-card.c-sky i      { color: var(--sky); }
+.qa-label {
+    font-size: .95rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+/* ===== TABS ===== */
+.tabs-nav {
+    background: #fff;
+    border-radius: 14px;
+    padding: .45rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    gap: .35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: .7rem .75rem;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: .82rem;
+    color: var(--slate-500);
+    cursor: pointer;
+    transition: all .25s;
+    white-space: nowrap;
+    position: relative;
+}
+.tab-btn:hover { background: var(--slate-50); color: var(--brand); }
+.tab-btn.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(0,120,215,.3);
+}
+.tab-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    padding: .1rem .45rem;
+    border-radius: 8px;
+    font-size: .7rem;
+    margin-left: .35rem;
+}
+.tab-btn:not(.active) .tab-badge {
+    background: var(--slate-200);
+    color: var(--slate-500);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== SECTION CARD ===== */
+.section-card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+}
+.section-header {
+    padding: 1rem 1.25rem;
+    font-weight: 700;
+    font-size: .95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--slate-100);
+}
+.section-header i {
+    color: var(--brand);
+    margin-right: .5rem;
+}
+.section-body { padding: 1.25rem; }
+.section-body.p0 { padding: 0; }
+
+/* ===== DATA TABLE ===== */
+.dt {
+    width: 100%;
+    border-collapse: collapse;
+}
+.dt thead {
+    background: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    color: #fff;
+}
+.dt th {
+    padding: .75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.dt tbody tr {
+    border-bottom: 1px solid var(--slate-100);
+    transition: background .15s;
+}
+.dt tbody tr:hover { background: var(--slate-50); }
+.dt td {
+    padding: .75rem 1rem;
+    font-size: .88rem;
+    color: var(--slate-700);
+}
+.dt td a {
+    color: var(--brand);
+    text-decoration: none;
+    font-weight: 600;
+}
+.dt td a:hover { text-decoration: underline; }
+.dt tfoot tr {
+    background: var(--slate-50);
+}
+.dt tfoot td {
+    padding: .75rem 1rem;
+    font-weight: 700;
+}
+
+/* ===== BADGES ===== */
+.badge-pill {
+    display: inline-block;
+    padding: .3rem .65rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+.bp-success { background: #d1fae5; color: #065f46; }
+.bp-warning { background: #fef3c7; color: #92400e; }
+.bp-danger  { background: #fee2e2; color: #991b1b; }
+.bp-info    { background: #dbeafe; color: #1e40af; }
+.bp-muted   { background: var(--slate-200); color: var(--slate-700); }
+
+/* ===== INFO GRID ===== */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: .85rem;
+}
+.info-tile {
+    padding: .85rem 1rem;
+    background: var(--slate-50);
+    border-radius: 10px;
+    border-left: 3px solid var(--brand);
+}
+.info-tile-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--slate-500);
+    margin-bottom: .15rem;
+}
+.info-tile-value {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--slate-900);
+}
+.info-tile-value a {
+    color: var(--brand);
+    text-decoration: none;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--slate-400);
+}
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: .75rem;
+    opacity: .25;
+}
+.empty-state p {
+    font-size: .95rem;
+    margin: 0;
+}
+
+/* ===== PHOTO GALLERY ===== */
+.photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: .85rem;
+}
+.photo-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+.photo-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+.photo-card-info {
+    padding: .6rem .75rem;
+    background: #fff;
+    font-size: .75rem;
+    color: var(--slate-500);
+}
+.photo-card-info strong {
+    color: var(--slate-700);
+}
+.photo-active-badge {
+    position: absolute;
+    top: .5rem;
+    left: .5rem;
+    background: var(--emerald);
+    color: #fff;
+    padding: .15rem .5rem;
+    border-radius: 6px;
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ===== MAP ===== */
+#shopMap {
+    height: 280px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ===== ALERT STRIP ===== */
+.alert-strip {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem;
+    border-radius: 10px;
+    font-size: .85rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+.alert-strip.warn {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.alert-strip.ok {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.alert-strip.success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.alert-strip.info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+/* ===== MOBILE-FIRST UTILITIES ===== */
+.mobile-label { display: none; }
+
+/* ===== RESPONSIVE: TABLET (≤768px) ===== */
+@media (max-width: 768px) {
+    .container-fluid { padding-left: .75rem; padding-right: .75rem; }
+    .shop-hero { padding: 1.25rem; margin-bottom: 1rem; border-radius: 12px; }
+    .hero-inner { flex-direction: column; text-align: center; gap: 1rem; }
+    .hero-actions { margin-left: 0; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: .4rem; }
+    .hero-actions .btn { padding: .5rem 1rem; font-size: .82rem; min-height: 44px; display: inline-flex; align-items: center; }
+    .hero-meta { justify-content: center; gap: .4rem .8rem; font-size: .82rem; }
+    .hero-photo, .hero-photo-placeholder { width: 70px; height: 70px; }
+    .hero-info h1 { font-size: 1.35rem; }
+
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); gap: .65rem; margin-bottom: 1rem; }
+    .kpi-card { padding: .9rem 1rem; border-radius: 12px; }
+    .kpi-value { font-size: 1.1rem; }
+    .kpi-label { font-size: .65rem; }
+    .kpi-sub { font-size: .68rem; }
+
+    .quick-actions { grid-template-columns: repeat(2, 1fr); gap: .5rem; margin-bottom: 1rem; }
+    .qa-card { padding: .85rem .5rem; border-radius: 10px; min-height: 44px; }
+    .qa-card i { font-size: 1.3rem; margin-bottom: .3rem; }
+    .qa-label { font-size: .75rem; }
+
+    .tabs-nav {
+        position: sticky; top: 0; z-index: 100;
+        border-radius: 12px; padding: .35rem; gap: .25rem;
+        margin-bottom: 1rem;
+        scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .tabs-nav::-webkit-scrollbar { display: none; }
+    .tab-btn { min-width: 90px; padding: .6rem .6rem; font-size: .78rem; }
+
+    .section-header { padding: .85rem 1rem; font-size: .88rem; }
+    .section-body { padding: 1rem; }
+
+    .info-grid { grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+
+    .photo-gallery { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .65rem; }
+    .photo-card img { height: 130px; }
+
+    #shopMap { height: 240px; }
+    .row.g-3 > .col-md-6 { margin-bottom: 0; }
+}
+
+/* ===== RESPONSIVE: MOBILE (≤576px) ===== */
+@media (max-width: 576px) {
+    .container-fluid { padding-left: .5rem; padding-right: .5rem; padding-top: .5rem !important; }
+    .shop-hero { padding: 1rem; margin-bottom: .85rem; border-radius: 10px; }
+    .shop-hero::before { width: 200px; height: 200px; }
+    .shop-hero::after { display: none; }
+    .hero-inner { gap: .75rem; }
+    .hero-photo, .hero-photo-placeholder { width: 60px; height: 60px; font-size: 1.6rem; }
+    .hero-info h1 { font-size: 1.2rem; }
+    .hero-code { font-size: .7rem; padding: .12rem .5rem; margin-bottom: .35rem; }
+    .hero-meta { font-size: .78rem; gap: .3rem .7rem; }
+    .hero-actions .btn { padding: .45rem .85rem; font-size: .78rem; border-radius: 8px; }
+
+    .kpi-strip { grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .85rem; }
+    .kpi-card { padding: .75rem .85rem; border-radius: 10px; }
+    .kpi-value { font-size: 1rem; }
+    .kpi-label { font-size: .62rem; letter-spacing: .4px; }
+    .kpi-sub { font-size: .65rem; }
+    .kpi-icon { font-size: 1.3rem; top: .6rem; right: .65rem; }
+
+    .quick-actions { grid-template-columns: repeat(5, 1fr); gap: .4rem; margin-bottom: .85rem; }
+    .qa-card { padding: .65rem .35rem; border-radius: 8px; border-width: 1.5px; }
+    .qa-card i { font-size: 1.15rem; margin-bottom: .2rem; }
+    .qa-label { font-size: .65rem; }
+
+    .tabs-nav {
+        position: sticky; top: 0; z-index: 100;
+        padding: .3rem; gap: .2rem; border-radius: 10px;
+        margin-left: -.5rem; margin-right: -.5rem;
+        border-radius: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .tab-btn {
+        min-width: unset; flex: 1;
+        padding: .55rem .4rem; font-size: .72rem;
+        border-radius: 8px;
+    }
+    .tab-btn i { display: none; }
+    .tab-badge { font-size: .62rem; padding: .08rem .35rem; margin-left: .2rem; }
+
+    .section-card { border-radius: 10px; margin-bottom: .85rem; }
+    .section-header { padding: .75rem .85rem; font-size: .85rem; flex-wrap: wrap; gap: .4rem; }
+    .section-header .btn { font-size: .72rem; padding: .3rem .6rem; min-height: 36px; }
+    .section-body { padding: .85rem; }
+
+    .alert-strip { font-size: .8rem; padding: .65rem .85rem; border-radius: 8px; }
+
+    /* ===== MOBILE TABLE → CARD LAYOUT ===== */
+    .dt thead { display: none; }
+    .dt, .dt tbody, .dt tr, .dt td {
+        display: block;
+        width: 100%;
+    }
+    .dt tbody tr {
+        padding: .75rem .85rem;
+        margin-bottom: .5rem;
+        border: 1px solid var(--slate-100);
+        border-radius: 10px;
+        background: #fff;
+        position: relative;
+        border-bottom: 1px solid var(--slate-100);
+    }
+    .dt tbody tr:last-child { margin-bottom: 0; }
+    .dt td {
+        padding: .25rem 0;
+        font-size: .84rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none;
+        text-align: right;
+    }
+    .dt td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        color: var(--slate-500);
+        text-align: left;
+        flex-shrink: 0;
+        margin-right: .75rem;
+    }
+    .dt td:first-child {
+        padding-top: .1rem;
+        font-weight: 700;
+        font-size: .88rem;
+    }
+    .dt td:first-child::before { display: none; }
+    .dt td:first-child a { font-size: .88rem; }
+    /* Action buttons row */
+    .dt td:last-child {
+        justify-content: flex-end;
+        gap: .35rem;
+        padding-top: .4rem;
+        margin-top: .2rem;
+        border-top: 1px solid var(--slate-100);
+    }
+    .dt td:last-child::before { display: none; }
+    .dt td .btn-sm {
+        min-width: 40px; min-height: 40px;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .dt tfoot { display: block; }
+    .dt tfoot tr {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: .65rem .85rem;
+        margin-bottom: 0;
+        background: var(--slate-50);
+        border-radius: 0 0 10px 10px;
+    }
+    .dt tfoot td {
+        display: inline;
+        padding: 0;
+        font-size: .82rem;
+    }
+    .dt tfoot td::before { display: none; }
+
+    .info-grid { grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .info-tile { padding: .7rem .85rem; border-radius: 8px; }
+    .info-tile-label { font-size: .62rem; }
+    .info-tile-value { font-size: .88rem; }
+
+    .photo-gallery { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+    .photo-card { border-radius: 10px; }
+    .photo-card img { height: 120px; }
+    .photo-card-info { padding: .5rem .65rem; font-size: .7rem; }
+
+    #shopMap { height: 200px; border-radius: 10px; }
+    .empty-state { padding: 2rem .75rem; }
+    .empty-state i { font-size: 2rem; }
+    .empty-state p { font-size: .88rem; }
+
+    /* Modal full-screen on mobile */
+    .modal-dialog { margin: .5rem; max-width: calc(100% - 1rem); }
+    .modal-content { border-radius: 14px !important; }
+    .modal-header { padding: .85rem 1rem; }
+    .modal-body { padding: .85rem 1rem; }
+    .modal-footer { padding: .65rem 1rem; }
+}
+
+/* ===== RESPONSIVE: SMALL PHONE (≤400px) ===== */
+@media (max-width: 400px) {
+    .container-fluid { padding-left: .35rem; padding-right: .35rem; }
+    .shop-hero { padding: .85rem; }
+    .hero-photo, .hero-photo-placeholder { width: 52px; height: 52px; font-size: 1.4rem; border-width: 2px; }
+    .hero-info h1 { font-size: 1.1rem; }
+    .hero-meta { font-size: .72rem; }
+    .hero-actions .btn { padding: .4rem .7rem; font-size: .72rem; }
+
+    .kpi-strip { gap: .4rem; }
+    .kpi-card { padding: .65rem .7rem; }
+    .kpi-value { font-size: .92rem; }
+    .kpi-label { font-size: .58rem; }
+
+    .quick-actions { grid-template-columns: repeat(2, 1fr); gap: .3rem; }
+    .qa-card { padding: .55rem .25rem; }
+    .qa-card i { font-size: 1rem; }
+    .qa-label { font-size: .6rem; }
+
+    .tab-btn { padding: .5rem .3rem; font-size: .68rem; }
+
+    .info-grid { grid-template-columns: 1fr; }
+    .photo-gallery { grid-template-columns: repeat(2, 1fr); }
+    .photo-card img { height: 100px; }
+
+    .modal-dialog { margin: .25rem; }
+}
+
+/* ===== TOUCH-FRIENDLY ENHANCEMENTS ===== */
+@media (hover: none) and (pointer: coarse) {
+    .kpi-card:hover { transform: none; box-shadow: var(--shadow-sm); }
+    .qa-card:hover { transform: none; box-shadow: var(--shadow-sm); border-color: transparent; }
+    .qa-card:active { transform: scale(.97); background: var(--slate-50); }
+    .kpi-card:active { transform: scale(.98); }
+    .dt tbody tr:hover { background: transparent; }
+    .hero-actions .btn,
+    .section-header .btn,
+    .dt td .btn-sm {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* ===== SAFE AREA (notch devices) ===== */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .container-fluid { padding-bottom: env(safe-area-inset-bottom); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:1260px; padding-top:1rem;">
+
+    <!-- ===== HERO HEADER ===== -->
+    <div class="shop-hero">
+        <div class="hero-inner">
+            {% if photo_history.0 %}
+            <img src="{{ photo_history.0.photo.url }}" alt="{{ shop.shop_name }}" class="hero-photo">
+            {% else %}
+            <div class="hero-photo-placeholder"><i class="fas fa-store"></i></div>
+            {% endif %}
+
+            <div class="hero-info">
+                <span class="hero-code">{{ shop.shop_code }}</span>
+                <h1>{{ shop.shop_name }}{% if is_new_shop %} <span style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:.55rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;vertical-align:middle;letter-spacing:.5px;margin-left:.35rem;animation:newPulse 2s ease-in-out infinite">NEW</span>{% endif %}</h1>
+                <div class="hero-meta">
+                    <span><i class="fas fa-user"></i>{{ shop.owner_name }}</span>
+                    <span><i class="fas fa-tag"></i>{{ shop.get_shop_type_display }}</span>
+                    <span><i class="fas fa-phone"></i><a href="tel:{{ shop.phone_number }}">{{ shop.phone_number }}</a></span>
+                    <span><i class="fas fa-map-marker-alt"></i>{{ shop.city }}, {{ shop.district }}</span>
+                    {% if not shop.is_active %}
+                    <span class="badge bg-danger ms-1">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <a href="{% url 'shops:edit' shop.pk %}" class="btn btn-light btn-sm"><i class="fas fa-pen me-1"></i>Edit</a>
+                <a href="#" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                    <i class="fas fa-camera me-1"></i>Photo
+                </a>
+                {% if user.is_office_staff %}
+                <a href="{% url 'shops:manage_access' shop.pk %}" class="btn btn-outline-light btn-sm"><i class="fas fa-lock me-1"></i>Access</a>
+                {% endif %}
+                {% if not user.is_sales_rep %}
+                <form method="post" action="{% url 'shops:toggle_active' shop.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    {% if shop.is_active %}
+                    <button type="submit" class="btn btn-outline-light btn-sm" onclick="return confirm('Mark this shop as inactive?')">
+                        <i class="fas fa-ban me-1"></i>Deactivate
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Reactivate this shop?')">
+                        <i class="fas fa-check-circle me-1"></i>Activate
+                    </button>
+                    {% endif %}
+                </form>
+                {% endif %}
+
+                <!-- Mark Visit Button (GPS-gated) -->
+                {% if visited_today %}
+                <span class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#b0ffb0;cursor:default;pointer-events:none;">
+                    <i class="fas fa-check-circle me-1"></i>Visited Today
+                </span>
+                {% else %}
+                <span id="notNearbyBadge" class="btn btn-sm" hidden style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.55);cursor:default;pointer-events:none;font-size:.7rem;">
+                    <i class="fas fa-map-marker-alt me-1"></i><span id="nearbyText">Checking GPS...</span>
+                </span>
+                <button id="markVisitBtn" class="btn btn-success btn-sm" hidden onclick="markVisit()">
+                    <i class="fas fa-map-marker-check me-1"></i><span id="visitBtnText">Mark Visit</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Update Alert -->
+    {% if needs_new_photo %}
+    <div class="alert-strip warn">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span><strong>Photo update needed:</strong> {{ photo_message }}.
+        <a href="#" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal" class="fw-bold">Upload now &rarr;</a></span>
+    </div>
+    {% endif %}
+
+    <!-- ===== LAST VISIT INFO STRIP ===== -->
+    {% if last_visit %}
+    <div class="alert-strip {% if visited_today %}success{% else %}info{% endif %}" id="visitInfoStrip">
+        <i class="fas fa-walking"></i>
+        <span>
+            <strong>Last Visit:</strong>
+            {{ last_visit.visit_date|date:"M d, Y" }} at {{ last_visit.visit_date|date:"h:i A" }}
+            by {{ last_visit.sales_rep.get_full_name|default:last_visit.sales_rep.username }}
+            {% if last_visit.visit_type != 'manual' %}
+                <span class="badge-pill bp-info" style="font-size:.65rem;vertical-align:middle;margin-left:.25rem">{{ last_visit.get_visit_type_display }}</span>
+            {% endif %}
+            {% if visited_today %}
+                <span class="badge-pill bp-success" style="font-size:.65rem;vertical-align:middle;margin-left:.25rem"><i class="fas fa-check"></i> Today</span>
+            {% endif %}
+        </span>
+    </div>
+    {% else %}
+    <div class="alert-strip warn" id="visitInfoStrip">
+        <i class="fas fa-walking"></i>
+        <span><strong>No visits recorded</strong> for this shop yet.</span>
+    </div>
+    {% endif %}
+
+    <!-- ===== KPI STRIP ===== -->
+    <div class="kpi-strip">
+        <div class="kpi-card rose">
+            <i class="fas fa-file-invoice-dollar kpi-icon"></i>
+            <div class="kpi-label">Total Debt</div>
+            <div class="kpi-value text-danger">Rs. {{ total_outstanding|floatformat:2|intcomma }}</div>
+            <div class="kpi-sub">{{ pending_bills_count }} unpaid bill{{ pending_bills_count|pluralize }}</div>
+        </div>
+        <div class="kpi-card amber">
+            <i class="fas fa-hourglass-half kpi-icon"></i>
+            <div class="kpi-label">Pending Verification</div>
+            <div class="kpi-value" style="color:var(--amber)">Rs. {{ pending_payment_amount|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Cheques & bank transfers</div>
+        </div>
+        <div class="kpi-card" style="border-color:var(--rose)">
+            <i class="fas fa-money-bill-wave kpi-icon"></i>
+            <div class="kpi-label">Cash Due Now</div>
+            <div class="kpi-value" style="color:var(--rose)">Rs. {{ actual_credit|floatformat:2|intcomma }}</div>
+            <div class="kpi-sub">After pending clearance</div>
+        </div>
+        <div class="kpi-card sky">
+            <i class="fas fa-chart-line kpi-icon"></i>
+            <div class="kpi-label">Total Sales</div>
+            <div class="kpi-value" style="color:var(--sky)">Rs. {{ total_sales|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">{{ total_bills_count }} bill{{ total_bills_count|pluralize }}</div>
+        </div>
+        <div class="kpi-card" style="border-color:var(--sky)">
+            <i class="fas fa-hand-holding-usd kpi-icon"></i>
+            <div class="kpi-label">Total Paid (Cleared)</div>
+            <div class="kpi-value" style="color:var(--sky)">Rs. {{ total_paid|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">{{ payment_rate|floatformat:1 }}% collection</div>
+        </div>
+        <div class="kpi-card">
+            <i class="fas fa-shield-alt kpi-icon"></i>
+            <div class="kpi-label">Credit Limit</div>
+            <div class="kpi-value">Rs. {{ shop.credit_limit|floatformat:0|intcomma }}</div>
+            <div class="kpi-sub">Available: Rs. {{ available_credit|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+
+    <!-- ===== QUICK ACTIONS ===== -->
+    <div class="quick-actions">
+        <a href="{% url 'sales:create' %}?shop={{ shop.id }}" class="qa-card c-primary">
+            <i class="fas fa-file-invoice"></i>
+            <div class="qa-label">Create Bill</div>
+        </a>
+        <a href="{% url 'sales:create_return' %}?shop={{ shop.id }}" class="qa-card c-amber">
+            <i class="fas fa-undo-alt"></i>
+            <div class="qa-label">Create Return</div>
+        </a>
+        <a href="{% url 'sales:create_exchange' %}?shop={{ shop.id }}" class="qa-card c-sky">
+            <i class="fas fa-exchange-alt"></i>
+            <div class="qa-label">Create Exchange</div>
+        </a>
+        <a href="tel:{{ shop.phone_number }}" class="qa-card c-rose">
+            <i class="fas fa-phone-alt"></i>
+            <div class="qa-label">Call Shop</div>
+        </a>
+    </div>
+
+    <!-- ===== TABS NAV ===== -->
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="showTab('pending', this)">
+            <i class="fas fa-exclamation-circle"></i> Pending
+            {% with total=pending_bills_count|add:pending_payments_count|add:pending_returns_count|add:uncollected_cheques_count %}
+            {% if total %}<span class="tab-badge">{{ total }}</span>{% endif %}
+            {% endwith %}
+        </button>
+        <button class="tab-btn" onclick="showTab('bills', this)">
+            <i class="fas fa-file-invoice"></i> Bills
+            <span class="tab-badge">{{ total_bills_count }}</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('payments', this)">
+            <i class="fas fa-money-bill-wave"></i> Payments
+            <span class="tab-badge">{{ total_payments_count }}</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('returns', this)">
+            <i class="fas fa-undo"></i> Returns
+            <span class="tab-badge">{{ total_returns_count }}</span>
+        </button>
+        <button class="tab-btn" onclick="showTab('info', this)">
+            <i class="fas fa-info-circle"></i> Info
+        </button>
+    </div>
+
+    <!-- ===== TAB: PENDING ===== -->
+    <div id="tab-pending" class="tab-content active">
+
+        <!-- Pending Bills -->
+        {% if pending_bills %}
+        <div class="section-card">
+            <div class="section-header" style="border-left:4px solid var(--rose)">
+                <span><i class="fas fa-file-invoice-dollar" style="color:var(--rose)"></i> Pending Bills ({{ pending_bills_count }})</span>
+                <a href="{% url 'sales:list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Bill No.</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Paid (Cleared)</th>
+                                <th>Pending</th>
+                                <th>Balance Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in pending_bills %}
+                            <tr>
+                                <td data-label="Bill No."><a href="{% url 'sales:detail' bill.pk %}">{{ bill.bill_number }}</a></td>
+                                <td data-label="Date">{{ bill.bill_date|date:"M d, Y" }}</td>
+                                <td data-label="Total">Rs. {{ bill.total_amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Paid (Cleared)">
+                                    {% if bill.paid_amount > 0 %}
+                                    <span style="color:var(--sky)">Rs. {{ bill.paid_amount|floatformat:2|intcomma }}</span>
+                                    {% else %}
+                                    <span style="color:var(--slate-400)">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Pending">
+                                    {% if bill.pending_payment_total > 0 %}
+                                    <span style="color:var(--amber)">Rs. {{ bill.pending_payment_total|floatformat:2|intcomma }}</span>
+                                    {% else %}
+                                    <span style="color:var(--slate-400)">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Balance Due"><strong class="text-danger">Rs. {{ bill.balance_amount|floatformat:2|intcomma }}</strong></td>
+                                <td data-label="">
+                                    <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a>
+                                    <a href="{% url 'sales:add_settlement' bill.pk %}" class="btn btn-sm btn-success"><i class="fas fa-money-bill"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Total Outstanding:</strong></td>
+                                <td colspan="2"><strong class="text-danger">Rs. {{ total_outstanding|floatformat:2|intcomma }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert-strip ok"><i class="fas fa-check-circle"></i> No pending bills &mdash; all payments up to date!</div>
+        {% endif %}
+
+        <!-- Pending Payments -->
+        {% if pending_payments %}
+        <div class="section-card">
+            <div class="section-header" style="border-left:4px solid var(--amber)">
+                <span><i class="fas fa-clock" style="color:var(--amber)"></i> Pending Payments Verification ({{ pending_payments_count }})</span>
+                <a href="{% url 'sales:settlement_list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Settlement No.</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Reference</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in pending_payments %}
+                            <tr>
+                                <td data-label="Settlement No."><a href="{% url 'sales:settlement_detail' payment.pk %}">{{ payment.settlement_number }}</a></td>
+                                <td data-label="Date">{{ payment.settlement_date|date:"M d, Y" }}</td>
+                                <td data-label="Method"><span class="badge-pill bp-info">{{ payment.get_settlement_method_display }}</span></td>
+                                <td data-label="Amount">Rs. {{ payment.amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Reference">{{ payment.reference_number|default:"—" }}</td>
+                                <td data-label=""><a href="{% url 'sales:settlement_detail' payment.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Pending Returns -->
+        {% if pending_returns %}
+        <div class="section-card">
+            <div class="section-header" style="border-left:4px solid var(--sky)">
+                <span><i class="fas fa-undo" style="color:var(--sky)"></i> Pending Returns Verification ({{ pending_returns_count }})</span>
+                <a href="{% url 'sales:return_list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Return No.</th>
+                                <th>Date</th>
+                                <th>Reason</th>
+                                <th>Amount</th>
+                                <th>Settlement</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for return in pending_returns %}
+                            <tr>
+                                <td data-label="Return No."><a href="{% url 'sales:return_detail' return.pk %}">{{ return.return_number }}</a></td>
+                                <td data-label="Date">{{ return.return_date|date:"M d, Y" }}</td>
+                                <td data-label="Reason">{{ return.get_return_reason_display }}</td>
+                                <td data-label="Amount">Rs. {{ return.total_amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Settlement"><span class="badge-pill bp-muted">{{ return.get_settlement_method_display }}</span></td>
+                                <td data-label=""><a href="{% url 'sales:return_detail' return.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Uncollected Cheques -->
+        {% if uncollected_cheques %}
+        <div class="section-card">
+            <div class="section-header" style="border-left:4px solid var(--rose)">
+                <span><i class="fas fa-money-check-alt" style="color:var(--rose)"></i> Uncollected Cheques ({{ uncollected_cheques_count }})</span>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Settlement No.</th>
+                                <th>Date</th>
+                                <th>Bill No.</th>
+                                <th>Cheque No.</th>
+                                <th>Bank</th>
+                                <th>Amount</th>
+                                <th>Received By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cheque in uncollected_cheques %}
+                            <tr>
+                                <td data-label="Settlement No."><a href="{% url 'sales:settlement_detail' cheque.pk %}">{{ cheque.settlement_number }}</a></td>
+                                <td data-label="Date">{{ cheque.settlement_date|date:"M d, Y" }}</td>
+                                <td data-label="Bill No.">
+                                    {% if cheque.bill %}
+                                    <a href="{% url 'sales:detail' cheque.bill.pk %}">{{ cheque.bill.bill_number }}</a>
+                                    {% else %}&mdash;{% endif %}
+                                </td>
+                                <td data-label="Cheque No.">{{ cheque.reference_number|default:"—" }}</td>
+                                <td data-label="Bank">{{ cheque.bank_name|default:"—" }}</td>
+                                <td data-label="Amount"><strong class="text-danger">Rs. {{ cheque.amount|floatformat:2|intcomma }}</strong></td>
+                                <td data-label="Received By">{{ cheque.received_by.get_full_name|default:cheque.received_by.username }}</td>
+                                <td data-label=""><a href="{% url 'sales:settlement_detail' cheque.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="text-end"><strong>Total Uncollected:</strong></td>
+                                <td colspan="3"><strong class="text-danger">Rs. {{ uncollected_cheques_amount|floatformat:2|intcomma }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not pending_bills and not pending_payments and not pending_returns and not uncollected_cheques %}
+        <div class="section-card">
+            <div class="empty-state" style="padding:3rem">
+                <i class="fas fa-check-double" style="color:var(--emerald);opacity:.6"></i>
+                <p style="color:var(--emerald);font-weight:600">All clear! No pending items for this shop.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ===== TAB: BILLS ===== -->
+    <div id="tab-bills" class="tab-content">
+        {% if all_bills %}
+        <div class="section-card">
+            <div class="section-header">
+                <span><i class="fas fa-file-invoice"></i> All Bills ({{ total_bills_count }})</span>
+                <a href="{% url 'sales:list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">Full List</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Bill No.</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Paid</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in all_bills %}
+                            <tr>
+                                <td data-label="Bill No."><a href="{% url 'sales:detail' bill.pk %}">{{ bill.bill_number }}</a></td>
+                                <td data-label="Date">{{ bill.bill_date|date:"M d, Y" }}</td>
+                                <td data-label="Total">Rs. {{ bill.total_amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Paid">Rs. {{ bill.paid_amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Balance" class="{% if bill.balance_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    Rs. {{ bill.balance_amount|floatformat:2|intcomma }}
+                                </td>
+                                <td data-label="Status">
+                                    {% if bill.balance_amount == 0 %}
+                                        <span class="badge-pill bp-success">Paid</span>
+                                    {% elif bill.paid_amount > 0 %}
+                                        <span class="badge-pill bp-warning">Partial</span>
+                                    {% else %}
+                                        <span class="badge-pill bp-danger">Unpaid</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label=""><a href="{% url 'sales:detail' bill.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="section-card"><div class="empty-state"><i class="fas fa-file-invoice"></i><p>No bills found for this shop</p></div></div>
+        {% endif %}
+    </div>
+
+    <!-- ===== TAB: PAYMENTS ===== -->
+    <div id="tab-payments" class="tab-content">
+        {% if all_payments %}
+        <div class="section-card">
+            <div class="section-header">
+                <span><i class="fas fa-money-bill-wave"></i> All Payments ({{ total_payments_count }})</span>
+                <a href="{% url 'sales:settlement_list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">Full List</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Settlement No.</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Reference</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in all_payments %}
+                            <tr>
+                                <td data-label="Settlement No."><a href="{% url 'sales:settlement_detail' payment.pk %}">{{ payment.settlement_number }}</a></td>
+                                <td data-label="Date">{{ payment.settlement_date|date:"M d, Y" }}</td>
+                                <td data-label="Method"><span class="badge-pill bp-info">{{ payment.get_settlement_method_display }}</span></td>
+                                <td data-label="Amount">Rs. {{ payment.amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Reference">{{ payment.reference_number|default:"—" }}</td>
+                                <td data-label=""><a href="{% url 'sales:settlement_detail' payment.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="section-card"><div class="empty-state"><i class="fas fa-money-bill-wave"></i><p>No payments found for this shop</p></div></div>
+        {% endif %}
+    </div>
+
+    <!-- ===== TAB: RETURNS ===== -->
+    <div id="tab-returns" class="tab-content">
+        {% if all_returns %}
+        <div class="section-card">
+            <div class="section-header">
+                <span><i class="fas fa-undo"></i> All Returns ({{ total_returns_count }})</span>
+                <a href="{% url 'sales:return_list' %}?shop={{ shop.id }}" class="btn btn-sm btn-outline-secondary">Full List</a>
+            </div>
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>Return No.</th>
+                                <th>Date</th>
+                                <th>Reason</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for return in all_returns %}
+                            <tr>
+                                <td data-label="Return No."><a href="{% url 'sales:return_detail' return.pk %}">{{ return.return_number }}</a></td>
+                                <td data-label="Date">{{ return.return_date|date:"M d, Y" }}</td>
+                                <td data-label="Reason">{{ return.get_return_reason_display }}</td>
+                                <td data-label="Amount">Rs. {{ return.total_amount|floatformat:2|intcomma }}</td>
+                                <td data-label="Status">
+                                    {% if return.is_verified %}
+                                        <span class="badge-pill bp-success">Verified</span>
+                                    {% else %}
+                                        <span class="badge-pill bp-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label=""><a href="{% url 'sales:return_detail' return.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="section-card"><div class="empty-state"><i class="fas fa-undo"></i><p>No returns found for this shop</p></div></div>
+        {% endif %}
+    </div>
+
+    <!-- ===== TAB: INFO ===== -->
+    <div id="tab-info" class="tab-content">
+
+        <!-- Financial Summary -->
+        <div class="section-card">
+            <div class="section-header"><span><i class="fas fa-chart-pie"></i> Financial Summary</span></div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-tile">
+                        <div class="info-tile-label">Net Sales</div>
+                        <div class="info-tile-value text-success">Rs. {{ net_sales|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Avg Bill Value</div>
+                        <div class="info-tile-value">Rs. {{ avg_bill_value|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Payment Rate</div>
+                        <div class="info-tile-value">{{ payment_rate|floatformat:1 }}%</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Total Returns</div>
+                        <div class="info-tile-value text-danger">Rs. {{ total_return_amount|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Exchanges</div>
+                        <div class="info-tile-value">{{ total_exchanges_count }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Visit Frequency (30d)</div>
+                        <div class="info-tile-value">{{ recent_visit_count }} visit{{ recent_visit_count|pluralize }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Pending Bank Transfers</div>
+                        <div class="info-tile-value" style="color:var(--amber)">Rs. {{ pending_bank_transfers_amount|floatformat:0|intcomma }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Available Credit</div>
+                        <div class="info-tile-value {% if available_credit > 0 %}text-success{% else %}text-danger{% endif %}">
+                            Rs. {{ available_credit|floatformat:0|intcomma }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact & Address -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="section-card" style="margin-bottom:0">
+                    <div class="section-header"><span><i class="fas fa-address-book"></i> Contact Information</span></div>
+                    <div class="section-body">
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Primary Phone</div>
+                            <div class="info-tile-value"><a href="tel:{{ shop.phone_number }}">{{ shop.phone_number }}</a></div>
+                        </div>
+                        {% if shop.alternate_phone %}
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Alternate Phone</div>
+                            <div class="info-tile-value"><a href="tel:{{ shop.alternate_phone }}">{{ shop.alternate_phone }}</a></div>
+                        </div>
+                        {% endif %}
+                        {% if shop.email %}
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Email</div>
+                            <div class="info-tile-value"><a href="mailto:{{ shop.email }}">{{ shop.email }}</a></div>
+                        </div>
+                        {% endif %}
+                        {% if shop.business_registration_no %}
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Business Reg. No.</div>
+                            <div class="info-tile-value">{{ shop.business_registration_no }}</div>
+                        </div>
+                        {% endif %}
+                        {% if shop.tax_id %}
+                        <div class="info-tile">
+                            <div class="info-tile-label">Tax ID</div>
+                            <div class="info-tile-value">{{ shop.tax_id }}</div>
+                        </div>
+                        {% endif %}
+                        {% if shop.assigned_sales_rep %}
+                        <div class="info-tile mt-2">
+                            <div class="info-tile-label">Assigned Sales Rep</div>
+                            <div class="info-tile-value">{{ shop.assigned_sales_rep.get_full_name }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="section-card" style="margin-bottom:0">
+                    <div class="section-header"><span><i class="fas fa-map-marker-alt"></i> Address</span></div>
+                    <div class="section-body">
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Street Address</div>
+                            <div class="info-tile-value">
+                                {{ shop.address_line1 }}
+                                {% if shop.address_line2 %}<br>{{ shop.address_line2 }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">City & District</div>
+                            <div class="info-tile-value">{{ shop.city }}, {{ shop.district }}</div>
+                        </div>
+                        {% if shop.postal_code %}
+                        <div class="info-tile mb-2">
+                            <div class="info-tile-label">Postal Code</div>
+                            <div class="info-tile-value">{{ shop.postal_code }}</div>
+                        </div>
+                        {% endif %}
+                        {% if shop.notes %}
+                        <div class="info-tile">
+                            <div class="info-tile-label">Notes</div>
+                            <div class="info-tile-value" style="font-weight:400">{{ shop.notes }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Map -->
+        {% if shop.latitude and shop.longitude %}
+        <div class="section-card">
+            <div class="section-header"><span><i class="fas fa-map"></i> Location Map</span></div>
+            <div class="section-body">
+                <div id="shopMap"></div>
+                <a href="https://www.google.com/maps?q={{ shop.latitude }},{{ shop.longitude }}"
+                   target="_blank" class="btn btn-primary w-100 mt-3" style="border-radius:10px">
+                    <i class="fas fa-directions me-2"></i>Get Directions
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Photo Gallery -->
+        {% if photo_history %}
+        <div class="section-card">
+            <div class="section-header">
+                <span><i class="fas fa-images"></i> Photo Gallery ({{ photo_history|length }})</span>
+                <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                    <i class="fas fa-plus me-1"></i>Add Photo
+                </a>
+            </div>
+            <div class="section-body">
+                <div class="photo-gallery">
+                    {% for photo in photo_history %}
+                    <div class="photo-card">
+                        {% if forloop.first %}<span class="photo-active-badge">Current</span>{% endif %}
+                        <img src="{{ photo.photo.url }}" alt="Shop photo">
+                        <div class="photo-card-info">
+                            <strong>{{ photo.uploaded_at|date:"M d, Y" }}</strong><br>
+                            <i class="fas fa-user" style="font-size:.65rem"></i> {{ photo.uploaded_by.get_full_name|default:photo.uploaded_by.username }}
+                            {% if photo.notes %}<br><i>{{ photo.notes|truncatewords:8 }}</i>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- All Shop Visits -->
+        <div class="section-card">
+            <div class="section-header">
+                <span><i class="fas fa-walking"></i> Shop Visits ({{ total_visits_count }})</span>
+            </div>
+            {% if all_visits %}
+            <div class="section-body p0">
+                <div class="table-responsive">
+                    <table class="dt">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date & Time</th>
+                                <th>Sales Rep</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for visit in all_visits %}
+                            <tr>
+                                <td data-label="#" style="color:var(--slate-400);font-size:.75rem">{{ forloop.counter }}</td>
+                                <td data-label="Date & Time">
+                                    <div style="font-weight:600">{{ visit.visit_date|date:"M d, Y" }}</div>
+                                    <div style="font-size:.75rem;color:var(--slate-500)">{{ visit.visit_date|date:"h:i A" }}</div>
+                                </td>
+                                <td data-label="Sales Rep">{{ visit.sales_rep.get_full_name|default:visit.sales_rep.username }}</td>
+                                <td data-label="Type">
+                                    {% if visit.visit_type == 'manual' %}
+                                    <span class="badge-pill bp-primary" style="font-size:.65rem"><i class="fas fa-hand-pointer"></i> Manual</span>
+                                    {% elif visit.visit_type == 'auto_bill' %}
+                                    <span class="badge-pill bp-success" style="font-size:.65rem"><i class="fas fa-file-invoice"></i> Bill</span>
+                                    {% elif visit.visit_type == 'auto_payment' %}
+                                    <span class="badge-pill bp-info" style="font-size:.65rem"><i class="fas fa-money-bill"></i> Payment</span>
+                                    {% elif visit.visit_type == 'auto_return' %}
+                                    <span class="badge-pill bp-warning" style="font-size:.65rem"><i class="fas fa-undo"></i> Return</span>
+                                    {% elif visit.visit_type == 'auto_exchange' %}
+                                    <span class="badge-pill bp-info" style="font-size:.65rem"><i class="fas fa-exchange-alt"></i> Exchange</span>
+                                    {% else %}
+                                    <span class="badge-pill" style="font-size:.65rem">{{ visit.get_visit_type_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Notes">{{ visit.notes|default:"—"|truncatewords:12 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="section-body" style="text-align:center;padding:2rem 1rem;">
+                <i class="fas fa-walking" style="font-size:2rem;color:var(--slate-300);display:block;margin-bottom:.5rem"></i>
+                <div style="color:var(--slate-500);font-weight:600">No visits recorded yet</div>
+                <div style="color:var(--slate-400);font-size:.8rem;margin-top:.25rem">Visits will appear here when the shop is visited</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Metadata -->
+        <div class="section-card">
+            <div class="section-header"><span><i class="fas fa-cog"></i> System Info</span></div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-tile">
+                        <div class="info-tile-label">Created</div>
+                        <div class="info-tile-value">{{ shop.created_at|date:"M d, Y" }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Last Updated</div>
+                        <div class="info-tile-value">{{ shop.updated_at|date:"M d, Y" }}</div>
+                    </div>
+                    {% if shop.created_by %}
+                    <div class="info-tile">
+                        <div class="info-tile-label">Created By</div>
+                        <div class="info-tile-value">{{ shop.created_by.get_full_name|default:shop.created_by.username }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="info-tile">
+                        <div class="info-tile-label">Access Level</div>
+                        <div class="info-tile-value">Level {{ user_access_level }}</div>
+                    </div>
+                    <div class="info-tile">
+                        <div class="info-tile-label">Status</div>
+                        <div class="info-tile-value">
+                            {% if shop.is_active %}<span class="badge-pill bp-success">Active</span>{% else %}<span class="badge-pill bp-danger">Inactive</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end container -->
+
+<!-- ===== UPLOAD PHOTO MODAL ===== -->
+<div class="modal fade" id="uploadPhotoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:var(--radius);overflow:hidden">
+            <form method="post" action="{% url 'shops:upload_photo' shop.pk %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header" style="background:var(--brand-gradient);color:#fff;border:none">
+                    <h5 class="modal-title"><i class="fas fa-camera me-2"></i>Upload Shop Photo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Choose Photo Source</label>
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('photoFile').click()">
+                                <i class="fas fa-folder-open me-1"></i>From Files
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('cameraInput').click()">
+                                <i class="fas fa-camera me-1"></i>Take Photo
+                            </button>
+                        </div>
+                        <input type="file" class="d-none" id="photoFile" name="photo" accept="image/*" onchange="handleFileSelect(this)">
+                        <input type="file" class="d-none" id="cameraInput" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
+                        <div id="photoPreview" class="d-none mt-2">
+                            <div class="card" style="border-radius:12px;overflow:hidden">
+                                <img id="previewImage" class="card-img-top" style="max-height:280px;object-fit:contain">
+                                <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" id="fileName"></small>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearPhoto()"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Upload a clear, recent photo of the shop front.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="photoNotes" class="form-label fw-bold">Notes (Optional)</label>
+                        <textarea class="form-control" id="photoNotes" name="notes" rows="2" placeholder="Context about this photo..." style="border-radius:10px"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="border-radius:10px"><i class="fas fa-upload me-1"></i>Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* Tab switching */
+function showTab(name, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    
+    {% if shop.latitude and shop.longitude %}
+    if (name === 'info' && !window._mapInited) {
+        window._mapInited = true;
+        setTimeout(initMap, 150);
+    }
+    {% endif %}
+}
+
+{% if shop.latitude and shop.longitude %}
+function initMap() {
+    const map = L.map('shopMap').setView([{{ shop.latitude }}, {{ shop.longitude }}], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
+    L.marker([{{ shop.latitude }}, {{ shop.longitude }}]).addTo(map)
+     .bindPopup('<strong>{{ shop.shop_name|escapejs }}</strong><br>{{ shop.address_line1|escapejs }}').openPopup();
+    setTimeout(() => map.invalidateSize(), 200);
+}
+{% endif %}
+
+/* Photo upload */
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please select a valid image file.'); input.value=''; return; }
+    if (file.size > 10*1024*1024) { alert('Image must be under 10MB.'); input.value=''; return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('previewImage').src = e.target.result;
+        document.getElementById('fileName').textContent = file.name + ' (' + formatSize(file.size) + ')';
+        document.getElementById('photoPreview').classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('photoFile').files = dt.files;
+}
+function clearPhoto() {
+    document.getElementById('photoFile').value='';
+    document.getElementById('cameraInput').value='';
+    document.getElementById('photoPreview').classList.add('d-none');
+}
+function formatSize(b) {
+    if (b<1024) return b+' B';
+    if (b<1048576) return (b/1024).toFixed(1)+' KB';
+    return (b/1048576).toFixed(1)+' MB';
+}
+document.getElementById('uploadPhotoModal')?.addEventListener('hidden.bs.modal', function(){
+    clearPhoto();
+    document.getElementById('photoNotes').value='';
+});
+
+/* ===== SHOP VISIT — GPS PROXIMITY CHECK & MARK VISIT ===== */
+(function() {
+    const SHOP_LAT = {{ shop.latitude|default:"null" }};
+    const SHOP_LNG = {{ shop.longitude|default:"null" }};
+    const MARK_URL = "{% url 'shops:mark_visit' shop.pk %}";
+    const CSRF = '{{ csrf_token }}';
+    const ALREADY_VISITED = {{ visited_today|yesno:"true,false" }};
+    const MAX_DIST_M = 500; // 500 meters
+
+    if (ALREADY_VISITED) return;
+
+    const btn = document.getElementById('markVisitBtn');
+    const badge = document.getElementById('notNearbyBadge');
+    const nearbyText = document.getElementById('nearbyText');
+    if (!btn || !badge) return;
+
+    // No shop coordinates — show "No location"
+    if (!SHOP_LAT || !SHOP_LNG) {
+        badge.hidden = false;
+        nearbyText.textContent = 'No shop location';
+        return;
+    }
+
+    // Show "Checking GPS..." initially
+    badge.hidden = false;
+
+    // Haversine in JS (returns meters)
+    function haversineM(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function formatDist(m) {
+        return m >= 1000 ? (m/1000).toFixed(1) + 'km' : Math.round(m) + 'm';
+    }
+
+    // Real-time GPS watch for proximity
+    if ('geolocation' in navigator) {
+        let watchId = navigator.geolocation.watchPosition(function(pos) {
+            const dist = haversineM(pos.coords.latitude, pos.coords.longitude, SHOP_LAT, SHOP_LNG);
+            if (dist <= MAX_DIST_M) {
+                // Nearby — show Mark Visit, hide badge
+                btn.hidden = false;
+                btn.dataset.lat = pos.coords.latitude;
+                btn.dataset.lng = pos.coords.longitude;
+                btn.title = 'You are ' + Math.round(dist) + 'm away';
+                badge.hidden = true;
+            } else {
+                // Too far — hide button, show distance
+                btn.hidden = true;
+                badge.hidden = false;
+                nearbyText.textContent = 'Not nearby (' + formatDist(dist) + ')';
+            }
+        }, function(err) {
+            // GPS unavailable
+            badge.hidden = false;
+            nearbyText.textContent = 'GPS unavailable';
+            btn.hidden = true;
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+
+        // Stop watching after 2 minutes to save battery
+        setTimeout(function() { navigator.geolocation.clearWatch(watchId); }, 120000);
+    } else {
+        badge.hidden = false;
+        nearbyText.textContent = 'GPS not supported';
+    }
+
+    // Mark visit via AJAX
+    window.markVisit = function() {
+        const lat = btn.dataset.lat;
+        const lng = btn.dataset.lng;
+        if (!lat || !lng) return;
+
+        btn.disabled = true;
+        document.getElementById('visitBtnText').textContent = 'Marking...';
+
+        const form = new FormData();
+        form.append('latitude', lat);
+        form.append('longitude', lng);
+        form.append('csrfmiddlewaretoken', CSRF);
+
+        fetch(MARK_URL, { method: 'POST', body: form })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Success — transform button to "Visited Today"
+                    btn.outerHTML = '<span class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#b0ffb0;cursor:default;pointer-events:none;">' +
+                        '<i class="fas fa-check-circle me-1"></i>Visited Today</span>';
+                    // Update the info strip
+                    const strip = document.getElementById('visitInfoStrip');
+                    if (strip) {
+                        strip.className = 'alert-strip success';
+                        strip.innerHTML = '<i class="fas fa-walking"></i><span><strong>Visit marked!</strong> ' + data.visit_time +
+                            ' <span class="badge-pill bp-success" style="font-size:.65rem;vertical-align:middle;margin-left:.25rem"><i class="fas fa-check"></i> Today</span></span>';
+                    }
+                } else if (data.status === 'already') {
+                    btn.outerHTML = '<span class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#b0ffb0;cursor:default;pointer-events:none;">' +
+                        '<i class="fas fa-check-circle me-1"></i>Visited Today</span>';
+                } else if (data.status === 'too_far') {
+                    btn.disabled = false;
+                    document.getElementById('visitBtnText').textContent = 'Mark Visit';
+                    alert(data.message);
+                } else {
+                    btn.disabled = false;
+                    document.getElementById('visitBtnText').textContent = 'Mark Visit';
+                    alert(data.message || 'Failed to mark visit');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                document.getElementById('visitBtnText').textContent = 'Mark Visit';
+                alert('Network error. Please try again.');
+            });
+    };
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Payout Details - {{ payout.payout_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .detail-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .voucher-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .voucher-number {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-box {
+        padding: 1.25rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .status-success {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-partial {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-failed {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .user-table {
+        font-size: 0.95rem;
+    }
+    
+    .user-table td {
+        vertical-align: middle;
+    }
+    
+    .notes-section {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+    
+    .back-btn:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'sales:manual_payout_list' %}" class="btn back-btn mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Payout List
+            </a>
+        </div>
+    </div>
+    
+    <!-- Voucher Header -->
+    <div class="voucher-header">
+        <div class="voucher-number">{{ payout.payout_number }}</div>
+        <div class="mt-2">
+            <span class="status-badge status-{{ payout.status }}">
+                {% if payout.status == 'success' %}
+                    <i class="fas fa-check-circle me-1"></i>SUCCESS
+                {% elif payout.status == 'partial' %}
+                    <i class="fas fa-exclamation-triangle me-1"></i>PARTIAL
+                {% else %}
+                    <i class="fas fa-times-circle me-1"></i>FAILED
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Payout Information -->
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-label">Execution Date</div>
+            <div class="info-value">{{ payout.execution_date|date:"F d, Y" }}</div>
+            <small class="text-muted">{{ payout.execution_date|date:"g:i A" }}</small>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-label">Executed By</div>
+            <div class="info-value">
+                {% if payout.executed_by %}
+                    {{ payout.executed_by.get_full_name }}
+                {% else %}
+                    System (Automated)
+                {% endif %}
+            </div>
+            {% if payout.is_manual %}
+                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Manual Payout</small>
+            {% else %}
+                <small class="text-muted"><i class="fas fa-robot me-1"></i>Automated Payout</small>
+            {% endif %}
+        </div>
+        
+        <div class="info-box">
+            <div class="info-label">Total Users Processed</div>
+            <div class="info-value">{{ payout.total_users_processed }}</div>
+            <small class="text-muted">
+                <span class="text-success">{{ successful_count }} successful</span>
+                {% if failed_count > 0 %}
+                    / <span class="text-danger">{{ failed_count }} failed</span>
+                {% endif %}
+            </small>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-label">Total Amount Credited</div>
+            <div class="info-value text-success">Rs. {{ payout.total_amount_credited|floatformat:2|intcomma }}</div>
+            {% if payout.duration_seconds %}
+                <small class="text-muted">Completed in {{ payout.duration_seconds }} seconds</small>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Period Information (for scheduled payouts) -->
+    {% if payout.period_start and payout.period_end %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <strong>Period:</strong> {{ payout.period_start|date:"M d, Y" }} to {{ payout.period_end|date:"M d, Y" }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Notes -->
+    {% if payout.notes %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="notes-section">
+                <div class="info-label mb-2"><i class="fas fa-sticky-note me-2"></i>Notes</div>
+                <div>{{ payout.notes }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- User Breakdown -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card detail-card">
+                <div class="card-header">
+                    <i class="fas fa-list me-2"></i>User-by-User Breakdown
+                </div>
+                <div class="card-body">
+                    {% if user_payouts %}
+                    <div class="table-responsive">
+                        <table class="table table-hover user-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Sales Representative</th>
+                                    <th class="text-end">Commission Balance</th>
+                                    <th class="text-end">Amount Credited</th>
+                                    <th>Money Transaction</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user_payout in user_payouts %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ user_payout.user.get_full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ user_payout.user.username }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        Rs. {{ user_payout.commission_balance|floatformat:2|intcomma }}
+                                    </td>
+                                    <td class="text-end text-success">
+                                        <strong>Rs. {{ user_payout.amount_credited|floatformat:2|intcomma }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if user_payout.money_transaction %}
+                                            <a href="{% url 'accounts:money_account_dashboard' %}?user_id={{ user_payout.user.id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-receipt"></i> View Transaction
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if user_payout.status == 'success' %}
+                                            <span class="badge bg-success">Success</span>
+                                        {% elif user_payout.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ user_payout.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-secondary">
+                                    <th colspan="2" class="text-end">TOTAL:</th>
+                                    <th class="text-end">Rs. {{ total_commission_balance|floatformat:2|intcomma }}</th>
+                                    <th class="text-end text-success">Rs. {{ total_amount_credited|floatformat:2|intcomma }}</th>
+                                    <th colspan="2"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>No user payout records found for this execution.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Details -->
+    {% if payout.details %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card detail-card">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2"></i>Additional Details
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0" style="background: #f9fafb; padding: 1rem; border-radius: 8px; overflow-x: auto;">{{ payout.details }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Print Button -->
+    <div class="row mt-4 mb-5">
+        <div class="col-12 text-center">
+            <button onclick="window.print()" class="btn btn-primary btn-lg">
+                <i class="fas fa-print me-2"></i>Print Payout Voucher
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Print styling
+window.addEventListener('beforeprint', function() {
+    document.body.classList.add('printing');
+});
+
+window.addEventListener('afterprint', function() {
+    document.body.classList.remove('printing');
+});
+</script>
+{% endblock %}

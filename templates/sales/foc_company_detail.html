@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FOC Value - {{ company.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .foc-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .transaction-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .transaction-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .transaction-table thead th {
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+    }
+    
+    .transaction-table tbody td {
+        padding: 0.75rem 1rem;
+        vertical-align: middle;
+    }
+    
+    .badge-received {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+    }
+    
+    .badge-given {
+        background: linear-gradient(135deg, #FF9800, #F57C00);
+        color: white;
+    }
+    
+    .badge-implicit {
+        background: linear-gradient(135deg, #FFC107, #FFB300);
+        color: white;
+    }
+    
+    .badge-restored {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        color: white;
+    }
+    
+    .badge-adjustment {
+        background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        color: white;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .action-buttons .btn {
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+    }
+    
+    .utilization-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .utilization-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4CAF50, #45a049);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="foc-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-gift me-2"></i>
+                    {{ company.company_name }}
+                </h2>
+                <p class="mb-0 opacity-75">FOC Value Usage Account Details</p>
+            </div>
+            <div class="action-buttons">
+                <a href="{% url 'sales:foc_dashboard' %}" class="btn btn-light me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+                <a href="{% url 'sales:export_foc_transactions' company.id %}" class="btn btn-success">
+                    <i class="fas fa-file-excel me-2"></i>Export Excel
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-box-open fa-2x text-success mb-2"></i>
+                    <div class="stat-label">Total FOC Received</div>
+                    <div class="stat-value text-success">
+                        Rs. {{ account.total_foc_received_value|floatformat:2|default:"0.00" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-holding-heart fa-2x text-warning mb-2"></i>
+                    <div class="stat-label">Total FOC Given</div>
+                    <div class="stat-value text-warning">
+                        Rs. {{ account.total_foc_given_value|floatformat:2|default:"0.00" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-balance-scale fa-2x text-primary mb-2"></i>
+                    <div class="stat-label">Net FOC Value</div>
+                    <div class="stat-value {% if account.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        Rs. {{ account.net_foc_value|floatformat:2|default:"0.00" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                    <div class="stat-label">Utilization %</div>
+                    <div class="stat-value text-info">
+                        {{ account.foc_utilization_percentage|floatformat:1 }}%
+                    </div>
+                    <div class="utilization-bar mt-2">
+                        <div class="utilization-fill" style="width: {{ account.foc_utilization_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Transaction Type</label>
+                <select name="transaction_type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="foc_received" {% if request.GET.transaction_type == 'foc_received' %}selected{% endif %}>FOC Received</option>
+                    <option value="foc_given" {% if request.GET.transaction_type == 'foc_given' %}selected{% endif %}>FOC Given</option>
+                    <option value="implicit_foc" {% if request.GET.transaction_type == 'implicit_foc' %}selected{% endif %}>Implicit FOC</option>
+                    <option value="return_foc_restored" {% if request.GET.transaction_type == 'return_foc_restored' %}selected{% endif %}>FOC Restored</option>
+                    <option value="adjustment" {% if request.GET.transaction_type == 'adjustment' %}selected{% endif %}>Adjustment</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                    <a href="{% url 'sales:foc_company_detail' company.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="transaction-table">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Transaction #</th>
+                    <th>Type</th>
+                    <th>Product</th>
+                    <th class="text-end">FOC Qty</th>
+                    <th class="text-end">Shop Price</th>
+                    <th class="text-end">FOC Value</th>
+                    <th>Shop/Notes</th>
+                    <th>Sales Rep</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.transaction_date|date:"Y-m-d" }}</td>
+                    <td><strong>{{ transaction.transaction_number }}</strong></td>
+                    <td>
+                        {% if transaction.transaction_type == 'foc_received' %}
+                            <span class="badge badge-received">FOC Received</span>
+                        {% elif transaction.transaction_type == 'foc_given' %}
+                            <span class="badge badge-given">FOC Given</span>
+                        {% elif transaction.transaction_type == 'implicit_foc' %}
+                            <span class="badge badge-implicit">Implicit FOC</span>
+                        {% elif transaction.transaction_type == 'return_foc_restored' %}
+                            <span class="badge badge-restored">FOC Restored</span>
+                        {% elif transaction.transaction_type == 'adjustment' %}
+                            <span class="badge badge-adjustment">Adjustment</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.product %}
+                            {{ transaction.product.product_name }}
+                        {% else %}
+                            <em class="text-muted">-</em>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ transaction.foc_quantity }}</td>
+                    <td class="text-end">Rs. {{ transaction.shop_price_at_time|floatformat:2 }}</td>
+                    <td class="text-end">
+                        <strong>Rs. {{ transaction.foc_value|floatformat:2 }}</strong>
+                    </td>
+                    <td>
+                        {% if transaction.shop %}
+                            {{ transaction.shop.shop_name }}
+                        {% elif transaction.notes %}
+                            {{ transaction.notes }}
+                        {% else %}
+                            <em class="text-muted">-</em>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.sales_rep %}
+                            {{ transaction.sales_rep.get_full_name }}
+                        {% else %}
+                            <em class="text-muted">-</em>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.purchase_item and transaction.purchase_item.purchase %}
+                            <a href="{% url 'products:purchase_detail' transaction.purchase_item.purchase.id %}">
+                                {{ transaction.purchase_item.purchase.purchase_number }}
+                            </a>
+                        {% elif transaction.bill_item and transaction.bill_item.bill %}
+                            <a href="{% url 'sales:detail' transaction.bill_item.bill.id %}">
+                                {{ transaction.bill_item.bill.sale_number }}
+                            </a>
+                        {% elif transaction.return_item and transaction.return_item.return_ref %}
+                            <a href="{% url 'sales:return_detail' transaction.return_item.return_ref.id %}">
+                                {{ transaction.return_item.return_ref.return_number }}
+                            </a>
+                        {% else %}
+                            <em class="text-muted">-</em>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                        No transactions found
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.transaction_type %}&transaction_type={{ request.GET.transaction_type }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.transaction_type %}&transaction_type={{ request.GET.transaction_type }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Previous</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.transaction_type %}&transaction_type={{ request.GET.transaction_type }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.transaction_type %}&transaction_type={{ request.GET.transaction_type }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

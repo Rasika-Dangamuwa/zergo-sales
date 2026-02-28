@@ -1,0 +1,1140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Print Bill {{ sale.bill_number }}</title>
+    <style>
+        /* ==================== RESET ==================== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ==================== PAGE ==================== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 16px 40px;
+        }
+
+        .page-wrap {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ==================== STATUS BAR ==================== */
+        #statusBar {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            animation: fadeIn .3s ease;
+        }
+        #statusBar.info    { display: block; background: #e3f2fd; color: #1565c0; }
+        #statusBar.success { display: block; background: #e8f5e9; color: #2e7d32; }
+        #statusBar.error   { display: block; background: #ffebee; color: #c62828; }
+        #statusBar.warning { display: block; background: #fff8e1; color: #f57f17; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ==================== CARD ==================== */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .card-title {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        /* ==================== BUTTONS ==================== */
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform .12s ease, box-shadow .12s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-green  { background: linear-gradient(135deg, #43a047, #2e7d32); color: #fff; box-shadow: 0 4px 14px rgba(67,160,71,.35); }
+        .btn-blue   { background: linear-gradient(135deg, #1e88e5, #1565c0); color: #fff; box-shadow: 0 4px 14px rgba(30,136,229,.35); }
+        .btn-teal   { background: linear-gradient(135deg, #00897b, #00695c); color: #fff; box-shadow: 0 4px 14px rgba(0,137,123,.35); }
+        .btn-purple { background: linear-gradient(135deg, #7b1fa2, #6a1b9a); color: #fff; box-shadow: 0 4px 14px rgba(123,31,162,.35); }
+        .btn-red    { background: linear-gradient(135deg, #e53935, #c62828); color: #fff; box-shadow: 0 4px 14px rgba(229,57,53,.25); }
+        .btn-ghost  { background: #fff; color: #555; border: 2px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        .btn-ghost:active { background: #f5f5f5; }
+
+        .btn:disabled { opacity: .5; pointer-events: none; }
+        .icon { font-size: 20px; flex-shrink: 0; }
+
+        /* ==================== RECEIPT PREVIEW ==================== */
+        .preview-label {
+            color: rgba(255,255,255,.9);
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 28px 0 14px;
+            letter-spacing: .3px;
+        }
+
+        .receipt-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 28px 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .receipt-inner {
+            display: inline-block;
+            text-align: left;
+        }
+
+        .receipt-logo {
+            display: block;
+            max-width: 180px;
+            max-height: 80px;
+            margin: 0 auto 12px;
+            object-fit: contain;
+        }
+
+        #receiptPreview {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            white-space: pre;
+            margin: 0;
+            padding: 0;
+            overflow: visible;
+            color: #222;
+        }
+
+        /* ==================== PRINT-ONLY ==================== */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .page-wrap { max-width: 100%; }
+            .card, #statusBar, .preview-label { display: none !important; }
+            .receipt-card { box-shadow: none; border-radius: 0; padding: 0; }
+            #receiptPreview { font-size: 11px; }
+        }
+
+        /* ==================== MOBILE ==================== */
+        @media (max-width: 480px) {
+            body { padding: 12px 10px 32px; }
+            .card { padding: 18px 14px; }
+            .receipt-card { padding: 20px 14px; }
+            #receiptPreview { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+    <!-- Status Bar -->
+    <div id="statusBar"></div>
+
+    <!-- Controls Card -->
+    <div class="card">
+        <div class="card-title">🖨️ Print Bill {{ sale.bill_number }}</div>
+        <div class="btn-stack">
+            <button class="btn btn-green" id="bluetoothPrintBtn" ontouchstart="" onclick="connectBluetoothPrinter()">
+                <span class="icon">🔵</span>
+                <span id="bluetoothBtnText">Print via Bluetooth</span>
+            </button>
+
+            <button class="btn btn-red" id="forgetPrinterBtn" style="display:none" ontouchstart="" onclick="forgetSavedPrinter()">
+                <span class="icon">🗑️</span>
+                <span>Forget Saved Printer</span>
+            </button>
+
+            <button class="btn btn-blue" ontouchstart="" onclick="window.print()">
+                <span class="icon">🖨️</span>
+                <span>Standard Print</span>
+            </button>
+
+            <button class="btn btn-teal" id="shareBtn" style="display:none" ontouchstart="" onclick="shareBill()">
+                <span class="icon">📤</span>
+                <span>Share / Print</span>
+            </button>
+
+            <button class="btn btn-ghost" ontouchstart="" onclick="downloadAsText()">
+                <span class="icon">💾</span>
+                <span>Download as Text</span>
+            </button>
+
+            <button class="btn btn-ghost" ontouchstart="" onclick="saveAsImage()">
+                <span class="icon">📷</span>
+                <span>Save as Image</span>
+            </button>
+
+            <button class="btn btn-purple" ontouchstart="" onclick="copyBillForCaysn()">
+                <span class="icon">📋</span>
+                <span>Copy Bill</span>
+            </button>
+
+            <button class="btn btn-ghost" ontouchstart="" onclick="window.location.href='{% url 'sales:detail' sale.pk %}'">
+                <span class="icon">↩️</span>
+                <span>Back to Bill</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Preview -->
+    <div class="preview-label">📄 Receipt Preview</div>
+    <div class="receipt-card">
+        <div class="receipt-inner">
+            {% if branding and branding.show_logo and branding.logo %}
+            <img src="{{ branding.logo.url }}" alt="Logo" class="receipt-logo">
+            {% endif %}
+            <pre id="receiptPreview"></pre>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ============================================================
+//  STATUS HELPER
+// ============================================================
+function showStatus(msg, type) {
+    var el = document.getElementById('statusBar');
+    el.textContent = msg;
+    el.className = type || 'info';
+}
+
+// ============================================================
+//  FORMAT RECEIPT (42 chars for 80mm thermal)
+// ============================================================
+function formatForThermalPrint() {
+    var W = {{ char_limits.normal|default:32 }};
+
+    function center(s) {
+        var clean = s.replace(/\r\n/g, ', ').replace(/\r/g, ', ').replace(/\n/g, ', ').replace(/, ,/g, ',').trim();
+        if (clean.length > W) {
+            var lines = [];
+            var words = clean.split(' ');
+            var cur = '';
+            for (var i = 0; i < words.length; i++) {
+                var word = words[i];
+                if (word.length > W) {
+                    if (cur) { lines.push(centerLine(cur)); cur = ''; }
+                    while (word.length > W) {
+                        lines.push(word.substring(0, W));
+                        word = word.substring(W);
+                    }
+                    if (word) cur = word;
+                    continue;
+                }
+                var test = cur ? cur + ' ' + word : word;
+                if (test.length > W) {
+                    if (cur) lines.push(centerLine(cur));
+                    cur = word;
+                } else {
+                    cur = test;
+                }
+            }
+            if (cur) lines.push(centerLine(cur));
+            return lines.join('\n');
+        }
+        return centerLine(clean);
+    }
+    function centerLine(s) {
+        if (s.length >= W) return s.substring(0, W);
+        return ' '.repeat(Math.floor((W - s.length) / 2)) + s;
+    }
+    function lr(l, r) {
+        var sp = W - l.length - r.length;
+        if (sp < 1) return l.substring(0, W - r.length - 1) + ' ' + r;
+        return l + ' '.repeat(sp) + r;
+    }
+    function line()  { return '='.repeat(W); }
+    function dash()  { return '-'.repeat(W); }
+
+    var t = '';
+
+    // Header
+    {% if branding %}
+    t += center('{{ branding.company_name|escapejs }}') + '\n';
+        {% if branding.tagline and branding.show_tagline %}
+    t += center('{{ branding.tagline|escapejs }}') + '\n';
+        {% endif %}
+        {% if branding.address and branding.show_address %}
+    t += center('{{ branding.address|escapejs }}') + '\n';
+        {% endif %}
+        {% if branding.phone and branding.show_contact %}
+    t += center('Tel: {{ branding.phone|escapejs }}') + '\n';
+        {% endif %}
+        {% if branding.email and branding.show_contact %}
+    t += center('{{ branding.email|escapejs }}') + '\n';
+        {% endif %}
+        {% if branding.website and branding.show_website %}
+    t += center('{{ branding.website|escapejs }}') + '\n';
+        {% endif %}
+    {% endif %}
+
+    t += line() + '\n';
+
+    {% if sale.bill_status == 'cancelled' %}
+    t += center('*** CANCELLED ***') + '\n';
+    t += line() + '\n';
+    {% elif sale.bill_status == 'draft' %}
+    t += center('*** DRAFT ESTIMATE ***') + '\n';
+    t += line() + '\n';
+    {% endif %}
+
+    t += center('SALES BILL') + '\n\n';
+    t += lr('Bill No:', '{{ sale.bill_number }}') + '\n';
+    t += lr('Date:', '{{ sale.bill_date|date:"d/m/Y H:i" }}') + '\n\n';
+
+    {% if sale.shop %}
+    t += 'Shop: {{ sale.shop.shop_name|escapejs }}' + '\n';
+    t += 'Owner: {{ sale.shop.owner_name|escapejs }}' + '\n';
+    {% else %}
+    t += 'Customer: {{ sale.customer_name|default:"Walk-in Customer"|escapejs }}' + '\n';
+    {% endif %}
+    t += 'Rep: {{ sale.sales_rep.get_full_name|default:sale.sales_rep.username|escapejs }}' + '\n';
+
+    t += dash() + '\n';
+    t += 'Item                      Qty  Total\n';
+    t += dash() + '\n';
+
+    {% for item in items %}
+    var n{{ forloop.counter }} = '{{ item.product.product_name|escapejs }}'.substring(0, 40);
+    t += n{{ forloop.counter }} + '\n';
+        {% if item.quantity > 0 %}
+    var q{{ forloop.counter }} = '{{ item.quantity|floatformat:0 }}';
+    var p{{ forloop.counter }} = '{{ item.unit_price|floatformat:2 }}';
+    var tt{{ forloop.counter }} = '{{ item.line_total|floatformat:2 }}';
+    t += lr(q{{ forloop.counter }} + ' x ' + p{{ forloop.counter }}, tt{{ forloop.counter }}) + '\n';
+        {% endif %}
+        {% if item.foc_quantity > 0 %}
+            {% if item.quantity > 0 %}
+    t += '  FOC: {{ item.foc_quantity|floatformat:0 }}' + '\n';
+            {% else %}
+    t += lr('FOC: {{ item.foc_quantity|floatformat:0 }}', 'FREE') + '\n';
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    t += dash() + '\n';
+    t += lr('Subtotal:', 'Rs. {{ sale.subtotal|floatformat:2 }}') + '\n';
+
+    {% if sale.discount_amount > 0 %}
+    t += lr('Discount ({{ sale.discount_percentage|floatformat:1 }}%):', '-Rs. {{ sale.discount_amount|floatformat:2 }}') + '\n';
+    {% endif %}
+
+    t += line() + '\n';
+    t += lr('TOTAL:', 'Rs. {{ sale.total_amount|floatformat:2 }}') + '\n';
+    t += line() + '\n';
+
+    {% if has_payment_info %}
+    // --- Payment Breakdown ---
+    t += '\n';
+    t += center('-- Payment Details --') + '\n';
+    {% if cash_paid > 0 %}
+    t += lr('Cash Paid:', 'Rs. {{ cash_paid|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if cheque_completed > 0 %}
+    t += lr('Cheque (Cleared):', 'Rs. {{ cheque_completed|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if cheque_pending > 0 %}
+    t += lr('Cheque (Pending):', 'Rs. {{ cheque_pending|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if bank_completed > 0 %}
+    t += lr('Bank Transfer:', 'Rs. {{ bank_completed|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if bank_pending > 0 %}
+    t += lr('Bank (Pending):', 'Rs. {{ bank_pending|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if return_adj > 0 %}
+    t += lr('Return Adjusted:', 'Rs. {{ return_adj|floatformat:2 }}') + '\n';
+    {% endif %}
+    t += dash() + '\n';
+    t += lr('Total Paid:', 'Rs. {{ total_paid|floatformat:2 }}') + '\n';
+    {% if total_pending > 0 %}
+    t += lr('Pending:', 'Rs. {{ total_pending|floatformat:2 }}') + '\n';
+    {% endif %}
+    {% if credit_balance > 0 %}
+    t += lr('BALANCE DUE:', 'Rs. {{ credit_balance|floatformat:2 }}') + '\n';
+    {% endif %}
+    t += dash() + '\n';
+    {% endif %}
+
+    {% if sale.bill_status == 'cancelled' %}
+    t += center('*** CANCELLED BILL ***') + '\n';
+    t += center('NOT VALID FOR PAYMENT') + '\n';
+    {% elif sale.bill_status == 'draft' %}
+    t += center('*** DRAFT ESTIMATE ***') + '\n';
+    t += center('NOT VALID UNTIL CONFIRMED') + '\n';
+    {% else %}
+    t += '\n';
+    t += center('{{ footer_text|escapejs }}') + '\n';
+    {% if print_profile.footer_line2 %}
+    t += center('{{ print_profile.footer_line2|escapejs }}') + '\n';
+    {% endif %}
+    {% if print_profile.footer_line3 %}
+    t += center('{{ print_profile.footer_line3|escapejs }}') + '\n';
+    {% endif %}
+    {% endif %}
+
+    {% if sale.notes %}
+    t += '\nNote: {{ sale.notes|escapejs }}' + '\n';
+    {% endif %}
+
+    // --- Signature Fields ---
+    {% if credit_balance > 0 %}
+    t += '\n\n';
+    t += 'Customer Signature:' + '\n';
+    t += '\n\n';
+    t += '........................' + '\n';
+    t += '\n';
+    {% endif %}
+    t += 'Rep Signature:' + '\n';
+    t += '\n\n';
+    t += '........................' + '\n';
+    t += dash() + '\n';
+
+    t += '\n' + center('{{ sale.bill_date|date:"d/m/Y H:i" }}') + '\n\n';
+    return t;
+}
+
+// ============================================================
+//  COPY BILL (Share API → fallback text box)
+// ============================================================
+function copyBillForCaysn() {
+    try {
+        var text = formatForThermalPrint();
+        if (navigator.share) {
+            navigator.share({ title: 'Bill {{ sale.bill_number }}', text: text })
+                .then(function() { showStatus('✅ Shared successfully!', 'success'); })
+                .catch(function(e) { if (e.name !== 'AbortError') showTextBox(text); });
+        } else {
+            showTextBox(text);
+        }
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+function showTextBox(text) {
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:99999;padding:20px;display:flex;flex-direction:column;';
+
+    var hd = document.createElement('div');
+    hd.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:10px;color:#1976d2;';
+    hd.textContent = 'Tap and hold → Copy';
+
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.readOnly = true;
+    ta.style.cssText = 'flex:1;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ccc;border-radius:6px;resize:none;';
+
+    var cb = document.createElement('button');
+    cb.textContent = 'Close';
+    cb.style.cssText = 'width:100%;padding:14px;margin-top:10px;font-size:16px;font-weight:700;background:#4caf50;color:#fff;border:none;border-radius:10px;cursor:pointer;';
+    cb.onclick = function() { document.body.removeChild(ov); };
+
+    ov.appendChild(hd);
+    ov.appendChild(ta);
+    ov.appendChild(cb);
+    document.body.appendChild(ov);
+    setTimeout(function() { ta.select(); }, 100);
+}
+
+// ============================================================
+//  DOWNLOAD AS TEXT
+// ============================================================
+function downloadAsText() {
+    var text = formatForThermalPrint();
+    var blob = new Blob([text], { type: 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bill_{{ sale.bill_number }}.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showStatus('✅ Downloaded as text file', 'success');
+}
+
+// ============================================================
+//  SAVE AS IMAGE (PNG)
+// ============================================================
+function saveAsImage() {
+    showStatus('📸 Capturing receipt...', 'info');
+    
+    var receiptCard = document.querySelector('.receipt-card');
+    if (!receiptCard) {
+        showStatus('❌ Receipt not found!', 'error');
+        return;
+    }
+    
+    // Create canvas manually from the receipt content
+    var pre = document.getElementById('receiptPreview');
+    var text = pre.textContent;
+    var lines = text.split('\n');
+    
+    // Create canvas
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    
+    // Calculate dimensions
+    var fontSize = 13;
+    var lineHeight = fontSize * 1.55;
+    var charWidth = fontSize * 0.6; // Monospace approximation
+    var maxChars = Math.max(...lines.map(function(l) { return l.length; }));
+    var padding = 40;
+    
+    canvas.width = (maxChars * charWidth) + (padding * 2);
+    canvas.height = (lines.length * lineHeight) + (padding * 2);
+    
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw logo if present
+    var logo = document.querySelector('.receipt-logo');
+    var yOffset = padding;
+    
+    if (logo && logo.complete) {
+        try {
+            var logoRatio = logo.naturalWidth / logo.naturalHeight;
+            var logoHeight = 80;
+            var logoWidth = logoHeight * logoRatio;
+            var logoX = (canvas.width - logoWidth) / 2;
+            ctx.drawImage(logo, logoX, yOffset, logoWidth, logoHeight);
+            yOffset += logoHeight + 20;
+        } catch (e) {
+            console.log('Logo draw error:', e);
+        }
+    }
+    
+    // Draw text
+    ctx.fillStyle = '#222222';
+    ctx.font = fontSize + 'px "Courier New", Courier, monospace';
+    ctx.textBaseline = 'top';
+    
+    lines.forEach(function(line, i) {
+        ctx.fillText(line, padding, yOffset + (i * lineHeight));
+    });
+    
+    // Download
+    canvas.toBlob(function(blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'Bill_{{ sale.bill_number }}.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showStatus('✅ Image saved!', 'success');
+    });
+}
+
+// ============================================================
+//  SAVE AS IMAGE (PNG)
+// ============================================================
+function saveAsImage() {
+    showStatus('📸 Capturing receipt...', 'info');
+    
+    var receiptCard = document.querySelector('.receipt-card');
+    if (!receiptCard) {
+        showStatus('❌ Receipt not found!', 'error');
+        return;
+    }
+    
+    // Create canvas manually from the receipt content
+    var pre = document.getElementById('receiptPreview');
+    var text = pre.textContent;
+    var lines = text.split('\n');
+    
+    // Create canvas
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    
+    // Calculate dimensions
+    var fontSize = 13;
+    var lineHeight = fontSize * 1.55;
+    var charWidth = fontSize * 0.6; // Monospace approximation
+    var maxChars = Math.max(...lines.map(l => l.length));
+    var padding = 40;
+    
+    canvas.width = (maxChars * charWidth) + (padding * 2);
+    canvas.height = (lines.length * lineHeight) + (padding * 2);
+    
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw logo if present
+    var logo = document.querySelector('.receipt-logo');
+    var yOffset = padding;
+    
+    if (logo && logo.complete) {
+        try {
+            var logoRatio = logo.naturalWidth / logo.naturalHeight;
+            var logoHeight = 80;
+            var logoWidth = logoHeight * logoRatio;
+            var logoX = (canvas.width - logoWidth) / 2;
+            ctx.drawImage(logo, logoX, yOffset, logoWidth, logoHeight);
+            yOffset += logoHeight + 20;
+        } catch (e) {
+            console.log('Logo draw error:', e);
+        }
+    }
+    
+    // Draw text
+    ctx.fillStyle = '#222222';
+    ctx.font = fontSize + 'px "Courier New", Courier, monospace';
+    ctx.textBaseline = 'top';
+    
+    lines.forEach(function(line, i) {
+        ctx.fillText(line, padding, yOffset + (i * lineHeight));
+    });
+    
+    // Download
+    canvas.toBlob(function(blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'Bill_{{ sale.bill_number }}.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showStatus('✅ Image saved!', 'success');
+    });
+}
+
+// ============================================================
+//  SHARE BILL
+// ============================================================
+async function shareBill() {
+    try {
+        await navigator.share({ title: 'Bill {{ sale.bill_number }}', text: formatForThermalPrint() });
+        showStatus('✅ Shared successfully', 'success');
+    } catch (e) { console.error('Share error:', e); }
+}
+
+// ============================================================
+//  SAVED PRINTER MANAGEMENT
+// ============================================================
+function updateForgetButton() {
+    var name = localStorage.getItem('savedBluetoothPrinter');
+    var btn = document.getElementById('forgetPrinterBtn');
+    var txt = document.getElementById('bluetoothBtnText');
+    if (name) {
+        btn.style.display = 'flex';
+        txt.textContent = 'Print via Bluetooth (' + name + ')';
+    } else {
+        btn.style.display = 'none';
+        txt.textContent = 'Print via Bluetooth';
+    }
+}
+
+function forgetSavedPrinter() {
+    localStorage.removeItem('savedBluetoothPrinter');
+    updateForgetButton();
+    showStatus('Saved printer forgotten.', 'success');
+}
+
+// ============================================================
+//  IMAGE → MONOCHROME BITMAP (for logo printing)
+// ============================================================
+function imageToBitmap(url) {
+    return new Promise(function(resolve, reject) {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            var c = document.createElement('canvas');
+            var ctx = c.getContext('2d');
+            var maxW = 384;
+            var sc = Math.min(1, maxW / img.width);
+            c.width  = Math.floor(img.width  * sc);
+            c.height = Math.floor(img.height * sc);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+
+            try {
+                var id = ctx.getImageData(0, 0, c.width, c.height);
+            } catch (e) {
+                // CORS tainted canvas - retry without crossOrigin
+                var img2 = new Image();
+                img2.onload = function() {
+                    var c2 = document.createElement('canvas');
+                    var ctx2 = c2.getContext('2d');
+                    c2.width  = c.width;
+                    c2.height = c.height;
+                    ctx2.drawImage(img2, 0, 0, c2.width, c2.height);
+                    try {
+                        var id2 = ctx2.getImageData(0, 0, c2.width, c2.height);
+                        resolve(convertToBitmap(id2, c2.width, c2.height));
+                    } catch (e2) { reject(e2); }
+                };
+                img2.onerror = reject;
+                img2.src = url;
+                return;
+            }
+            resolve(convertToBitmap(id, c.width, c.height));
+        };
+        img.onerror = function() {
+            // If crossOrigin fails, retry without it
+            var img2 = new Image();
+            img2.onload = function() {
+                var c = document.createElement('canvas');
+                var ctx = c.getContext('2d');
+                var maxW = 384;
+                var sc = Math.min(1, maxW / img2.width);
+                c.width  = Math.floor(img2.width  * sc);
+                c.height = Math.floor(img2.height * sc);
+                ctx.drawImage(img2, 0, 0, c.width, c.height);
+                try {
+                    var id = ctx.getImageData(0, 0, c.width, c.height);
+                    resolve(convertToBitmap(id, c.width, c.height));
+                } catch (e) { reject(e); }
+            };
+            img2.onerror = reject;
+            img2.src = url;
+        };
+        img.src = url;
+    });
+}
+
+function convertToBitmap(id, w, h) {
+    var bpl = Math.ceil(w / 8);
+    var bm  = new Uint8Array(bpl * h);
+    for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+            var i = (y * w + x) * 4;
+            var gray = 0.299 * id.data[i] + 0.587 * id.data[i+1] + 0.114 * id.data[i+2];
+            if (gray < 128) {
+                bm[y * bpl + Math.floor(x / 8)] |= (1 << (7 - (x % 8)));
+            }
+        }
+    }
+    return { bitmap: bm, width: w, height: h };
+}
+
+// ============================================================
+//  GENERATE ESC/POS COMMANDS (async for logo)
+// ============================================================
+async function generateESCPOS() {
+    var enc = new TextEncoder();
+    var ESC = 0x1B, GS = 0x1D;
+    var cmd = [];
+    var W = {{ char_limits.normal|default:32 }};
+    var SEP = '='.repeat(W) + '\n';
+    var DSEP = '-'.repeat(W) + '\n';
+
+    // Init printer
+    cmd.push(ESC, 0x40);
+    // Center
+    cmd.push(ESC, 0x61, 0x01);
+
+    {% if branding and branding.show_logo and branding.logo %}
+    try {
+        var logo = await imageToBitmap('{{ branding.logo.url }}');
+        var bpl = Math.ceil(logo.width / 8);
+        cmd.push(GS, 0x76, 0x30, 0x00);
+        cmd.push(bpl & 0xFF, (bpl >> 8) & 0xFF);
+        cmd.push(logo.height & 0xFF, (logo.height >> 8) & 0xFF);
+        cmd.push(...logo.bitmap);
+        cmd.push(...enc.encode('\n'));
+    } catch (e) { console.error('Logo error:', e); }
+    {% endif %}
+
+    // Bold company name
+    cmd.push(ESC, 0x45, 0x01);
+    {% if branding %}
+    cmd.push(...enc.encode('{{ branding.company_name|escapejs }}\n'));
+    {% endif %}
+    cmd.push(ESC, 0x45, 0x00);
+
+    {% if branding %}
+        {% if branding.tagline and branding.show_tagline %}
+    cmd.push(...enc.encode('{{ branding.tagline|escapejs }}\n'));
+        {% endif %}
+        {% if branding.address and branding.show_address %}
+    cmd.push(...enc.encode('{{ branding.address|escapejs }}\n'));
+        {% endif %}
+        {% if branding.phone and branding.show_contact %}
+    cmd.push(...enc.encode('Tel: {{ branding.phone|escapejs }}\n'));
+        {% endif %}
+        {% if branding.email and branding.show_contact %}
+    cmd.push(...enc.encode('{{ branding.email|escapejs }}\n'));
+        {% endif %}
+        {% if branding.website and branding.show_website %}
+    cmd.push(...enc.encode('{{ branding.website|escapejs }}\n'));
+        {% endif %}
+    {% else %}
+    cmd.push(...enc.encode('Sales & Distribution\n'));
+    cmd.push(...enc.encode('Tel: +94 XX XXX XXXX\n'));
+    {% endif %}
+
+    cmd.push(...enc.encode(DSEP));
+
+    // Cancelled / Draft warning (top)
+    {% if sale.bill_status == 'cancelled' or sale.sale_status == 'cancelled' %}
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('\n*** CANCELLED - VOID ***\nNOT VALID FOR PAYMENT\n'));
+    cmd.push(ESC, 0x45, 0x00);
+    cmd.push(...enc.encode('\n' + SEP));
+    {% elif sale.bill_status == 'draft' or sale.sale_status == 'draft' %}
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('\n*** DRAFT - ESTIMATE ONLY ***\nNOT VALID FOR PAYMENT\n'));
+    cmd.push(ESC, 0x45, 0x00);
+    cmd.push(...enc.encode('\n' + SEP));
+    {% endif %}
+
+    // Left align
+    cmd.push(ESC, 0x61, 0x00);
+
+    // Bill number
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('BILL: {{ sale.bill_number|escapejs }}\n'));
+    cmd.push(ESC, 0x45, 0x00);
+
+    cmd.push(...enc.encode('\n'));
+    cmd.push(...enc.encode('Date: {{ sale.bill_date|date:"d/m/Y H:i" }}\n'));
+
+    {% if sale.shop %}
+    cmd.push(...enc.encode('Shop: {{ sale.shop.shop_name|escapejs }}\n'));
+    cmd.push(...enc.encode('Owner: {{ sale.shop.owner_name|escapejs }}\n'));
+    {% else %}
+    cmd.push(...enc.encode('Customer: {{ sale.customer_name|default:"Walk-in Customer"|escapejs }}\n'));
+    {% endif %}
+
+    cmd.push(...enc.encode('Rep: {{ sale.sales_rep.get_full_name|default:sale.sales_rep.username|escapejs }}\n'));
+    cmd.push(...enc.encode('\n' + DSEP));
+
+    // Items
+    {% for item in items %}
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('{{ item.product.product_name|escapejs }}\n'));
+    cmd.push(ESC, 0x45, 0x00);
+        {% if item.quantity > 0 %}
+    cmd.push(...enc.encode('{{ item.quantity|floatformat:0 }} x Rs.{{ item.unit_price|floatformat:2 }}'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ item.line_total|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+        {% endif %}
+        {% if item.foc_quantity > 0 %}
+            {% if item.quantity > 0 %}
+    cmd.push(...enc.encode('FOC: {{ item.foc_quantity|floatformat:0 }}         FREE\n'));
+            {% else %}
+    cmd.push(...enc.encode('FOC: {{ item.foc_quantity|floatformat:0 }}'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('FREE\n'));
+    cmd.push(ESC, 0x61, 0x00);
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    cmd.push(...enc.encode(DSEP));
+
+    // Totals
+    cmd.push(...enc.encode('Subtotal:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ sale.subtotal|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+
+    {% if sale.discount_amount > 0 %}
+    cmd.push(...enc.encode('Discount ({{ sale.discount_percentage|floatformat:1 }}%):'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('-Rs.{{ sale.discount_amount|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+
+    // Grand total
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('TOTAL:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ sale.total_amount|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    cmd.push(ESC, 0x45, 0x00);
+
+    {% if has_payment_info %}
+    // --- Payment Breakdown ---
+    cmd.push(ESC, 0x61, 0x01); // Center
+    cmd.push(...enc.encode('-- Payment Details --\n'));
+    cmd.push(ESC, 0x61, 0x00); // Left
+
+    {% if cash_paid > 0 %}
+    cmd.push(...enc.encode('Cash Paid:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ cash_paid|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+    {% if cheque_completed > 0 %}
+    cmd.push(...enc.encode('Cheque (Cleared):'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ cheque_completed|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+    {% if cheque_pending > 0 %}
+    cmd.push(...enc.encode('Cheque (Pending):'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ cheque_pending|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+    {% if bank_completed > 0 %}
+    cmd.push(...enc.encode('Bank Transfer:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ bank_completed|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+    {% if bank_pending > 0 %}
+    cmd.push(...enc.encode('Bank (Pending):'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ bank_pending|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+    {% if return_adj > 0 %}
+    cmd.push(...enc.encode('Return Adjusted:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ return_adj|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+
+    cmd.push(...enc.encode(DSEP));
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('Total Paid:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ total_paid|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    cmd.push(ESC, 0x45, 0x00);
+
+    {% if total_pending > 0 %}
+    cmd.push(...enc.encode('Pending:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ total_pending|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    {% endif %}
+
+    {% if credit_balance > 0 %}
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('BALANCE DUE:'));
+    cmd.push(ESC, 0x61, 0x02);
+    cmd.push(...enc.encode('Rs.{{ credit_balance|floatformat:2 }}\n'));
+    cmd.push(ESC, 0x61, 0x00);
+    cmd.push(ESC, 0x45, 0x00);
+    {% endif %}
+    {% endif %}
+
+    cmd.push(...enc.encode(DSEP));
+
+    // Footer
+    {% if sale.bill_status == 'cancelled' or sale.sale_status == 'cancelled' %}
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('\n!!! CANCELLED - VOID !!!\nNOT VALID FOR PAYMENT\nDO NOT HONOR\n'));
+    cmd.push(ESC, 0x45, 0x00);
+    cmd.push(...enc.encode('\nFOR RECORDS ONLY\n'));
+    {% elif sale.bill_status == 'draft' or sale.sale_status == 'draft' %}
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('\n!!! DRAFT - ESTIMATE ONLY !!!\nNOT VALID FOR PAYMENT\n'));
+    cmd.push(ESC, 0x45, 0x00);
+    cmd.push(...enc.encode('\nNOT VALID UNTIL CONFIRMED\n'));
+    {% else %}
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(...enc.encode('{{ footer_text|escapejs }}\n'));
+    {% if print_profile.footer_line2 %}
+    cmd.push(...enc.encode('{{ print_profile.footer_line2|escapejs }}\n'));
+    {% endif %}
+    {% if print_profile.footer_line3 %}
+    cmd.push(...enc.encode('{{ print_profile.footer_line3|escapejs }}\n'));
+    {% endif %}
+    {% endif %}
+
+    // --- Signature Fields ---
+    cmd.push(ESC, 0x61, 0x00); // Left align
+    {% if credit_balance > 0 %}
+    cmd.push(...enc.encode('\n\nCustomer Signature:\n'));
+    cmd.push(...enc.encode('\n\n'));
+    cmd.push(...enc.encode('........................\n'));
+    cmd.push(...enc.encode('\n'));
+    {% else %}
+    cmd.push(...enc.encode('\n'));
+    {% endif %}
+    cmd.push(...enc.encode('Rep Signature:\n'));
+    cmd.push(...enc.encode('\n\n'));
+    cmd.push(...enc.encode('........................\n'));
+    cmd.push(...enc.encode(DSEP));
+
+    cmd.push(ESC, 0x61, 0x01);
+    cmd.push(...enc.encode('{{ sale.bill_date|date:"d/m/Y H:i" }}\n'));
+    cmd.push(...enc.encode('\n\n\n'));
+    cmd.push(GS, 0x56, 0x00); // Cut paper
+
+    return new Uint8Array(cmd);
+}
+
+// ============================================================
+//  BLUETOOTH PRINTER
+// ============================================================
+async function connectBluetoothPrinter() {
+    try {
+        var savedName = localStorage.getItem('savedBluetoothPrinter');
+        var device = null;
+
+        // Try saved printer first
+        if (savedName) {
+            try {
+                showStatus('Auto-connecting to ' + savedName + '...', 'info');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: savedName }],
+                    optionalServices: [
+                        '000018f0-0000-1000-8000-00805f9b34fb',
+                        '0000180a-0000-1000-8000-00805f9b34fb',
+                        '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                    ]
+                });
+            } catch (e) {
+                localStorage.removeItem('savedBluetoothPrinter');
+                updateForgetButton();
+                showStatus('Saved printer not found. Select manually...', 'warning');
+                device = null;
+            }
+        }
+
+        // Manual selection
+        if (!device) {
+            showStatus('Scanning for printers...', 'info');
+            device = await navigator.bluetooth.requestDevice({
+                filters: [
+                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+                    { namePrefix: 'BlueTooth Printer' },
+                    { namePrefix: 'Printer' },
+                    { namePrefix: 'BT-' },
+                    { namePrefix: 'MTP-' },
+                    { namePrefix: 'RPP' },
+                    { namePrefix: 'POS-' }
+                ],
+                optionalServices: [
+                    '000018f0-0000-1000-8000-00805f9b34fb',
+                    '0000180a-0000-1000-8000-00805f9b34fb',
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                ]
+            });
+        }
+
+        showStatus('Connecting to ' + device.name + '...', 'info');
+        var server = await device.gatt.connect();
+        showStatus('Getting printer service...', 'info');
+
+        var service;
+        try {
+            service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        } catch (e) {
+            service = await server.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
+        }
+
+        var char;
+        try {
+            char = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        } catch (e) {
+            char = await service.getCharacteristic('49535343-8841-43f4-a8d4-ecbe34729bb3');
+        }
+
+        showStatus('Preparing print data...', 'info');
+        var data = await generateESCPOS();
+        var copies = {{ print_profile.bill_print_copies|default:1 }};
+
+        for (var c = 1; c <= copies; c++) {
+            if (copies > 1) showStatus('Printing copy ' + c + ' of ' + copies + '...', 'info');
+            for (var i = 0; i < data.length; i += 20) {
+                await char.writeValue(data.slice(i, i + 20));
+                await new Promise(function(r) { setTimeout(r, 50); });
+            }
+            if (c < copies) await new Promise(function(r) { setTimeout(r, 1000); });
+        }
+
+        showStatus('✅ Printed! (' + copies + (copies > 1 ? ' copies)' : ' copy)'), 'success');
+
+        if (device.name) {
+            localStorage.setItem('savedBluetoothPrinter', device.name);
+            updateForgetButton();
+        }
+
+        setTimeout(function() { device.gatt.disconnect(); }, 2000);
+
+    } catch (e) {
+        console.error('BT error:', e);
+        if (e.name === 'NotFoundError')
+            showStatus('No printer found. Check Bluetooth is on.', 'error');
+        else if (e.name === 'SecurityError')
+            showStatus('Bluetooth access denied.', 'error');
+        else
+            showStatus('Error: ' + e.message, 'error');
+    }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Render receipt preview
+    document.getElementById('receiptPreview').textContent = formatForThermalPrint();
+
+    // Show share button if supported
+    if (navigator.share) {
+        document.getElementById('shareBtn').style.display = 'flex';
+    }
+
+    // Check Bluetooth support
+    if (!('bluetooth' in navigator)) {
+        document.getElementById('bluetoothPrintBtn').disabled = true;
+    }
+
+    // Update saved printer UI
+    updateForgetButton();
+
+    showStatus('Ready', 'info');
+});
+
+// Auto-print if configured
+var autoUrl = new URLSearchParams(window.location.search).get('autoprint') === 'true';
+var autoSetting = {{ print_profile.auto_print|yesno:"true,false" }};
+if (autoUrl || autoSetting) {
+    window.addEventListener('load', function() {
+        setTimeout(function() { window.print(); }, 500);
+    });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1221 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Profit & Loss - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pnl-header {
+        background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .pnl-header h1 { font-size: 1.6rem; font-weight: 700; }
+    .pnl-header p { opacity: 0.85; font-size: 0.9rem; }
+
+    /* Stat cards */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 4px solid transparent;
+        height: 100%;
+    }
+    .stat-card.revenue { border-left-color: #2563eb; }
+    .stat-card.net-sales { border-left-color: #7c3aed; }
+    .stat-card.gross-profit { border-left-color: #059669; }
+    .stat-card.operating-profit { border-left-color: #f97316; }
+    .stat-card.total-expenses { border-left-color: #dc2626; }
+    .stat-card.net-profit { border-left-color: #f59e0b; }
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .stat-sub {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        margin-top: 0.15rem;
+    }
+
+    /* P&L Statement */
+    .pnl-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .pnl-table table { margin-bottom: 0; }
+    .pnl-table th { 
+        background: #f8fafc; 
+        font-weight: 600; 
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #475569;
+    }
+    .pnl-table td { 
+        font-size: 0.92rem; 
+        vertical-align: middle;
+        padding: 0.65rem 1rem;
+    }
+    .pnl-section-header {
+        background: #f1f5f9 !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        color: #1e293b !important;
+        letter-spacing: 0.3px;
+    }
+    .pnl-subtotal {
+        font-weight: 700;
+        border-top: 2px solid #e2e8f0;
+    }
+    .pnl-grand-total {
+        font-weight: 800;
+        font-size: 1.05rem !important;
+        background: #f0fdf4 !important;
+        border-top: 3px double #059669;
+    }
+    .pnl-indent { padding-left: 2rem !important; }
+    .pnl-subgroup-header td {
+        background: #fafbfc !important;
+        padding: 0.5rem 1rem 0.25rem 2rem !important;
+        border-bottom: none !important;
+    }
+    .pnl-loss { color: #dc2626 !important; }
+    .pnl-profit { color: #059669 !important; }
+
+    /* Company breakdown */
+    .breakdown-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .breakdown-table th {
+        background: #f8fafc;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #475569;
+    }
+    .breakdown-table td { font-size: 0.9rem; }
+
+    .margin-badge {
+        display: inline-block;
+        padding: 0.2rem 0.55rem;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .margin-good { background: #dcfce7; color: #166534; }
+    .margin-ok { background: #fef9c3; color: #854d0e; }
+    .margin-bad { background: #fee2e2; color: #991b1b; }
+
+    /* Chart */
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .chart-card h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1rem;
+    }
+
+    /* Filter */
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .pnl-header { padding: 1.2rem; }
+        .pnl-header h1 { font-size: 1.2rem; }
+        .stat-value { font-size: 1rem; }
+        .stat-card { padding: 0.85rem; }
+        .stat-label { font-size: 0.68rem; }
+    }
+    @media (min-width: 992px) {
+        .stat-value { font-size: 1.25rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="pnl-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Profit & Loss Statement</h1>
+                <p class="mb-0 mt-1">FIFO-based cost of goods sold &bull; {{ total_bills }} confirmed bill{{ total_bills|pluralize }}</p>
+            </div>
+            <div>
+                <span class="badge bg-white text-dark fs-6 px-3 py-2">
+                    {% if request.GET.start_date and request.GET.end_date %}
+                        {{ request.GET.start_date }} to {{ request.GET.end_date }}
+                    {% elif request.GET.start_date %}
+                        From {{ request.GET.start_date }}
+                    {% elif request.GET.end_date %}
+                        Until {{ request.GET.end_date }}
+                    {% else %}
+                        All Time
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-card mb-4">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3 col-6">
+                    <label class="form-label small fw-semibold mb-1">Start Date</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request.GET.start_date }}">
+                </div>
+                <div class="col-md-3 col-6">
+                    <label class="form-label small fw-semibold mb-1">End Date</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request.GET.end_date }}">
+                </div>
+                <div class="col-md-3 col-8">
+                    <label class="form-label small fw-semibold mb-1">Company</label>
+                    <select name="company" class="form-select form-select-sm">
+                        <option value="">All Companies</option>
+                        {% for comp in companies %}
+                        <option value="{{ comp.id }}" {% if request.GET.company == comp.id|stringformat:"s" %}selected{% endif %}>
+                            {{ comp.company_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-4">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top-Line Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="stat-card revenue">
+                <div class="stat-label">Gross Sales</div>
+                <div class="stat-value text-primary">Rs. {{ gross_sales|floatformat:0|intcomma }}</div>
+                <div class="stat-sub">{{ total_bills }} bill{{ total_bills|pluralize }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card net-sales">
+                <div class="stat-label">Net Sales</div>
+                <div class="stat-value" style="color: #7c3aed;">Rs. {{ net_sales|floatformat:0|intcomma }}</div>
+                <div class="stat-sub">After returns</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card gross-profit">
+                <div class="stat-label">Gross Profit</div>
+                <div class="stat-value {% if gross_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}">
+                    Rs. {{ gross_profit|floatformat:0|intcomma }}
+                </div>
+                <div class="stat-sub">{{ gross_margin|floatformat:1 }}% margin</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card operating-profit">
+                <div class="stat-label">Operating Profit</div>
+                <div class="stat-value {% if operating_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}" style="{% if operating_profit >= 0 %}color: #f97316;{% endif %}">
+                    Rs. {{ operating_profit|floatformat:0|intcomma }}
+                </div>
+                <div class="stat-sub">{{ operating_margin|floatformat:1 }}% margin</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card total-expenses">
+                <div class="stat-label">Total Expenses</div>
+                <div class="stat-value text-danger">Rs. {{ total_expenses|floatformat:0|intcomma }}</div>
+                <div class="stat-sub">Opex + Losses</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card net-profit">
+                <div class="stat-label">Net Profit</div>
+                <div class="stat-value {% if net_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}">
+                    Rs. {{ net_profit|floatformat:0|intcomma }}
+                </div>
+                <div class="stat-sub">{{ net_margin|floatformat:1 }}% margin</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- P&L Statement Table -->
+        <div class="col-lg-7">
+            <div class="pnl-table">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 60%;">Description</th>
+                            <th class="text-end" style="width: 40%;">Amount (Rs.)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- REVENUE -->
+                        <tr class="pnl-section-header">
+                            <td colspan="2"><i class="fas fa-arrow-trend-up me-1 text-primary"></i> Revenue</td>
+                        </tr>
+                        <tr>
+                            <td class="pnl-indent">Gross Sales</td>
+                            <td class="text-end fw-semibold">{{ gross_sales|floatformat:2|intcomma }}</td>
+                        </tr>
+                        <tr>
+                            <td class="pnl-indent text-danger">Less: Sales Returns</td>
+                            <td class="text-end text-danger">({{ total_returns|floatformat:2|intcomma }})</td>
+                        </tr>
+                        <tr class="pnl-subtotal">
+                            <td class="fw-bold">Net Sales</td>
+                            <td class="text-end fw-bold" style="color: #7c3aed;">{{ net_sales|floatformat:2|intcomma }}</td>
+                        </tr>
+
+                        <!-- COGS -->
+                        <tr class="pnl-section-header">
+                            <td colspan="2"><i class="fas fa-boxes-stacked me-1 text-warning"></i> Cost of Goods Sold</td>
+                        </tr>
+                        <tr>
+                            <td class="pnl-indent">
+                                COGS (FIFO method)
+                                <button type="button" data-bs-toggle="collapse" data-bs-target="#cogsTransactions" aria-expanded="false" aria-controls="cogsTransactions" class="btn btn-link btn-sm ms-2 text-decoration-none p-0" style="font-size: 0.8rem;">
+                                    <i class="fas fa-chevron-down"></i> Details
+                                </button>
+                            </td>
+                            <td class="text-end text-danger">({{ cogs|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% if returns_cost > 0 %}
+                        <tr>
+                            <td class="pnl-indent text-success">
+                                Less: Cost of Returned Goods
+                                <button type="button" data-bs-toggle="collapse" data-bs-target="#returnsCostTransactions" aria-expanded="false" aria-controls="returnsCostTransactions" class="btn btn-link btn-sm ms-2 text-decoration-none p-0" style="font-size: 0.8rem;">
+                                    <i class="fas fa-chevron-down"></i> Details
+                                </button>
+                            </td>
+                            <td class="text-end text-success">{{ returns_cost|floatformat:2|intcomma }}</td>
+                        </tr>
+                        <tr class="pnl-subtotal" style="border-top: 1px solid #dee2e6;">
+                            <td class="fw-bold">Net COGS</td>
+                            <td class="text-end fw-bold text-danger">({{ net_cogs|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="pnl-subtotal">
+                            <td class="fw-bold">Gross Profit</td>
+                            <td class="text-end fw-bold {% if gross_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}">
+                                {{ gross_profit|floatformat:2|intcomma }}
+                                <small class="text-muted ms-1">({{ gross_margin|floatformat:1 }}%)</small>
+                            </td>
+                        </tr>
+
+                        <!-- OPERATING EXPENSES -->
+                        <tr class="pnl-section-header">
+                            <td colspan="2"><i class="fas fa-receipt me-1 text-danger"></i> Operating Expenses</td>
+                        </tr>
+
+                        <!-- Sub-group: Sales & Distribution -->
+                        {% if total_commission > 0 or net_foc_cost > 0 %}
+                        <tr class="pnl-subgroup-header">
+                            <td colspan="2">
+                                <small class="text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px; color: #6366f1;">
+                                    <i class="fas fa-truck me-1"></i>Sales & Distribution
+                                </small>
+                            </td>
+                        </tr>
+                        {% if total_commission > 0 %}
+                        <tr>
+                            <td class="pnl-indent">Sales Commission</td>
+                            <td class="text-end text-danger">({{ total_commission|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if net_foc_cost > 0 %}
+                        <tr>
+                            <td class="pnl-indent">Net FOC Cost</td>
+                            <td class="text-end text-danger">({{ net_foc_cost|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+
+                        <!-- Sub-group: General & Administrative (from Expense model) -->
+                        {% if total_operating_expenses > 0 %}
+                        <tr class="pnl-subgroup-header">
+                            <td colspan="2">
+                                <small class="text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px; color: #6366f1;">
+                                    <i class="fas fa-building me-1"></i>General & Administrative
+                                    <a href="{% url 'expenses:expense_list' %}" class="ms-1 text-decoration-none" style="font-size: 0.65rem; color: #6366f1;">
+                                        <i class="fas fa-external-link-alt"></i> View All
+                                    </a>
+                                </small>
+                            </td>
+                        </tr>
+                        {% for cat in op_expense_by_category %}
+                        <tr>
+                            <td class="pnl-indent">
+                                <i class="fas {{ cat.category__icon }} me-1" style="color: {{ cat.category__color }}; font-size: 0.78rem;"></i>
+                                {{ cat.category__name }}
+                            </td>
+                            <td class="text-end text-danger">({{ cat.total|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if not total_opex %}
+                        <tr>
+                            <td class="pnl-indent text-muted fst-italic" colspan="2">No operating expenses recorded</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="pnl-subtotal">
+                            <td class="fw-bold">Total Operating Expenses</td>
+                            <td class="text-end fw-bold text-danger">({{ total_opex|floatformat:2|intcomma }})</td>
+                        </tr>
+
+                        <!-- OPERATING PROFIT -->
+                        <tr class="pnl-subtotal" style="background: #fefce8;">
+                            <td class="fw-bold">
+                                <i class="fas fa-chart-line me-1 text-warning"></i>Operating Profit
+                            </td>
+                            <td class="text-end fw-bold {% if operating_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}">
+                                {{ operating_profit|floatformat:2|intcomma }}
+                                <small class="text-muted ms-1">({{ operating_margin|floatformat:1 }}%)</small>
+                            </td>
+                        </tr>
+
+                        <!-- OTHER LOSSES & WRITE-OFFS -->
+                        <tr class="pnl-section-header">
+                            <td colspan="2"><i class="fas fa-exclamation-triangle me-1 text-warning"></i> Losses & Write-offs</td>
+                        </tr>
+                        {% if total_bad_debt > 0 %}
+                        <tr>
+                            <td class="pnl-indent">Bad Debt Write-offs</td>
+                            <td class="text-end text-danger">({{ total_bad_debt|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if total_damage > 0 %}
+                        <tr>
+                            <td class="pnl-indent">Damage / Wastage</td>
+                            <td class="text-end text-danger">({{ total_damage|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if total_writeoffs > 0 %}
+                        <tr>
+                            <td class="pnl-indent">
+                                Stock Write-offs
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">Status adjustments, non-resaleable</small>
+                            </td>
+                            <td class="text-end text-danger">({{ total_writeoffs|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if net_adjustment_loss > 0 %}
+                        <tr>
+                            <td class="pnl-indent">
+                                Inventory Adjustments (Net Loss)
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">Manual stock corrections</small>
+                            </td>
+                            <td class="text-end text-danger">({{ net_adjustment_loss|floatformat:2|intcomma }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if not total_losses %}
+                        <tr>
+                            <td class="pnl-indent text-muted fst-italic" colspan="2">No losses recorded</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="pnl-subtotal">
+                            <td class="fw-bold">Total Losses & Write-offs</td>
+                            <td class="text-end fw-bold text-danger">({{ total_losses|floatformat:2|intcomma }})</td>
+                        </tr>
+
+                        <!-- TOTAL ALL EXPENSES -->
+                        <tr class="pnl-subtotal" style="border-top: 2px solid #cbd5e1;">
+                            <td class="fw-bold">Total Expenses</td>
+                            <td class="text-end fw-bold text-danger">({{ total_expenses|floatformat:2|intcomma }})</td>
+                        </tr>
+
+                        <!-- NET PROFIT -->
+                        <tr class="pnl-grand-total">
+                            <td><i class="fas fa-flag-checkered me-1"></i> Net Profit</td>
+                            <td class="text-end {% if net_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %}">
+                                {{ net_profit|floatformat:2|intcomma }}
+                                <small class="text-muted ms-1">({{ net_margin|floatformat:1 }}%)</small>
+                            </td>
+                        </tr>
+
+                        {% if total_supplier_returns > 0 %}
+                        <!-- INFORMATIONAL: Supplier Returns -->
+                        <tr style="background: #f0f9ff;">
+                            <td colspan="2" class="pt-2 pb-1">
+                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                    <i class="fas fa-info-circle me-1"></i>Inventory Memo
+                                </small>
+                            </td>
+                        </tr>
+                        <tr style="background: #f0f9ff;">
+                            <td class="pnl-indent">
+                                <small class="text-muted">Supplier Returns (Purchase Returns + Returns to Company)</small>
+                            </td>
+                            <td class="text-end">
+                                <small class="text-info">Rs. {{ total_supplier_returns|floatformat:2|intcomma }}</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="col-lg-5">
+            <div class="chart-card mb-4">
+                <h5><i class="fas fa-chart-bar me-2 text-success"></i>Monthly Trend</h5>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="pnlChart"></canvas>
+                </div>
+            </div>
+
+            <!-- COGS Breakdown by Product (Summary) -->
+            {% if cogs_breakdown %}
+            <div class="breakdown-table mb-4">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                        <i class="fas fa-boxes-stacked me-2 text-warning"></i>COGS by Product (Summary)
+                    </h5>
+                    <button type="button" data-bs-toggle="collapse" data-bs-target="#cogsTransactions" aria-expanded="false" aria-controls="cogsTransactions" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-list-ol me-1"></i>Transaction Details
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-center">Sold</th>
+                                <th class="text-center">FOC</th>
+                                <th class="text-end">Avg Cost</th>
+                                <th class="text-end">Total COGS</th>
+                                <th class="text-end">Revenue</th>
+                                <th class="text-center">Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in cogs_breakdown %}
+                            <tr>
+                                <td>
+                                    <span class="fw-semibold">{{ row.product_name }}</span>
+                                    <br><small class="text-muted">{{ row.product_code }} &bull; {{ row.size }}</small>
+                                </td>
+                                <td class="text-center">{{ row.qty_sold|floatformat:0 }}</td>
+                                <td class="text-center text-muted">{{ row.foc_given|floatformat:0 }}</td>
+                                <td class="text-end">{{ row.avg_unit_cost|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-danger fw-semibold">{{ row.total_cost|floatformat:2|intcomma }}</td>
+                                <td class="text-end">{{ row.revenue|floatformat:2|intcomma }}</td>
+                                <td class="text-center">
+                                    <span class="margin-badge {% if row.margin >= 20 %}margin-good{% elif row.margin >= 10 %}margin-ok{% else %}margin-bad{% endif %}">
+                                        {{ row.margin|floatformat:1 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold" style="background: #f8fafc;">
+                                <td>Total</td>
+                                <td colspan="3"></td>
+                                <td class="text-end text-danger">{{ cogs|floatformat:2|intcomma }}</td>
+                                <td class="text-end">{{ gross_sales|floatformat:2|intcomma }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if company_breakdown %}
+            <!-- Company Breakdown -->
+            <div class="breakdown-table">
+                <div class="p-3 border-bottom">
+                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                        <i class="fas fa-building me-2 text-primary"></i>Profitability by Company
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th class="text-end">Revenue</th>
+                                <th class="text-end">COGS</th>
+                                <th class="text-end">Profit</th>
+                                <th class="text-center">Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in company_breakdown %}
+                            <tr>
+                                <td class="fw-semibold">{{ row.company.company_name }}</td>
+                                <td class="text-end">{{ row.revenue|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-muted">{{ row.cogs|floatformat:2|intcomma }}</td>
+                                <td class="text-end {% if row.gross_profit >= 0 %}pnl-profit{% else %}pnl-loss{% endif %} fw-semibold">
+                                    {{ row.gross_profit|floatformat:2|intcomma }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="margin-badge {% if row.margin >= 20 %}margin-good{% elif row.margin >= 10 %}margin-ok{% else %}margin-bad{% endif %}">
+                                        {{ row.margin|floatformat:1 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- COGS Transaction-Level Breakdown (Full Ledger) -->
+    {% if cogs_ledger %}
+    <div class="collapse mt-4" id="cogsTransactions">
+        <div class="breakdown-table">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                    <i class="fas fa-receipt me-2 text-warning"></i>COGS Transaction Ledger
+                    <span class="badge bg-secondary ms-2">{{ cogs_ledger|length }} items</span>
+                </h5>
+                <div>
+                    <input type="text" id="cogsSearch" class="form-control form-control-sm" placeholder="Search bills, products, shops..." style="width: 250px;">
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0" id="cogsLedgerTable" style="font-size: 0.82rem;">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr style="background: #f1f5f9;">
+                            <th style="width: 4%;">#</th>
+                            <th style="width: 9%;">Date</th>
+                            <th style="width: 11%;">Bill No.</th>
+                            <th style="width: 11%;">Shop</th>
+                            <th style="width: 14%;">Product</th>
+                            <th class="text-center" style="width: 4%;">Qty</th>
+                            <th class="text-center" style="width: 4%;">FOC</th>
+                            <th class="text-end" style="width: 7%;">Unit Price</th>
+                            <th class="text-end" style="width: 7%;">Revenue</th>
+                            <th class="text-end" style="width: 7%;">FIFO Cost</th>
+                            <th class="text-end" style="width: 7%;">COGS</th>
+                            <th class="text-center" style="width: 5%;">Margin</th>
+                            <th class="text-center" style="width: 4%;">Layers</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in cogs_ledger %}
+                        <tr class="cogs-row" {% if row.cost_breakdown %}style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#layerDetail{{ forloop.counter }}" aria-expanded="false"{% endif %}>
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <small>{{ row.date|date:"d M Y" }}</small>
+                            </td>
+                            <td>
+                                <a href="#" class="text-decoration-none fw-semibold" style="font-size: 0.8rem;">{{ row.bill_number }}</a>
+                            </td>
+                            <td>
+                                <small class="text-truncate d-inline-block" style="max-width: 120px;" title="{{ row.shop }}">{{ row.shop }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">{{ row.product_name }}</span>
+                                <br><small class="text-muted">{{ row.product_code }}</small>
+                            </td>
+                            <td class="text-center">{{ row.qty_sold|floatformat:0 }}</td>
+                            <td class="text-center {% if row.foc_qty > 0 %}text-info fw-semibold{% else %}text-muted{% endif %}">
+                                {{ row.foc_qty|floatformat:0 }}
+                            </td>
+                            <td class="text-end">{{ row.unit_price|floatformat:2|intcomma }}</td>
+                            <td class="text-end">{{ row.revenue|floatformat:2|intcomma }}</td>
+                            <td class="text-end">
+                                <span title="FIFO weighted-average cost per unit">{{ row.unit_cost|floatformat:4|intcomma }}</span>
+                            </td>
+                            <td class="text-end text-danger fw-semibold">{{ row.total_cost|floatformat:2|intcomma }}</td>
+                            <td class="text-center">
+                                {% if row.revenue > 0 %}
+                                <span class="margin-badge {% if row.margin >= 20 %}margin-good{% elif row.margin >= 10 %}margin-ok{% else %}margin-bad{% endif %}">
+                                    {{ row.margin|floatformat:1 }}%
+                                </span>
+                                {% else %}
+                                <span class="margin-badge margin-bad" title="FOC only - no revenue">FOC</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if row.cost_breakdown %}
+                                <span class="badge bg-info bg-opacity-25 text-info" title="Click row to see cost layers consumed">
+                                    <i class="fas fa-layer-group me-1"></i>{{ row.cost_breakdown|length }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted" title="No layer data (run replay to populate)">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if row.cost_breakdown %}
+                        <tr class="collapse" id="layerDetail{{ forloop.counter }}">
+                            <td colspan="13" class="p-0">
+                                <div class="px-4 py-2" style="background: #f8fafc;">
+                                    <small class="fw-bold text-primary d-block mb-1">
+                                        <i class="fas fa-cubes me-1"></i>FIFO Layers Consumed:
+                                    </small>
+                                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.78rem;">
+                                        <thead>
+                                            <tr class="text-muted">
+                                                <th style="width: 5%;">#</th>
+                                                <th style="width: 25%;">Source</th>
+                                                <th style="width: 30%;">Reference</th>
+                                                <th class="text-end" style="width: 20%;">Unit Cost</th>
+                                                <th class="text-center" style="width: 20%;">Qty Used</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for layer in row.cost_breakdown %}
+                                            <tr>
+                                                <td class="text-muted">{{ forloop.counter }}</td>
+                                                <td>
+                                                    {% if 'Purchase' in layer.source %}
+                                                    <span class="badge bg-success bg-opacity-25 text-success">{{ layer.source }}</span>
+                                                    {% elif 'Opening' in layer.source %}
+                                                    <span class="badge bg-primary bg-opacity-25 text-primary">{{ layer.source }}</span>
+                                                    {% elif 'Return' in layer.source %}
+                                                    <span class="badge bg-warning bg-opacity-25 text-warning">{{ layer.source }}</span>
+                                                    {% elif 'Exchange' in layer.source %}
+                                                    <span class="badge bg-info bg-opacity-25 text-info">{{ layer.source }}</span>
+                                                    {% elif 'Adjustment' in layer.source or 'Reconciliation' in layer.source %}
+                                                    <span class="badge bg-secondary bg-opacity-25 text-secondary">{{ layer.source }}</span>
+                                                    {% else %}
+                                                    <span class="badge bg-dark bg-opacity-25 text-dark">{{ layer.source }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td><code style="font-size: 0.75rem;">{{ layer.reference }}</code></td>
+                                                <td class="text-end">Rs. {{ layer.unit_cost|floatformat:2|intcomma }}</td>
+                                                <td class="text-center fw-semibold">{{ layer.qty_consumed }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background: #f0fdf4; border-top: 2px solid #059669;">
+                            <td colspan="8" class="text-end">Grand Total:</td>
+                            <td class="text-end">{{ gross_sales|floatformat:2|intcomma }}</td>
+                            <td></td>
+                            <td class="text-end text-danger">{{ cogs|floatformat:2|intcomma }}</td>
+                            <td class="text-center">
+                                <span class="margin-badge {% if gross_margin >= 20 %}margin-good{% elif gross_margin >= 10 %}margin-ok{% else %}margin-bad{% endif %}">
+                                    {{ gross_margin|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="p-2 bg-light border-top text-muted text-center" style="font-size: 0.75rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                FIFO Cost = weighted-average cost per unit from oldest inventory layers consumed at time of sale.
+                Total COGS = (Qty Sold + FOC Qty) &times; FIFO Unit Cost.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Returns Cost Transaction Ledger -->
+    {% if returns_cost_ledger %}
+    <div class="collapse mt-4" id="returnsCostTransactions">
+        <div class="breakdown-table">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                    <i class="fas fa-undo-alt me-2 text-success"></i>Cost of Returned Goods - Transaction Ledger
+                    <span class="badge bg-success ms-2">{{ returns_cost_ledger|length }} items</span>
+                </h5>
+                <div>
+                    <input type="text" id="returnsCostSearch" class="form-control form-control-sm" placeholder="Search returns, products, shops..." style="width: 250px;">
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0" id="returnsCostTable" style="font-size: 0.82rem;">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr style="background: #ecfdf5;">
+                            <th style="width: 4%;">#</th>
+                            <th style="width: 9%;">Date</th>
+                            <th style="width: 11%;">Return No.</th>
+                            <th style="width: 12%;">Shop</th>
+                            <th style="width: 15%;">Product</th>
+                            <th class="text-center" style="width: 6%;">Qty</th>
+                            <th class="text-end" style="width: 9%;">Unit Cost</th>
+                            <th class="text-end" style="width: 10%;">Total Cost</th>
+                            <th class="text-end" style="width: 10%;">Return Value</th>
+                            <th style="width: 8%;">Reason</th>
+                            <th class="text-end" style="width: 10%;">Running Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in returns_cost_ledger %}
+                        <tr class="returns-cost-row">
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <small>{{ row.date|date:"d M Y" }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-success" style="font-size: 0.8rem;">{{ row.return_number }}</span>
+                            </td>
+                            <td>
+                                <small class="text-truncate d-inline-block" style="max-width: 130px;" title="{{ row.shop }}">{{ row.shop }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">{{ row.product_name }}</span>
+                                <br><small class="text-muted">{{ row.product_code }}{% if row.size %} &bull; {{ row.size }}{% endif %}</small>
+                            </td>
+                            <td class="text-center">{{ row.quantity }}</td>
+                            <td class="text-end">{{ row.unit_cost|floatformat:4|intcomma }}</td>
+                            <td class="text-end text-success fw-semibold">{{ row.total_cost|floatformat:2|intcomma }}</td>
+                            <td class="text-end">{{ row.return_revenue|floatformat:2|intcomma }}</td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.7rem;">{{ row.return_reason }}</span>
+                            </td>
+                            <td class="text-end text-muted">{{ row.running_cost|floatformat:2|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background: #ecfdf5; border-top: 2px solid #059669;">
+                            <td colspan="7" class="text-end">Grand Total:</td>
+                            <td class="text-end text-success">{{ returns_cost|floatformat:2|intcomma }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="p-2 bg-light border-top text-muted text-center" style="font-size: 0.75rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                Cost of Returned Goods = cost at which returned stock was valued when the return was processed.
+                This amount is deducted from COGS to calculate Net COGS.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Cost Layer Breakdown by Source -->
+    {% if layer_breakdown %}
+    <div class="mt-4">
+        <div class="breakdown-table">
+            <div class="p-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>Cost Layer Breakdown by Source
+                    </h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary">{{ total_layers }} layers</span>
+                        <span class="badge bg-warning text-dark">Active Value: Rs. {{ total_inventory_value|floatformat:2|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Summary Cards -->
+            <div class="p-3">
+                <div class="row g-2 mb-3">
+                    {% for src in layer_breakdown %}
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="p-2 rounded-3 text-center" style="background: {{ src.color }}10; border: 1px solid {{ src.color }}30;">
+                            <div style="font-size: 0.7rem; color: {{ src.color }}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fas {{ src.icon }} me-1"></i>{{ src.label }}
+                            </div>
+                            <div class="fw-bold mt-1" style="font-size: 1.15rem; color: #1e293b;">
+                                {{ src.total_layers }}
+                                <small class="text-muted" style="font-size: 0.65rem;">layers</small>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b;">
+                                <span class="text-success">{{ src.active_layers }} active</span>
+                                &bull;
+                                <span class="text-muted">{{ src.exhausted_layers }} used</span>
+                            </div>
+                            <div class="fw-semibold mt-1" style="font-size: 0.82rem; color: {{ src.color }};">
+                                Rs. {{ src.total_value|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" style="font-size: 0.82rem;">
+                    <thead>
+                        <tr style="background: #f1f5f9;">
+                            <th style="width: 22%;">Source</th>
+                            <th class="text-center" style="width: 8%;">Layers</th>
+                            <th class="text-center" style="width: 8%;">Active</th>
+                            <th class="text-center" style="width: 10%;">Original Qty</th>
+                            <th class="text-center" style="width: 10%;">Consumed</th>
+                            <th class="text-center" style="width: 10%;">Remaining</th>
+                            <th class="text-end" style="width: 14%;">Original Value</th>
+                            <th class="text-end" style="width: 14%;">Active Value</th>
+                            <th class="text-center" style="width: 8%;">% of Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for src in layer_breakdown %}
+                        <tr>
+                            <td>
+                                <i class="fas {{ src.icon }} me-1" style="color: {{ src.color }};"></i>
+                                <span class="fw-semibold">{{ src.label }}</span>
+                            </td>
+                            <td class="text-center">{{ src.total_layers }}</td>
+                            <td class="text-center">
+                                <span class="text-success fw-semibold">{{ src.active_layers }}</span>
+                                <span class="text-muted">/{{ src.exhausted_layers }}</span>
+                            </td>
+                            <td class="text-center">{{ src.total_original_qty|intcomma }}</td>
+                            <td class="text-center text-danger">{{ src.total_consumed_qty|intcomma }}</td>
+                            <td class="text-center fw-semibold {% if src.total_remaining_qty > 0 %}text-success{% else %}text-muted{% endif %}">
+                                {{ src.total_remaining_qty|intcomma }}
+                            </td>
+                            <td class="text-end text-muted">{{ src.total_original_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end fw-semibold" style="color: {{ src.color }};">
+                                {{ src.total_value|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-center">
+                                {% if total_inventory_value > 0 %}
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="flex-grow-1" style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                                        {% widthratio src.total_value total_inventory_value 100 as pct %}
+                                        <div style="width: {% widthratio src.total_value total_inventory_value 100 %}%; height: 100%; background: {{ src.color }}; border-radius: 3px;"></div>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.7rem; min-width: 32px;">{% widthratio src.total_value total_inventory_value 100 %}%</small>
+                                </div>
+                                {% else %}
+                                <small class="text-muted">0%</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background: #f0f9ff; border-top: 2px solid #0ea5e9;">
+                            <td><i class="fas fa-sigma me-1 text-info"></i>Total</td>
+                            <td class="text-center">{{ total_layers }}</td>
+                            <td class="text-center text-success">{{ active_layers }}</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                            <td class="text-end">—</td>
+                            <td class="text-end text-info fw-bold">Rs. {{ total_inventory_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center"><small class="text-muted">100%</small></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="p-2 bg-light border-top text-muted text-center" style="font-size: 0.75rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Active Value</strong> = Remaining Qty &times; Unit Cost for non-exhausted layers.
+                <strong>Original Value</strong> = total cost at time of stock entry.
+                Layers are consumed oldest-first (FIFO) when sales are made.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- FIFO Inventory Cost Layers -->
+    {% if fifo_layers %}
+    <div class="mt-4">
+        <div class="breakdown-table">
+            <div class="p-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">
+                        <i class="fas fa-layer-group me-2 text-info"></i>FIFO Inventory Cost Layers
+                    </h5>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-info">{{ total_layers }} total</span>
+                        <span class="badge bg-success">{{ active_layers }} active</span>
+                        <span class="badge bg-secondary">{{ exhausted_layers }} exhausted</span>
+                        <span class="badge bg-warning text-dark">Value: Rs. {{ total_inventory_value|floatformat:2|intcomma }}</span>
+                    </div>
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                    <input type="text" id="layerSearch" class="form-control form-control-sm" placeholder="Search product, reference..." style="width: 220px;">
+                    <select id="layerFilter" class="form-select form-select-sm" style="width: 160px;">
+                        <option value="all">All Layers</option>
+                        <option value="active">Active Only</option>
+                        <option value="exhausted">Exhausted Only</option>
+                    </select>
+                    <select id="layerSourceFilter" class="form-select form-select-sm" style="width: 160px;">
+                        <option value="all">All Sources</option>
+                        <option value="purchase">Purchase/GRN</option>
+                        <option value="opening_balance">Opening Balance</option>
+                        <option value="return">Sales Return</option>
+                        <option value="exchange_in">Exchange IN</option>
+                        <option value="adjustment">Adjustment</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0" id="fifoLayersTable" style="font-size: 0.82rem;">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr style="background: #f1f5f9;">
+                            <th style="width: 4%;">#</th>
+                            <th style="width: 14%;">Product</th>
+                            <th style="width: 8%;">Company</th>
+                            <th style="width: 10%;">Source</th>
+                            <th style="width: 10%;">Reference</th>
+                            <th class="text-end" style="width: 9%;">Unit Cost</th>
+                            <th class="text-center" style="width: 8%;">Original</th>
+                            <th class="text-center" style="width: 8%;">Consumed</th>
+                            <th class="text-center" style="width: 8%;">Remaining</th>
+                            <th class="text-end" style="width: 10%;">Layer Value</th>
+                            <th class="text-center" style="width: 6%;">Status</th>
+                            <th style="width: 8%;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for layer in fifo_layers %}
+                        <tr class="layer-row" data-status="{% if layer.is_exhausted %}exhausted{% else %}active{% endif %}" data-source="{{ layer.source_key }}">
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <span class="fw-semibold">{{ layer.product_name }}</span>
+                                <br><small class="text-muted">{{ layer.product_code }} &bull; {{ layer.size }}</small>
+                            </td>
+                            <td><small>{{ layer.company }}</small></td>
+                            <td>
+                                {% if layer.source_key == 'purchase' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 0.72rem;">{{ layer.source }}</span>
+                                {% elif layer.source_key == 'opening_balance' %}
+                                <span class="badge bg-info bg-opacity-10 text-info" style="font-size: 0.72rem;">{{ layer.source }}</span>
+                                {% elif layer.source_key == 'return' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning" style="font-size: 0.72rem;">{{ layer.source }}</span>
+                                {% elif layer.source_key == 'exchange_in' %}
+                                <span class="badge bg-success bg-opacity-10 text-success" style="font-size: 0.72rem;">{{ layer.source }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.72rem;">{{ layer.source }}</span>
+                                {% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ layer.reference }}</small></td>
+                            <td class="text-end fw-semibold">{{ layer.unit_cost|floatformat:4|intcomma }}</td>
+                            <td class="text-center">{{ layer.original_qty }}</td>
+                            <td class="text-center text-danger">{{ layer.consumed_qty }}</td>
+                            <td class="text-center fw-semibold {% if layer.remaining_qty > 0 %}text-success{% else %}text-muted{% endif %}">{{ layer.remaining_qty }}</td>
+                            <td class="text-end {% if layer.is_exhausted %}text-muted{% else %}fw-semibold{% endif %}">
+                                {% if layer.is_exhausted %}
+                                <small class="text-muted">-</small>
+                                {% else %}
+                                {{ layer.total_value|floatformat:2|intcomma }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if layer.is_exhausted %}
+                                <span class="badge bg-secondary" style="font-size: 0.7rem;">Exhausted</span>
+                                {% else %}
+                                <span class="badge bg-success" style="font-size: 0.7rem;">Active</span>
+                                {% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ layer.created_at|date:"d M Y" }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background: #f0f9ff; border-top: 2px solid #0ea5e9;">
+                            <td colspan="6" class="text-end">Active Inventory Value:</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                            <td class="text-end text-info fw-bold">Rs. {{ total_inventory_value|floatformat:2|intcomma }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="p-2 bg-light border-top text-muted text-center" style="font-size: 0.75rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                Each stock-in event (Purchase, Opening Balance, Return, Exchange) creates a FIFO layer.
+                When items are sold, the <strong>oldest layers are consumed first</strong>.
+                Layer Value = Remaining Qty &times; Unit Cost.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_revenue|json_script:"chart-revenue" }}
+{{ chart_cogs|json_script:"chart-cogs" }}
+{{ chart_profit|json_script:"chart-profit" }}
+{{ chart_expenses|json_script:"chart-expenses" }}
+{{ chart_net_profit|json_script:"chart-net-profit" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Chart
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: JSON.parse(document.getElementById('chart-labels').textContent),
+            datasets: [
+                {
+                    label: 'Net Revenue',
+                    data: JSON.parse(document.getElementById('chart-revenue').textContent),
+                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                    borderRadius: 4,
+                    barPercentage: 0.7,
+                    order: 2,
+                },
+                {
+                    label: 'Net COGS',
+                    data: JSON.parse(document.getElementById('chart-cogs').textContent),
+                    backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                    borderRadius: 4,
+                    barPercentage: 0.7,
+                    order: 3,
+                },
+                {
+                    label: 'Expenses',
+                    data: JSON.parse(document.getElementById('chart-expenses').textContent),
+                    backgroundColor: 'rgba(249, 115, 22, 0.6)',
+                    borderRadius: 4,
+                    barPercentage: 0.7,
+                    order: 4,
+                },
+                {
+                    label: 'Gross Profit',
+                    data: JSON.parse(document.getElementById('chart-profit').textContent),
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderRadius: 4,
+                    barPercentage: 0.7,
+                    order: 5,
+                },
+                {
+                    label: 'Net Profit',
+                    type: 'line',
+                    data: JSON.parse(document.getElementById('chart-net-profit').textContent),
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    borderWidth: 2.5,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#7c3aed',
+                    fill: false,
+                    order: 1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { 
+                        usePointStyle: true, 
+                        pointStyle: 'rectRounded',
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': Rs. ' + 
+                                context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 0});
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            if (value >= 1000000) return 'Rs. ' + (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return 'Rs. ' + (value / 1000).toFixed(0) + 'K';
+                            return 'Rs. ' + value;
+                        },
+                        font: { size: 10 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                },
+                x: {
+                    ticks: { font: { size: 10 } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // COGS Ledger search filter
+    const searchInput = document.getElementById('cogsSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#cogsLedgerTable tbody .cogs-row');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+
+    // Returns Cost Ledger search filter
+    const returnsCostSearch = document.getElementById('returnsCostSearch');
+    if (returnsCostSearch) {
+        returnsCostSearch.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#returnsCostTable tbody .returns-cost-row');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+
+    // FIFO Layers filters
+    function filterLayers() {
+        const search = (document.getElementById('layerSearch')?.value || '').toLowerCase();
+        const statusFilter = document.getElementById('layerFilter')?.value || 'all';
+        const sourceFilter = document.getElementById('layerSourceFilter')?.value || 'all';
+        const rows = document.querySelectorAll('#fifoLayersTable tbody .layer-row');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const status = row.dataset.status;
+            const source = row.dataset.source;
+            const matchesSearch = !search || text.includes(search);
+            const matchesStatus = statusFilter === 'all' || status === statusFilter;
+            const matchesSource = sourceFilter === 'all' || source === sourceFilter;
+            row.style.display = (matchesSearch && matchesStatus && matchesSource) ? '' : 'none';
+        });
+    }
+    document.getElementById('layerSearch')?.addEventListener('input', filterLayers);
+    document.getElementById('layerFilter')?.addEventListener('change', filterLayers);
+    document.getElementById('layerSourceFilter')?.addEventListener('change', filterLayers);
+</script>
+{% endblock %}

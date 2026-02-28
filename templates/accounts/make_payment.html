@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Make Payment{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">Disburse Payment</h2>
+                    <p class="text-muted mb-0">Pay user from their account balance due</p>
+                </div>
+                <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="paymentForm">
+                        {% csrf_token %}
+                        
+                        <!-- User Selection -->
+                        <div class="mb-4">
+                            <label for="user_id" class="form-label fw-semibold">
+                                Select User <span class="text-danger">*</span>
+                            </label>
+                            <select name="user_id" id="user_id" class="form-select form-select-lg" required>
+                                <option value="">Choose user...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" 
+                                        data-balance="{{ user.money_account.current_balance|default:'0' }}"
+                                        {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                                    {{ user.get_full_name }} ({{ user.get_user_type_display }})
+                                    {% if user.money_account %}
+                                    - Balance Due: Rs. {{ user.money_account.current_balance|floatformat:2 }}
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Available Balance Display -->
+                        <div class="alert alert-info" id="balanceAlert" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><strong>Balance Due:</strong></span>
+                                <span class="fs-5 fw-bold">Rs. <span id="availableBalance">0.00</span></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Amount -->
+                        <div class="mb-4">
+                            <label for="amount" class="form-label fw-semibold">
+                                Payment Amount (Rs.) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">Rs.</span>
+                                <input type="number" name="amount" id="amount" 
+                                       class="form-control" 
+                                       step="0.01" min="0.01" required
+                                       placeholder="0.00">
+                            </div>
+                            <div class="form-text">
+                                <button type="button" class="btn btn-sm btn-link p-0" id="payFullBtn">
+                                    Pay full balance
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-4">
+                            <label for="payment_method" class="form-label fw-semibold">
+                                Payment Method <span class="text-danger">*</span>
+                            </label>
+                            <select name="payment_method" id="payment_method" class="form-select" required>
+                                <option value="cash">Cash</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+
+                        <!-- Reference Number (conditional) -->
+                        <div class="mb-4" id="referenceField" style="display: none;">
+                            <label for="reference_number" class="form-label fw-semibold">
+                                Reference Number <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="reference_number" id="reference_number" 
+                                   class="form-control" 
+                                   placeholder="Cheque number or transaction reference">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                Description <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="description" id="description" 
+                                   class="form-control" required
+                                   placeholder="Payment description (e.g., Commission payment for January)">
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label fw-semibold">Additional Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                      placeholder="Any additional information (optional)"></textarea>
+                        </div>
+
+                        <!-- Payment Date -->
+                        <div class="mb-4">
+                            <label for="transaction_date" class="form-label fw-semibold">
+                                Payment Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" name="transaction_date" id="transaction_date" 
+                                   class="form-control" required>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="bi bi-cash-stack me-2"></i>Disburse Payment
+                            </button>
+                            <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Warning Card -->
+            <div class="card border-warning mt-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>Important Notes</h6>
+                    <ul class="mb-0 small">
+                        <li>Payments reduce the user's balance due</li>
+                        <li>Cannot disburse more than the balance due</li>
+                        <li>For cheque/bank transfer, reference number is mandatory</li>
+                        <li>This records disbursements to users, not income from sales</li>
+                        <li>Once disbursed, payment cannot be edited (only reversed with adjustment)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update available balance when user is selected
+document.getElementById('user_id').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const balance = parseFloat(selected.dataset.balance || 0);
+    
+    if (this.value) {
+        document.getElementById('balanceAlert').style.display = 'block';
+        document.getElementById('availableBalance').textContent = balance.toFixed(2);
+    } else {
+        document.getElementById('balanceAlert').style.display = 'none';
+    }
+});
+
+// Pay full balance button
+document.getElementById('payFullBtn').addEventListener('click', function() {
+    const balance = parseFloat(document.getElementById('availableBalance').textContent);
+    if (balance > 0) {
+        document.getElementById('amount').value = balance.toFixed(2);
+    }
+});
+
+// Show/hide reference number based on payment method
+document.getElementById('payment_method').addEventListener('change', function() {
+    const referenceField = document.getElementById('referenceField');
+    const referenceInput = document.getElementById('reference_number');
+    
+    if (this.value === 'cheque' || this.value === 'bank_transfer') {
+        referenceField.style.display = 'block';
+        referenceInput.required = true;
+    } else {
+        referenceField.style.display = 'none';
+        referenceInput.required = false;
+    }
+});
+
+// Set today's date as default
+document.getElementById('transaction_date').valueAsDate = new Date();
+
+// Form validation
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const balance = parseFloat(document.getElementById('availableBalance').textContent);
+    
+    if (amount <= 0) {
+        e.preventDefault();
+        alert('Amount must be greater than zero');
+        return false;
+    }
+    
+    if (amount > balance) {
+        e.preventDefault();
+        alert(`Cannot pay Rs. ${amount.toFixed(2)}. Available balance is only Rs. ${balance.toFixed(2)}`);
+        return false;
+    }
+});
+</script>
+{% endblock %}

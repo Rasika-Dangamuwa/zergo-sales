@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Zergo Platform Admin{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --bg: #F1F5F9;
+            --card: #FFFFFF;
+        }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+        }
+        .platform-nav {
+            background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .platform-nav .brand {
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .platform-nav .brand i { color: var(--primary-light); }
+        .platform-nav .nav-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .platform-nav .nav-links a:hover,
+        .platform-nav .nav-links a.active { color: white; }
+        .stat-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.15s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .stat-card .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+        .stat-card .stat-label {
+            font-size: 0.85rem;
+            color: #64748B;
+        }
+        .dist-table { 
+            background: var(--card);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .dist-table th { 
+            background: #F8FAFC;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748B;
+        }
+        .badge-plan {
+            font-size: 0.75rem;
+            padding: 0.3em 0.7em;
+            border-radius: 6px;
+        }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="platform-nav">
+        <a href="{% url 'tenants:dashboard' %}" class="brand">
+            <i class="fas fa-globe"></i> Zergo Platform
+        </a>
+        <div class="nav-links">
+            <a href="{% url 'tenants:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{% url 'tenants:distributor_list' %}" class="{% if 'distributor' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-building"></i> Distributors
+            </a>
+            <a href="{% url 'tenants:reports' %}" class="{% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i> Reports
+            </a>
+            <a href="{% url 'tenants:platform_settings' %}" class="{% if 'settings' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-sliders-h"></i> Settings
+            </a>
+            <a href="{% url 'catalog:dashboard' %}" class="{% if request.resolver_match.app_name == 'catalog' %}active{% endif %}">
+                <i class="fas fa-box-open"></i> Catalog
+            </a>
+            <a href="/admin/">
+                <i class="fas fa-cog"></i> Admin
+            </a>
+            <a href="{% url 'logout' %}">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container-fluid px-4 mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Content -->
+    {% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

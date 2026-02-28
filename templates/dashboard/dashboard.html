@@ -1,0 +1,758 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dash-header {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%);
+        color: white; padding: 1.5rem 2rem; border-radius: 14px;
+        margin-bottom: 1.5rem; position: relative; overflow: hidden;
+    }
+    .dash-header::after {
+        content: ''; position: absolute; top: -50%; right: -10%;
+        width: 300px; height: 300px; border-radius: 50%; background: rgba(255,255,255,0.05);
+    }
+    .dash-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.15rem; }
+    .dash-header .subtitle { opacity: 0.8; font-size: 0.85rem; }
+
+    /* Snapshot */
+    .snap-card {
+        background: white; border-radius: 12px; padding: 1rem 1.15rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid transparent;
+        height: 100%; transition: transform 0.15s;
+    }
+    .snap-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .snap-card.sales { border-left-color: #2563eb; }
+    .snap-card.collections { border-left-color: #059669; }
+    .snap-card.receivable { border-left-color: #f59e0b; }
+    .snap-card.stock { border-left-color: #ef4444; }
+    .snap-label { color: #6b7280; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 0.1rem; }
+    .snap-value { font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
+    .snap-sub { font-size: 0.75rem; color: #9ca3af; }
+
+    /* Section panels */
+    .work-section {
+        background: white; border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 1.25rem; overflow: hidden;
+    }
+    .section-header {
+        padding: 0.85rem 1.25rem; border-bottom: 1px solid #e5e7eb;
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: pointer; user-select: none;
+    }
+    .section-header:hover { background: #f8fafc; }
+    .section-header h6 { font-size: 0.92rem; font-weight: 700; margin: 0; }
+    .section-header .badge { font-size: 0.7rem; }
+    .section-body { max-height: 600px; overflow-y: auto; }
+
+    /* Table rows in sections */
+    .work-table { width: 100%; margin: 0; font-size: 0.82rem; }
+    .work-table th {
+        background: #f8fafc; font-weight: 600; font-size: 0.72rem;
+        text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;
+        padding: 0.5rem 0.85rem; border-bottom: 1px solid #e5e7eb;
+        position: sticky; top: 0; z-index: 1;
+    }
+    .work-table td { padding: 0.55rem 0.85rem; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
+    .work-table tbody tr:hover { background: #f0f9ff; }
+    .work-table tbody tr:last-child td { border-bottom: none; }
+    .work-table .amount { font-weight: 600; white-space: nowrap; }
+    .work-table .text-muted-sm { font-size: 0.72rem; color: #9ca3af; }
+    .work-table .ref-link { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .work-table .ref-link:hover { text-decoration: underline; }
+
+    /* Action buttons */
+    .btn-action {
+        font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 6px;
+        font-weight: 600; text-decoration: none; white-space: nowrap;
+    }
+
+    /* Status badges */
+    .status-badge {
+        font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.5rem;
+        border-radius: 6px; display: inline-block;
+    }
+
+    /* Priority badges in header */
+    .priority-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .priority-pill { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 20px; }
+
+    /* Quick actions */
+    .quick-action-btn {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 0.85rem 0.5rem; text-decoration: none; color: #374151;
+        transition: all 0.2s; border-radius: 10px;
+    }
+    .quick-action-btn:hover { background: #f0f9ff; color: #2563eb; transform: translateY(-2px); }
+    .quick-action-btn i { font-size: 1.5rem; margin-bottom: 0.35rem; }
+    .quick-action-btn span { font-size: 0.72rem; font-weight: 600; text-align: center; line-height: 1.2; }
+
+    /* Feature cards */
+    .feature-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s; height: 100%; }
+    .feature-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .feature-card .card-header { border: none; padding: 0.85rem 1.15rem; font-weight: 600; font-size: 0.92rem; display: flex; align-items: center; gap: 0.5rem; }
+    .feature-link { display: block; padding: 0.55rem 1.15rem; color: #495057; text-decoration: none; transition: all 0.15s; border-bottom: 1px solid #f8f9fa; font-size: 0.85rem; }
+    .feature-link:last-child { border-bottom: none; }
+    .feature-link:hover { background: #f8fafc; color: #2563eb; padding-left: 1.4rem; }
+    .feature-link i { width: 18px; margin-right: 0.4rem; text-align: center; font-size: 0.8rem; }
+
+    .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b; }
+    .collapse-icon { transition: transform 0.2s; }
+    .collapsed .collapse-icon { transform: rotate(-90deg); }
+
+    /* Overdue row */
+    .work-table tr.overdue td { background: #fef2f2; }
+
+    @media (max-width: 768px) {
+        .dash-header { padding: 1rem 1.15rem; }
+        .dash-header h2 { font-size: 1.2rem; }
+        .work-table { font-size: 0.76rem; }
+        .work-table th, .work-table td { padding: 0.4rem 0.6rem; }
+        .snap-value { font-size: 1.1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+
+{% if user.user_type in 'admin,office' %}
+
+<!-- Header -->
+<div class="dash-header">
+    <h2><i class="fas fa-tachometer-alt me-2"></i>Distributor Dashboard</h2>
+    <div class="subtitle">
+        Welcome, {{ user.get_full_name }}
+        <span class="badge bg-white bg-opacity-25 ms-1">{{ user.get_user_type_display }}</span>
+        &mdash; {{ "now"|date:"l, d M Y" }}
+        {% if total_pending > 0 %}
+        <span class="badge bg-danger ms-2" style="font-size: 0.8rem;">{{ total_pending }} pending task{{ total_pending|pluralize }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Today's Snapshot -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="snap-card sales">
+            <div class="snap-label"><i class="fas fa-receipt me-1"></i>Today's Sales</div>
+            <div class="snap-value text-primary">Rs. {{ today_sales_total|floatformat:0|intcomma }}</div>
+            <div class="snap-sub">{{ today_bills_count }} bill{{ today_bills_count|pluralize }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="snap-card collections">
+            <div class="snap-label"><i class="fas fa-hand-holding-usd me-1"></i>Today's Collections</div>
+            <div class="snap-value text-success">Rs. {{ today_collections|floatformat:0|intcomma }}</div>
+            <div class="snap-sub">{{ today_returns_count }} return{{ today_returns_count|pluralize }} (Rs. {{ today_returns_total|floatformat:0|intcomma }})</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="snap-card receivable">
+            <div class="snap-label"><i class="fas fa-file-invoice-dollar me-1"></i>Total Receivable</div>
+            <div class="snap-value text-warning">Rs. {{ total_receivable|floatformat:0|intcomma }}</div>
+            <div class="snap-sub">{{ unsettled_bills_count }} unsettled bill{{ unsettled_bills_count|pluralize }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="snap-card stock">
+            <div class="snap-label"><i class="fas fa-boxes me-1"></i>Stock Alerts</div>
+            <div class="snap-value {% if out_of_stock_count > 0 %}text-danger{% else %}text-secondary{% endif %}">{{ low_stock_count }}</div>
+            <div class="snap-sub">
+                {% if out_of_stock_count > 0 %}<span class="text-danger fw-semibold">{{ out_of_stock_count }} out of stock</span>
+                {% else %}All products in stock{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Priority Summary Bar -->
+{% if total_pending > 0 %}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <span class="fw-bold text-muted" style="font-size: 0.82rem;"><i class="fas fa-tasks me-1"></i>PENDING WORK:</span>
+    {% if critical_count %}<span class="priority-pill bg-danger text-white">{{ critical_count }} Critical</span>{% endif %}
+    {% if high_count %}<span class="priority-pill bg-warning text-dark">{{ high_count }} Needs Approval</span>{% endif %}
+    <span class="priority-pill bg-light text-dark border">{{ total_pending }} Total</span>
+</div>
+{% endif %}
+
+<div class="row g-4">
+<!-- ===== LEFT: All Pending Work Sections ===== -->
+<div class="col-lg-8">
+
+    <!-- ━━━ 1a. UNCOLLECTED CHEQUES (rep hasn't handed over physical cheque) ━━━ -->
+    {% if uncollected_cheques %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-uncollected">
+            <h6><i class="fas fa-money-check text-danger me-2"></i>Uncollected Cheques
+                <small class="text-muted fw-normal ms-1" style="font-size:0.76rem;">— Rep hasn't handed over yet</small>
+                <span class="badge bg-danger ms-1">{{ section_counts.uncollected_cheques }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-uncollected" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Settlement #</th><th>Shop</th><th>Amount</th><th>Cheque Date</th><th>Bank</th><th>Rep</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for s in uncollected_cheques %}
+                <tr {% if s.cheque_date and s.cheque_date < today %}class="overdue"{% endif %}>
+                    <td><a href="{% url 'sales:settlement_detail' s.pk %}" class="ref-link">{{ s.settlement_number }}</a></td>
+                    <td>{{ s.shop.shop_name|default:"-" }}<div class="text-muted-sm">{{ s.bill.bill_number|default:"" }}</div></td>
+                    <td class="amount">Rs. {{ s.amount|floatformat:0|intcomma }}</td>
+                    <td>{% if s.cheque_date %}{{ s.cheque_date|date:"d M Y" }}{% if s.cheque_date < today %} <span class="text-danger fw-bold" title="Overdue">!</span>{% endif %}{% else %}-{% endif %}</td>
+                    <td>{{ s.bank_name|default:"-" }}</td>
+                    <td>{{ s.received_by.get_full_name|default:"-" }}</td>
+                    <td><a href="{% url 'sales:mark_cheque_collected' s.pk %}" class="btn btn-action btn-outline-primary">Collect</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 1b. COLLECTED CHEQUES — in hand, awaiting bank clearing ━━━ -->
+    {% if collected_pending_cheques %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-collected-cheques">
+            <h6><i class="fas fa-money-check-alt text-info me-2"></i>Collected Cheques — Awaiting Clearing
+                <small class="text-muted fw-normal ms-1" style="font-size:0.76rem;">— In hand, sorted by clearing date</small>
+                <span class="badge bg-info ms-1">{{ section_counts.collected_cheques }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-collected-cheques" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Settlement #</th><th>Shop</th><th>Amount</th><th>Cheque Date</th><th>Bank</th><th>Rep</th><th>Collected By</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for s in collected_pending_cheques %}
+                <tr {% if s.cheque_date and s.cheque_date < today %}class="overdue"{% endif %}>
+                    <td><a href="{% url 'sales:settlement_detail' s.pk %}" class="ref-link">{{ s.settlement_number }}</a></td>
+                    <td>{{ s.shop.shop_name|default:"-" }}<div class="text-muted-sm">{{ s.bill.bill_number|default:"" }}</div></td>
+                    <td class="amount">Rs. {{ s.amount|floatformat:0|intcomma }}</td>
+                    <td>{% if s.cheque_date %}{{ s.cheque_date|date:"d M Y" }}{% if s.cheque_date < today %} <span class="text-danger fw-bold" title="Overdue">!</span>{% endif %}{% else %}-{% endif %}</td>
+                    <td>{{ s.bank_name|default:"-" }}</td>
+                    <td>{{ s.received_by.get_full_name|default:"-" }}</td>
+                    <td>{{ s.collected_by.get_full_name|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'sales:clear_cheque' s.pk %}" class="btn btn-action btn-outline-success">Clear</a>
+                        <a href="{% url 'sales:bounce_cheque' s.pk %}" class="btn btn-action btn-outline-danger ms-1">Bounce</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 3. PENDING BANK TRANSFERS ━━━ -->
+    {% if pending_bank_transfers %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-bank">
+            <h6><i class="fas fa-university text-primary me-2"></i>Pending Bank Transfers
+                <span class="badge bg-primary ms-1">{{ section_counts.bank_transfers }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-bank" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Settlement #</th><th>Shop</th><th>Amount</th><th>Date</th><th>Reference</th><th>Rep</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for s in pending_bank_transfers %}
+                <tr>
+                    <td><a href="{% url 'sales:settlement_detail' s.pk %}" class="ref-link">{{ s.settlement_number }}</a></td>
+                    <td>{{ s.shop.shop_name|default:"-" }}<div class="text-muted-sm">{{ s.bill.bill_number|default:"" }}</div></td>
+                    <td class="amount">Rs. {{ s.amount|floatformat:0|intcomma }}</td>
+                    <td>{{ s.settlement_date|date:"d M Y" }}</td>
+                    <td>{{ s.reference_number|default:"-" }}</td>
+                    <td>{{ s.received_by.get_full_name|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'sales:confirm_bank_transfer' s.pk %}" class="btn btn-action btn-outline-success">Confirm</a>
+                        <a href="{% url 'sales:reject_bank_transfer' s.pk %}" class="btn btn-action btn-outline-danger ms-1">Reject</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 4. RETURNS NEEDING VERIFICATION ━━━ -->
+    {% if unverified_returns %}
+    <div class="work-section border-start border-warning border-3">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-verify-returns">
+            <h6><i class="fas fa-clipboard-check text-warning me-2"></i>Returns Needing Verification
+                <span class="badge bg-warning text-dark ms-1">{{ section_counts.unverified_returns }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-verify-returns" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Return #</th><th>Shop</th><th>Amount</th><th>Date</th><th>Reason</th><th>Rep</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for r in unverified_returns %}
+                <tr>
+                    <td><a href="{% url 'sales:return_detail' r.pk %}" class="ref-link">{{ r.return_number }}</a></td>
+                    <td>{{ r.shop.shop_name|default:r.customer_name|default:"-" }}</td>
+                    <td class="amount">Rs. {{ r.total_amount|floatformat:0|intcomma }}</td>
+                    <td>{{ r.return_date|date:"d M Y" }}</td>
+                    <td><span class="status-badge bg-light text-dark border">{{ r.get_return_reason_display|default:r.return_reason }}</span></td>
+                    <td>{{ r.created_by.get_full_name|default:"-" }}</td>
+                    <td><a href="{% url 'sales:return_detail' r.pk %}" class="btn btn-action btn-outline-warning">Verify</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 5. UNSETTLED RETURNS (Cash Refund Pending) ━━━ -->
+    {% if unsettled_returns %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-unsettled-returns">
+            <h6><i class="fas fa-hand-holding-usd text-success me-2"></i>Unsettled Returns (Cash Refund Pending)
+                <span class="badge bg-success ms-1">{{ section_counts.unsettled_returns }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-unsettled-returns" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Return #</th><th>Shop</th><th>Amount</th><th>Date</th><th>Verified</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for r in unsettled_returns %}
+                <tr>
+                    <td><a href="{% url 'sales:return_detail' r.pk %}" class="ref-link">{{ r.return_number }}</a></td>
+                    <td>{{ r.shop.shop_name|default:r.customer_name|default:"-" }}</td>
+                    <td class="amount text-danger">Rs. {{ r.total_amount|floatformat:0|intcomma }}</td>
+                    <td>{{ r.return_date|date:"d M Y" }}</td>
+                    <td>
+                        {% if r.is_verified %}<span class="text-success"><i class="fas fa-check-circle"></i></span>
+                        {% else %}<span class="text-muted"><i class="fas fa-hourglass-half"></i></span>{% endif %}
+                    </td>
+                    <td><a href="{% url 'sales:return_detail' r.pk %}" class="btn btn-action btn-outline-success">Settle</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 6. STATUS ADJUSTMENTS PENDING APPROVAL ━━━ -->
+    {% if pending_adjustments %}
+    <div class="work-section border-start border-warning border-3">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-adjustments">
+            <h6><i class="fas fa-sliders-h text-warning me-2"></i>Status Adjustments — Pending Approval
+                <span class="badge bg-warning text-dark ms-1">{{ section_counts.adjustments }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-adjustments" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Adjustment #</th><th>Type</th><th>Products</th><th>Date</th><th>Reported By</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for adj in pending_adjustments %}
+                <tr>
+                    <td><a href="{% url 'products:product_status_detail' adj.pk %}" class="ref-link">{{ adj.adjustment_number }}</a></td>
+                    <td><span class="status-badge bg-light text-dark border">{{ adj.get_status_type_display|default:adj.status_type }}</span></td>
+                    <td>
+                        {% for item in adj.items.all|slice:":3" %}
+                        <div>{{ item.product.product_name }} <span class="text-muted">&times;{{ item.quantity }}</span></div>
+                        {% endfor %}
+                        {% if adj.items.count > 3 %}<div class="text-muted-sm">+{{ adj.items.count|add:"-3" }} more...</div>{% endif %}
+                    </td>
+                    <td>{{ adj.adjustment_date|date:"d M Y" }}</td>
+                    <td>{{ adj.adjusted_by.get_full_name|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'products:approve_status_adjustment' adj.pk %}" class="btn btn-action btn-outline-success">Approve</a>
+                        <a href="{% url 'products:reject_status_adjustment' adj.pk %}" class="btn btn-action btn-outline-danger ms-1">Reject</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 7. ADVANCE REQUESTS ━━━ -->
+    {% if pending_advances %}
+    <div class="work-section border-start border-warning border-3">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-advances">
+            <h6><i class="fas fa-money-check-alt text-warning me-2"></i>Advance Requests — Pending Approval
+                <span class="badge bg-warning text-dark ms-1">{{ section_counts.advances }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-advances" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Request #</th><th>Sales Rep</th><th>Requested Amount</th><th>Date</th><th>Reason</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for adv in pending_advances %}
+                <tr>
+                    <td class="fw-semibold">{{ adv.request_number }}</td>
+                    <td>{{ adv.user.get_full_name }}</td>
+                    <td class="amount">Rs. {{ adv.requested_amount|floatformat:0|intcomma }}</td>
+                    <td>{{ adv.request_date|date:"d M Y" }}</td>
+                    <td>{{ adv.reason|truncatewords:8|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'accounts:approve_advance' adv.pk %}" class="btn btn-action btn-outline-success">Approve</a>
+                        <a href="{% url 'accounts:reject_advance' adv.pk %}" class="btn btn-action btn-outline-danger ms-1">Reject</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 8. PENDING EXCHANGES ━━━ -->
+    {% if pending_exchanges %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-exchanges">
+            <h6><i class="fas fa-exchange-alt text-info me-2"></i>Exchanges — Pending Approval
+                <span class="badge bg-info ms-1">{{ section_counts.exchanges }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-exchanges" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>Exchange #</th><th>Shop</th><th>Reason</th><th>Date</th><th>Rep</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for ex in pending_exchanges %}
+                <tr>
+                    <td><a href="{% url 'sales:exchange_detail' ex.pk %}" class="ref-link">{{ ex.exchange_number }}</a></td>
+                    <td>{{ ex.shop.shop_name|default:"-" }}</td>
+                    <td><span class="status-badge bg-light text-dark border">{{ ex.get_exchange_reason_display|default:ex.exchange_reason }}</span></td>
+                    <td>{{ ex.exchange_date|date:"d M Y" }}</td>
+                    <td>{{ ex.created_by.get_full_name|default:"-" }}</td>
+                    <td><a href="{% url 'sales:exchange_detail' ex.pk %}" class="btn btn-action btn-outline-info">Review</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 10. PURCHASE RETURNS ━━━ -->
+    {% if pending_purchase_returns %}
+    <div class="work-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-purchase-returns">
+            <h6><i class="fas fa-truck-loading text-secondary me-2"></i>Purchase Returns
+                <small class="text-muted fw-normal ms-1" style="font-size:0.76rem;">— Awaiting supplier response or settlement</small>
+                <span class="badge bg-secondary ms-1">{{ section_counts.purchase_returns }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-purchase-returns" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr>
+                    <th>PR #</th><th>Company</th><th>Reason</th><th>Amount</th><th>Status</th><th>Next Action</th><th>Date</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for pr in pending_purchase_returns %}
+                <tr>
+                    <td><a href="{% url 'products:purchase_return_detail' pr.pk %}" class="ref-link">{{ pr.pr_number }}</a></td>
+                    <td>{{ pr.company.company_name|default:"-" }}</td>
+                    <td><span class="text-muted-sm">{{ pr.get_return_reason_display|default:pr.return_type|default:"-" }}</span></td>
+                    <td class="amount">Rs. {{ pr.total_amount|floatformat:0|intcomma }}</td>
+                    <td>
+                        {% if pr.status == 'pending' %}<span class="status-badge bg-warning text-dark">Pending</span>
+                        {% elif pr.status == 'sent_to_supplier' %}<span class="status-badge bg-info text-white">Sent to Supplier</span>
+                        {% elif pr.status == 'company_approved' %}<span class="status-badge bg-success text-white">Company Approved</span>
+                        {% else %}<span class="status-badge bg-secondary text-white">{{ pr.status }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if pr.status == 'pending' %}<span class="text-warning fw-semibold">Send to supplier</span>
+                        {% elif pr.status == 'sent_to_supplier' %}<span class="text-info fw-semibold">Waiting for approval</span>
+                        {% elif pr.status == 'company_approved' %}<span class="text-success fw-semibold">Process settlement</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pr.return_date|date:"d M Y" }}</td>
+                    <td><a href="{% url 'products:purchase_return_detail' pr.pk %}" class="btn btn-action btn-outline-secondary">View</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ 11. OUT OF STOCK ━━━ -->
+    {% if out_of_stock_products %}
+    <div class="work-section border-start border-danger border-3">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#sec-out-of-stock">
+            <h6><i class="fas fa-box-open text-danger me-2"></i>Out of Stock
+                <span class="badge bg-danger ms-1">{{ section_counts.out_of_stock }}</span></h6>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+        </div>
+        <div id="sec-out-of-stock" class="collapse show section-body">
+            <table class="work-table">
+                <thead><tr><th>Product</th><th>In Stock</th><th>Min Level</th></tr></thead>
+                <tbody>
+                {% for p in out_of_stock_products %}
+                <tr>
+                    <td><a href="{% url 'products:detail' p.pk %}" class="ref-link">{{ p.product_name }}</a></td>
+                    <td class="fw-bold text-danger">{{ p.quantity_in_stock }}</td>
+                    <td>{{ p.minimum_stock_level }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% if out_of_stock_count > 10 %}
+            <div class="p-2 text-center"><a href="{% url 'products:stock_alert' %}" class="text-primary fw-semibold" style="font-size:0.82rem;">View all {{ out_of_stock_count }} out-of-stock products &rarr;</a></div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ━━━ ALL CLEAR ━━━ -->
+    {% if total_pending == 0 %}
+    <div class="work-section">
+        <div class="p-5 text-center">
+            <i class="fas fa-check-circle text-success d-block mb-3" style="font-size: 3rem;"></i>
+            <h5 class="text-success fw-bold">All Clear!</h5>
+            <p class="text-muted mb-0">No pending tasks. Everything is up to date.</p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ===== RIGHT SIDEBAR ===== -->
+<div class="col-lg-4">
+
+    <!-- Quick Actions -->
+    <div class="work-section">
+        <div class="p-3 border-bottom">
+            <h6 class="mb-0 fw-bold" style="font-size: 0.92rem;"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h6>
+        </div>
+        <div class="p-3">
+            <div class="row g-2">
+                <div class="col-4">
+                    <a href="{% url 'sales:create' %}" class="quick-action-btn">
+                        <i class="fas fa-file-invoice text-primary"></i><span>New Bill</span>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'sales:create_return' %}" class="quick-action-btn">
+                        <i class="fas fa-undo-alt text-success"></i><span>New Return</span>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'sales:settlement_list' %}" class="quick-action-btn">
+                        <i class="fas fa-money-bill-wave text-info"></i><span>Payments</span>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'sales:exchange_list' %}" class="quick-action-btn">
+                        <i class="fas fa-exchange-alt text-warning"></i><span>Exchanges</span>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'products:stock_alert' %}" class="quick-action-btn">
+                        <i class="fas fa-exclamation-triangle text-danger"></i><span>Stock Alerts</span>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'dashboard:profit_loss_report' %}" class="quick-action-btn">
+                        <i class="fas fa-chart-pie" style="color:#7c3aed;"></i><span>P&L Report</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receivables -->
+    <div class="work-section">
+        <div class="p-3 border-bottom">
+            <h6 class="mb-0 fw-bold" style="font-size: 0.92rem;"><i class="fas fa-chart-bar me-2 text-primary"></i>Receivables Overview</h6>
+        </div>
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted" style="font-size:0.82rem;">Unsettled Bills</span>
+                <span class="fw-bold" style="font-size:0.88rem;">{{ unsettled_bills_count }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted" style="font-size:0.82rem;">Total Receivable</span>
+                <span class="fw-bold text-warning" style="font-size:0.88rem;">Rs. {{ total_receivable|floatformat:0|intcomma }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted" style="font-size:0.82rem;">Today's Sales</span>
+                <span class="fw-bold text-primary" style="font-size:0.88rem;">Rs. {{ today_sales_total|floatformat:0|intcomma }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted" style="font-size:0.82rem;">Today's Collections</span>
+                <span class="fw-bold text-success" style="font-size:0.88rem;">Rs. {{ today_collections|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory -->
+    <div class="work-section">
+        <div class="p-3 border-bottom">
+            <h6 class="mb-0 fw-bold" style="font-size: 0.92rem;"><i class="fas fa-warehouse me-2 text-info"></i>Inventory Status</h6>
+        </div>
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-circle text-danger me-1" style="font-size:0.5rem;"></i>Out of Stock</span>
+                <span class="fw-bold {% if out_of_stock_count > 0 %}text-danger{% endif %}" style="font-size:0.88rem;">{{ out_of_stock_count }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-circle text-warning me-1" style="font-size:0.5rem;"></i>Low Stock</span>
+                <span class="fw-bold {% if low_stock_count > 0 %}text-warning{% endif %}" style="font-size:0.88rem;">{{ low_stock_count }}</span>
+            </div>
+            {% if low_stock_products %}
+            <div class="mt-2 pt-1">
+                <div class="text-muted fw-semibold mb-1" style="font-size:0.72rem;">LOW STOCK PRODUCTS:</div>
+                {% for p in low_stock_products %}
+                <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:0.78rem;">
+                    <span>{{ p.product_name|truncatewords:4 }}</span>
+                    <span class="fw-bold text-warning">{{ p.quantity_in_stock }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <a href="{% url 'products:stock_alert' %}" class="btn btn-sm btn-outline-info w-100 mt-2"><i class="fas fa-eye me-1"></i>View All Stock Alerts</a>
+        </div>
+    </div>
+
+    <!-- Purchasing Summary -->
+    {% if draft_pos or ordered_pos or draft_grns or unpaid_grns %}
+    <div class="work-section">
+        <div class="p-3 border-bottom">
+            <h6 class="mb-0 fw-bold" style="font-size: 0.92rem;"><i class="fas fa-truck me-2 text-success"></i>Purchasing</h6>
+        </div>
+        <div class="p-3">
+            {% if draft_pos %}
+            <div class="mb-2"><span class="fw-semibold" style="font-size:0.78rem;">Draft POs:</span>
+                {% for po in draft_pos %}<div class="d-flex justify-content-between py-1" style="font-size:0.78rem;"><a href="{% url 'products:po_detail' po.pk %}" class="ref-link">{{ po.po_number }}</a><span class="text-muted">{{ po.created_at|date:"d M" }}</span></div>{% endfor %}
+            </div>{% endif %}
+            {% if ordered_pos %}
+            <div class="mb-2"><span class="fw-semibold" style="font-size:0.78rem;">Awaiting Delivery:</span>
+                {% for po in ordered_pos %}<div class="d-flex justify-content-between py-1" style="font-size:0.78rem;">
+                    <div><a href="{% url 'products:po_detail' po.pk %}" class="ref-link">{{ po.po_number }}</a><div class="text-muted" style="font-size:0.72rem;">{{ po.company.company_name }}</div></div>
+                    <div class="text-end"><span class="text-muted">Ordered {{ po.order_date|date:"d M" }}</span>{% if po.expected_delivery_date %}<div class="{% if po.expected_delivery_date < today %}text-danger fw-bold{% else %}text-info{% endif %}" style="font-size:0.72rem;">{% if po.expected_delivery_date < today %}Overdue since {{ po.expected_delivery_date|date:"d M" }}{% else %}Exp. {{ po.expected_delivery_date|date:"d M" }}{% endif %}</div>{% endif %}</div>
+                </div>{% endfor %}
+            </div>{% endif %}
+            {% if draft_grns %}
+            <div class="mb-2"><span class="fw-semibold" style="font-size:0.78rem;">Draft GRNs:</span>
+                {% for g in draft_grns %}<div class="d-flex justify-content-between py-1" style="font-size:0.78rem;"><a href="{% url 'products:purchase_detail' g.pk %}" class="ref-link">{{ g.grn_number }}</a><span class="text-muted">{{ g.company.company_name|default:"-"|truncatewords:2 }}</span></div>{% endfor %}
+            </div>{% endif %}
+            {% if unpaid_grns %}
+            <div><span class="fw-semibold" style="font-size:0.78rem;">Unpaid GRNs:</span>
+                {% for g in unpaid_grns %}<div class="d-flex justify-content-between py-1" style="font-size:0.78rem;"><a href="{% url 'products:purchase_detail' g.pk %}" class="ref-link">{{ g.grn_number }}</a><span class="amount" style="font-size:0.78rem;">Rs. {{ g.total_amount|floatformat:0|intcomma }}</span></div>{% endfor %}
+            </div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+</div>
+
+<!-- Feature Navigation Cards -->
+<h3 class="section-title mt-4"><i class="fas fa-th-large me-2 text-muted"></i>All Features</h3>
+<div class="row g-3">
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-primary text-white"><i class="fas fa-shopping-cart"></i><span>Sales Management</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'sales:create' %}" class="feature-link"><i class="fas fa-plus-circle"></i> Create Bill</a>
+                <a href="{% url 'sales:list' %}" class="feature-link"><i class="fas fa-list"></i> All Bills</a>
+                <a href="{% url 'sales:settlement_list' %}" class="feature-link"><i class="fas fa-money-bill-wave"></i> Payments</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-warning text-dark"><i class="fas fa-undo-alt"></i><span>Returns & Exchanges</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'sales:create_return' %}" class="feature-link"><i class="fas fa-plus-circle"></i> Create Return</a>
+                <a href="{% url 'sales:return_list' %}" class="feature-link"><i class="fas fa-list"></i> All Returns</a>
+                <a href="{% url 'sales:exchange_list' %}" class="feature-link"><i class="fas fa-exchange-alt"></i> Exchanges</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-success text-white"><i class="fas fa-truck"></i><span>Purchasing</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'products:po_list' %}" class="feature-link"><i class="fas fa-clipboard-list"></i> Purchase Orders</a>
+                <a href="{% url 'products:purchase_list' %}" class="feature-link"><i class="fas fa-file-invoice"></i> GRN (Purchases)</a>
+                <a href="{% url 'products:purchase_return_list' %}" class="feature-link"><i class="fas fa-truck-loading"></i> Purchase Returns</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-info text-white"><i class="fas fa-boxes"></i><span>Inventory</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'products:list' %}" class="feature-link"><i class="fas fa-box"></i> Products</a>
+                <a href="{% url 'products:stock_alert' %}" class="feature-link"><i class="fas fa-exclamation-triangle"></i> Stock Alerts</a>
+                <a href="{% url 'products:stock_count' %}" class="feature-link"><i class="fas fa-warehouse"></i> Stock Count</a>
+                <a href="{% url 'products:product_status_adjustment' %}" class="feature-link"><i class="fas fa-sliders-h"></i> Status Adjustment</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-secondary text-white"><i class="fas fa-store"></i><span>Shops</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'shops:list' %}" class="feature-link"><i class="fas fa-list"></i> All Shops</a>
+                <a href="{% url 'shops:add' %}" class="feature-link"><i class="fas fa-plus-circle"></i> Add Shop</a>
+                <a href="{% url 'shops:map' %}" class="feature-link"><i class="fas fa-map-marked-alt"></i> Shop Map</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header bg-dark text-white"><i class="fas fa-chart-bar"></i><span>Reports & Finance</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'dashboard:profit_loss_report' %}" class="feature-link"><i class="fas fa-chart-pie"></i> Profit & Loss</a>
+                <a href="{% url 'dashboard:sales_report' %}" class="feature-link"><i class="fas fa-chart-line"></i> Sales Report</a>
+                <a href="{% url 'dashboard:payment_report' %}" class="feature-link"><i class="fas fa-file-invoice-dollar"></i> Payment Report</a>
+                <a href="{% url 'sales:commission_settings' %}" class="feature-link"><i class="fas fa-percentage"></i> Commission Settings</a>
+                <a href="{% url 'accounts:all_money_accounts' %}" class="feature-link"><i class="fas fa-wallet"></i> Money Accounts</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Sales Rep Redirect -->
+<div class="py-4 text-center">
+    <h4>Redirecting to your dashboard...</h4>
+    <a href="{% url 'dashboard:sales_rep' %}" class="btn btn-primary mt-2">Go to Sales Rep Dashboard</a>
+</div>
+{% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle chevron icon on collapse
+document.querySelectorAll('.section-header').forEach(function(header) {
+    var target = document.querySelector(header.getAttribute('data-bs-target'));
+    if (target) {
+        target.addEventListener('show.bs.collapse', function() { header.classList.remove('collapsed'); });
+        target.addEventListener('hide.bs.collapse', function() { header.classList.add('collapsed'); });
+    }
+});
+</script>
+{% endblock %}

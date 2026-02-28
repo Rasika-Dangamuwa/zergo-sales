@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(109, 40, 217, 0.3);
+    }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+    .summary-card {
+        background: white; border-radius: 12px; padding: 1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid;
+    }
+    .summary-card.rd { border-color: #7c3aed; }
+    .summary-card.pc { border-color: #3b82f6; }
+    .summary-card.no { border-color: #10b981; }
+    .summary-card.purchase { border-color: #f59e0b; }
+    .summary-card .label { font-size: 0.78rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .summary-card .value { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
+    .summary-card .sub { font-size: 0.75rem; color: #94a3b8; }
+
+    /* ── Desktop Table ── */
+    .detail-wrap {
+        background: white; border-radius: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow-x: auto;
+    }
+    .detail-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .detail-table thead th {
+        padding: 8px 10px; text-align: center; white-space: nowrap;
+        font-weight: 600; border-bottom: 1px solid #e2e8f0;
+    }
+    .detail-table thead tr:first-child th { background: #7c3aed; color: white; font-size: 0.78rem; }
+    .detail-table thead tr:nth-child(2) th { background: #f8fafc; color: #475569; }
+    .detail-table tbody td {
+        padding: 6px 8px; text-align: center; border-bottom: 1px solid #f1f5f9; vertical-align: middle;
+    }
+    .detail-table tbody td:nth-child(1) { font-weight: 600; width: 45px; }
+    .detail-table tbody td:nth-child(2) { text-align: left; font-weight: 500; min-width: 120px; }
+    .detail-table tbody tr.is-off td { background: #f8fafc; color: #a0aec0; }
+    .detail-table tbody tr.is-today td { background: #ede9fe; font-weight: 600; }
+    .detail-table tbody tr.is-today td:first-child { border-left: 3px solid #7c3aed; }
+    .ach-cell.has-data { color: #059669; font-weight: 600; }
+    .ach-cell.zero { color: #cbd5e1; }
+    .detail-table tfoot td {
+        padding: 10px 8px; text-align: center; font-weight: 700;
+        background: #f8fafc; border-top: 2px solid #e2e8f0;
+    }
+
+    /* ── Mobile Detail Cards ── */
+    .mobile-detail-cards { display: none; }
+
+    .m-day-card {
+        background: white; border-radius: 12px; padding: 0.75rem 1rem;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.07); margin-bottom: 0.5rem;
+        border-left: 3px solid #7c3aed;
+    }
+    .m-day-card.is-off { border-left-color: #cbd5e1; background: #f8fafc; }
+    .m-day-card.is-today { border-left-color: #7c3aed; background: #ede9fe; border-left-width: 4px; }
+    .m-day-card-head {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .m-day-card-head .m-date { font-weight: 700; font-size: 0.95rem; color: #1e293b; }
+    .m-day-card-head .m-day { font-size: 0.78rem; color: #64748b; font-weight: 600; }
+    .m-day-card-head .m-route { font-size: 0.78rem; color: #7c3aed; font-weight: 600; }
+    .m-day-card.is-off .m-day-card-head .m-route { color: #a0aec0; }
+
+    .m-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+    .m-metric { text-align: center; }
+    .m-metric-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
+    .m-metric-row { display: flex; justify-content: center; gap: 2px; align-items: baseline; font-size: 0.78rem; }
+    .m-t-val { color: #475569; font-weight: 600; }
+    .m-a-val { color: #059669; font-weight: 700; }
+    .m-a-val.zero { color: #cbd5e1; }
+    .m-sep { color: #cbd5e1; font-size: 0.65rem; }
+
+    .m-section-label {
+        font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+        color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 2px; margin-top: 4px;
+    }
+
+    .m-cum-row {
+        display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px;
+        background: #f8fafc; border-radius: 6px; padding: 4px 2px;
+        margin-top: 5px;
+    }
+    .m-cum-row .m-metric-row { font-size: 0.72rem; }
+    .m-cum-label {
+        font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+        color: #94a3b8; letter-spacing: 0.5px; margin-top: 5px; margin-bottom: 1px;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .m-cum-label::after {
+        content: ''; flex: 1; height: 1px; background: #e2e8f0;
+    }
+
+    @media (max-width: 768px) {
+        .page-header { padding: 1rem 0; margin-bottom: 1rem; border-radius: 0 0 14px 14px; }
+        .page-header h1 { font-size: 1.25rem; }
+        .page-header .d-flex.gap-2 { flex-wrap: wrap; gap: 0.35rem !important; }
+        .page-header .btn { font-size: 0.75rem; padding: 4px 10px; }
+        .summary-cards { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+        .summary-card { padding: 0.75rem 0.85rem; }
+        .summary-card .value { font-size: 1.3rem; }
+        .summary-card .label { font-size: 0.7rem; }
+        .detail-wrap { display: none; }
+        .mobile-detail-cards { display: block; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-calendar-check me-2"></i>{{ plan.get_month_display }} {{ plan.year }}</h1>
+                <small class="opacity-75">{{ plan.user.get_full_name|default:plan.user.username }}{% if plan.area %} &bull; {{ plan.area }}{% endif %}</small>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'sales:monthly_plan_export_pdf' pk=plan.pk %}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-file-pdf me-1"></i> Export PDF
+                </a>
+                <a href="{% url 'sales:monthly_plan_create' %}?year={{ plan.year }}&month={{ plan.month }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-edit me-1"></i> Edit Plan
+                </a>
+                <a href="{{ back_url }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> {{ back_label }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card rd">
+            <div class="label">R/D (Cases)</div>
+            <div class="value">{{ total_achievement.rd|floatformat:2|intcomma }}</div>
+            <div class="sub">Target: {{ total_target.rd|intcomma }}</div>
+        </div>
+        <div class="summary-card pc">
+            <div class="label">P/C (Bills)</div>
+            <div class="value">{{ total_achievement.pc|intcomma }}</div>
+            <div class="sub">Target: {{ total_target.pc|intcomma }}</div>
+        </div>
+        <div class="summary-card no">
+            <div class="label">N/O (New Outlets)</div>
+            <div class="value">{{ total_achievement.no|intcomma }}</div>
+            <div class="sub">Target: {{ total_target.no|intcomma }}</div>
+        </div>
+        <div class="summary-card purchase">
+            <div class="label">Purchase</div>
+            <div class="value">{{ total_achievement.purchase|intcomma }}</div>
+            <div class="sub">Target: {{ total_target.purchase|intcomma }}</div>
+        </div>
+    </div>
+
+    <!-- Main Data Table -->
+    <div class="detail-wrap">
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="background: #6d28d9; color: white;">Date</th>
+                    <th rowspan="2" style="background: #6d28d9; color: white; text-align: left;">Route</th>
+                    <th colspan="4">Target</th>
+                    <th colspan="4" style="background: #059669;">Cum Achievement</th>
+                    <th colspan="4" style="background: #3b82f6;">Cum Target</th>
+                </tr>
+                <tr>
+                    <th>R/D</th><th>P/C</th><th>N/O</th><th>Purchase</th>
+                    <th>R/D</th><th>P/C</th><th>N/O</th><th>Purchase</th>
+                    <th>R/D</th><th>P/C</th><th>N/O</th><th>Purchase</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="{% if row.is_off %}is-off{% endif %} {% if row.is_today %}is-today{% endif %}">
+                    <td>{{ row.day }}</td>
+                    <td style="text-align: left;">{{ row.route|default:"—" }}</td>
+                    {% if row.is_off %}
+                        <td colspan="4" style="text-align: center; font-style: italic;">Off</td>
+                        <td class="ach-cell {% if row.achievement.rd %}has-data{% else %}zero{% endif %}">{{ row.achievement.rd|default:""|floatformat:2|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.pc %}has-data{% else %}zero{% endif %}">{{ row.achievement.pc|default:""|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.no %}has-data{% else %}zero{% endif %}">{{ row.achievement.no|default:""|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.purchase %}has-data{% else %}zero{% endif %}">{{ row.achievement.purchase|default:""|intcomma }}</td>
+                    {% else %}
+                        <td>{{ row.target.rd|default:""|intcomma }}</td>
+                        <td>{{ row.target.pc|default:""|intcomma }}</td>
+                        <td>{{ row.target.no|default:""|intcomma }}</td>
+                        <td>{{ row.target.purchase|default:""|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.rd %}has-data{% else %}zero{% endif %}">{{ row.achievement.rd|default:""|floatformat:2|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.pc %}has-data{% else %}zero{% endif %}">{{ row.achievement.pc|default:""|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.no %}has-data{% else %}zero{% endif %}">{{ row.achievement.no|default:""|intcomma }}</td>
+                        <td class="ach-cell {% if row.achievement.purchase %}has-data{% else %}zero{% endif %}">{{ row.achievement.purchase|default:""|intcomma }}</td>
+                    {% endif %}
+                    <td>{{ row.cum_target.rd|intcomma }}</td>
+                    <td>{{ row.cum_target.pc|intcomma }}</td>
+                    <td>{{ row.cum_target.no|intcomma }}</td>
+                    <td>{{ row.cum_target.purchase|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td></td>
+                    <td style="text-align: left;"><strong>Total</strong></td>
+                    <td>{{ total_target.rd|intcomma }}</td>
+                    <td>{{ total_target.pc|intcomma }}</td>
+                    <td>{{ total_target.no|intcomma }}</td>
+                    <td>{{ total_target.purchase|intcomma }}</td>
+                    <td>{{ total_achievement.rd|floatformat:2|intcomma }}</td>
+                    <td>{{ total_achievement.pc|intcomma }}</td>
+                    <td>{{ total_achievement.no|intcomma }}</td>
+                    <td>{{ total_achievement.purchase|intcomma }}</td>
+                    <td colspan="4"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Mobile Detail Cards -->
+    <div class="mobile-detail-cards">
+        {% for row in rows %}
+        <div class="m-day-card {% if row.is_off %}is-off{% endif %} {% if row.is_today %}is-today{% endif %}">
+            <div class="m-day-card-head">
+                <div>
+                    <span class="m-date">{{ row.day }}</span>
+                    <span class="m-day">{{ row.day_name }}</span>
+                </div>
+                <span class="m-route">{{ row.route|default:"—" }}</span>
+            </div>
+            {% if row.is_off %}
+                <div style="text-align:center; font-size:0.78rem; color:#a0aec0; font-style:italic; padding: 2px 0;">Off</div>
+            {% endif %}
+            <div class="m-section-label">Ach / Tgt</div>
+            <div class="m-metrics">
+                <div class="m-metric">
+                    <div class="m-metric-label">R/D</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val {% if not row.daily_achievement.rd %}zero{% endif %}">{% if row.daily_achievement.rd %}{{ row.daily_achievement.rd|floatformat:2|intcomma }}{% else %}—{% endif %}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{% if not row.is_off %}{{ row.target.rd|default:"0"|intcomma }}{% else %}—{% endif %}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">P/C</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val {% if not row.daily_achievement.pc %}zero{% endif %}">{% if row.daily_achievement.pc %}{{ row.daily_achievement.pc|intcomma }}{% else %}—{% endif %}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{% if not row.is_off %}{{ row.target.pc|default:"0"|intcomma }}{% else %}—{% endif %}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">N/O</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val {% if not row.daily_achievement.no %}zero{% endif %}">{% if row.daily_achievement.no %}{{ row.daily_achievement.no|intcomma }}{% else %}—{% endif %}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{% if not row.is_off %}{{ row.target.no|default:"0"|intcomma }}{% else %}—{% endif %}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">Purch</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val {% if not row.daily_achievement.purchase %}zero{% endif %}">{% if row.daily_achievement.purchase %}{{ row.daily_achievement.purchase|intcomma }}{% else %}—{% endif %}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{% if not row.is_off %}{{ row.target.purchase|default:"0"|intcomma }}{% else %}—{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="m-cum-label">Cumulative</div>
+            <div class="m-cum-row">
+                <div class="m-metric"><div class="m-metric-row"><span class="m-a-val {% if not row.achievement.rd %}zero{% endif %}">{% if row.achievement.rd %}{{ row.achievement.rd|floatformat:2|intcomma }}{% else %}—{% endif %}</span><span class="m-sep">/</span><span class="m-t-val">{{ row.cum_target.rd|intcomma }}</span></div></div>
+                <div class="m-metric"><div class="m-metric-row"><span class="m-a-val {% if not row.achievement.pc %}zero{% endif %}">{% if row.achievement.pc %}{{ row.achievement.pc|intcomma }}{% else %}—{% endif %}</span><span class="m-sep">/</span><span class="m-t-val">{{ row.cum_target.pc|intcomma }}</span></div></div>
+                <div class="m-metric"><div class="m-metric-row"><span class="m-a-val {% if not row.achievement.no %}zero{% endif %}">{% if row.achievement.no %}{{ row.achievement.no|intcomma }}{% else %}—{% endif %}</span><span class="m-sep">/</span><span class="m-t-val">{{ row.cum_target.no|intcomma }}</span></div></div>
+                <div class="m-metric"><div class="m-metric-row"><span class="m-a-val {% if not row.achievement.purchase %}zero{% endif %}">{% if row.achievement.purchase %}{{ row.achievement.purchase|intcomma }}{% else %}—{% endif %}</span><span class="m-sep">/</span><span class="m-t-val">{{ row.cum_target.purchase|intcomma }}</span></div></div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Mobile Totals Card -->
+        <div class="m-day-card" style="border-left-color: #1e293b; background: #f8fafc;">
+            <div class="m-day-card-head" style="border-bottom: 2px solid #e2e8f0;">
+                <span class="m-date">Total</span>
+            </div>
+            <div class="m-section-label">Achievement / Target</div>
+            <div class="m-metrics">
+                <div class="m-metric">
+                    <div class="m-metric-label">R/D</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val">{{ total_achievement.rd|floatformat:2|intcomma }}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{{ total_target.rd|intcomma }}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">P/C</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val">{{ total_achievement.pc|intcomma }}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{{ total_target.pc|intcomma }}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">N/O</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val">{{ total_achievement.no|intcomma }}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{{ total_target.no|intcomma }}</span>
+                    </div>
+                </div>
+                <div class="m-metric">
+                    <div class="m-metric-label">Purch</div>
+                    <div class="m-metric-row">
+                        <span class="m-a-val">{{ total_achievement.purchase|intcomma }}</span>
+                        <span class="m-sep">/</span>
+                        <span class="m-t-val">{{ total_target.purchase|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

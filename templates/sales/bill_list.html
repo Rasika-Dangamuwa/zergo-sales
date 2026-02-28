@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Sales Bills - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #1f43b4;
+        --primary-dark: #1a3891;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.total { border-color: #1f43b4; }
+    .stat-card.revenue { border-color: #2952cc; }
+    .stat-card.cash { border-color: #f59e0b; }
+    .stat-card.credit { border-color: #ef4444; }
+    .stat-card.cheque { border-color: #3b82f6; }
+    .stat-card.bank { border-color: #059669; }
+    
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        opacity: 0.15;
+        float: right;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1e293b;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0.25rem 0 0 0;
+    }
+    
+    .stat-card .stat-subtext {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        margin-top: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .filter-tabs {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f1f5f9;
+        border: 2px solid transparent;
+        color: #475569;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .filter-tab:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+    
+    .filter-tab.active {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+    }
+    
+    .bill-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .bill-table table {
+        margin-bottom: 0 !important;
+        background-color: white !important;
+    }
+    
+    .bill-table thead {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%) !important;
+    }
+    
+    .bill-table thead tr {
+        background: transparent !important;
+    }
+    
+    .bill-table thead th {
+        color: white !important;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        border: none !important;
+        background-color: transparent !important;
+    }
+    
+    .bill-table tbody tr {
+        transition: all 0.3s;
+        border-bottom: 1px solid #f1f5f9;
+        background-color: white !important;
+        cursor: pointer;
+    }
+    
+    .bill-table tbody tr:hover {
+        background: #f8fafc !important;
+        transform: translateX(3px);
+    }
+    
+    .bill-table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    .bill-number {
+        font-weight: 700;
+        color: #1f43b4;
+    }
+    
+    .shop-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .shop-owner {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+    
+    .status-badge {
+        padding: 0.3rem 0.75rem;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .status-confirmed { background: #dbeafe; color: #1e40af; }
+    .status-draft { background: #f1f5f9; color: #475569; }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    
+    .payment-paid { background: #d1fae5; color: #065f46; }
+    .payment-partial { background: #fef3c7; color: #92400e; }
+    .payment-pending { background: #fee2e2; color: #991b1b; }
+    
+    /* Mobile Card Layout */
+    .mobile-cards-container {
+        display: none;
+    }
+    
+    .mobile-bill-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .mobile-bill-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        transform: scaleY(0);
+        transition: transform 0.3s;
+    }
+    
+    .mobile-bill-card:hover {
+        transform: translateX(3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        border-color: #e2e8f0;
+    }
+    
+    .mobile-bill-card:hover::before {
+        transform: scaleY(1);
+    }
+    
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .card-bill-number {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1f43b4;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .card-amount {
+        text-align: right;
+    }
+    
+    .card-total {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+    
+    .card-balance {
+        font-size: 0.75rem;
+        color: #ef4444;
+        margin-top: 0.25rem;
+    }
+    
+    .card-info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .card-info-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-info-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .card-badges {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .btn-card-action {
+        flex: 1;
+        padding: 0.625rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #cbd5e0;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .empty-state p {
+        color: #64748b;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .fab-button {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.4);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 6px 30px rgba(31, 67, 180, 0.6);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.25rem 0;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .quick-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.25rem;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+        }
+        
+        .bill-table {
+            display: none;
+        }
+        
+        .mobile-cards-container {
+            display: block !important;
+        }
+        
+        .filter-card {
+            padding: 1rem;
+        }
+        
+        .fab-button {
+            display: flex;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-file-invoice me-2"></i> Bills Management</h1>
+                <a href="{% url 'sales:create' %}" class="btn btn-light d-none d-md-inline-block">
+                    <i class="fas fa-plus me-1"></i> New Bill
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="quick-stats">
+        <div class="stat-card total">
+            <i class="fas fa-file-invoice stat-icon"></i>
+            <div class="stat-value">{{ total_bills|intcomma }}</div>
+            <div class="stat-label">Total Bills</div>
+        </div>
+        <div class="stat-card revenue">
+            <i class="fas fa-chart-line stat-icon"></i>
+            <div class="stat-value">{{ total_sales|floatformat:2|intcomma }}</div>
+            <div class="stat-label">Total Sales</div>
+        </div>
+        <div class="stat-card cash">
+            <i class="fas fa-money-bill-wave stat-icon"></i>
+            <div class="stat-value">{{ cash_total|floatformat:2|intcomma }}</div>
+            <div class="stat-label">Cash Sales</div>
+        </div>
+        <div class="stat-card credit">
+            <i class="fas fa-credit-card stat-icon"></i>
+            <div class="stat-value">{{ credit_total|floatformat:2|intcomma }}</div>
+            <div class="stat-label">Credit Balance</div>
+        </div>
+    </div>
+    
+    <!-- Payment Method Breakdown -->
+    <div class="quick-stats">
+        <div class="stat-card cheque">
+            <i class="fas fa-money-check stat-icon"></i>
+            <div class="stat-value">{{ cheque_total|floatformat:2|intcomma }}</div>
+            <div class="stat-label">Total Cheque</div>
+            <div class="stat-subtext">
+                <span style="color: #f59e0b;">⏳ {{ cheque_pending|floatformat:2|intcomma }}</span>
+                <span style="color: #10b981;">✓ {{ cheque_completed|floatformat:2|intcomma }}</span>
+            </div>
+        </div>
+        <div class="stat-card bank">
+            <i class="fas fa-university stat-icon"></i>
+            <div class="stat-value">{{ bank_total|floatformat:2|intcomma }}</div>
+            <div class="stat-label">Total Bank Transfer</div>
+            <div class="stat-subtext">
+                <span style="color: #f59e0b;">⏳ {{ bank_pending|floatformat:2|intcomma }}</span>
+                <span style="color: #10b981;">✓ {{ bank_completed|floatformat:2|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search by bill number, shop name, or owner..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="from_date" class="form-control" placeholder="From Date" value="{{ from_date }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="to_date" class="form-control" placeholder="To Date" value="{{ to_date }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+        
+        <div class="filter-tabs mt-3">
+            <a href="?date=today" class="filter-tab {% if date_filter == 'today' %}active{% endif %}">Today</a>
+            <a href="?date=yesterday" class="filter-tab {% if date_filter == 'yesterday' %}active{% endif %}">Yesterday</a>
+            <a href="?date=this_week" class="filter-tab {% if date_filter == 'this_week' %}active{% endif %}">This Week</a>
+            <a href="?date=this_month" class="filter-tab {% if date_filter == 'this_month' %}active{% endif %}">This Month</a>
+            <a href="?" class="filter-tab {% if date_filter == 'all' %}active{% endif %}">All Time</a>
+            <span style="margin: 0 0.25rem; color: #cbd5e0;">|</span>
+            <a href="?settlement_status=unsettled" class="filter-tab {% if request.GET.settlement_status == 'unsettled' %}active{% endif %}">Unsettled</a>
+            <a href="?settlement_status=partial_settled" class="filter-tab {% if request.GET.settlement_status == 'partial_settled' %}active{% endif %}">Partially Settled</a>
+            <a href="?settlement_status=settled" class="filter-tab {% if request.GET.settlement_status == 'settled' %}active{% endif %}">Settled</a>
+        </div>
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="bill-table">
+        {% if bills %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Date</th>
+                    <th>Shop</th>
+                    <th>Sales Rep</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Balance</th>
+                    <th class="text-center">Settlement</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr onclick="window.location.href='{% url 'sales:detail' bill.pk %}'">
+                    <td class="bill-number">{{ bill.bill_number }}</td>
+                    <td>{{ bill.bill_date|date:"d M Y" }}</td>
+                    <td>
+                        {% if bill.shop %}
+                            <div class="shop-name">{{ bill.shop.shop_name }}</div>
+                            <div class="shop-owner">{{ bill.shop.owner_name }}</div>
+                        {% else %}
+                            <div class="shop-name">{{ bill.customer_name|default:"Unregistered Customer" }} <span class="badge bg-secondary">Unregistered</span></div>
+                        {% endif %}
+                    </td>
+                    <td>{{ bill.sales_rep.get_full_name|default:bill.sales_rep.username }}</td>
+                    <td class="text-end">Rs. {{ bill.total_amount|floatformat:2|intcomma }}</td>
+                    <td class="text-end">Rs. {{ bill.balance_amount|floatformat:2|intcomma }}</td>
+                    <td class="text-center">
+                        {% if bill.settlement_status == 'settled' %}
+                            <span class="status-badge payment-paid">Settled</span>
+                        {% elif bill.settlement_status == 'partial_settled' %}
+                            <span class="status-badge payment-partial">Partially Settled</span>
+                        {% else %}
+                            <span class="status-badge payment-pending">Unsettled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if bill.bill_status == 'confirmed' %}
+                            <span class="status-badge status-confirmed">Confirmed</span>
+                        {% elif bill.bill_status == 'draft' %}
+                            <span class="status-badge status-draft">Draft</span>
+                        {% else %}
+                            <span class="status-badge status-cancelled">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation()">
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-sm btn-outline-primary" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if bill.balance_amount > 0 %}
+                            <a href="{% url 'sales:add_settlement' bill.pk %}" class="btn btn-sm btn-outline-success" title="Payment">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'sales:mobile_print' bill.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Print">
+                                <i class="fas fa-print"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox empty-state-icon"></i>
+            <h3>No Bills Found</h3>
+            <p>
+                {% if request.GET.search or request.GET.status or request.GET.settlement_status %}
+                    No bills match your current filters. Try adjusting the filters above.
+                {% else %}
+                    You haven't created any bills yet. Start by creating your first bill!
+                {% endif %}
+            </p>
+            <a href="{% url 'sales:create' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Create Your First Bill
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="mobile-cards-container">
+        {% if bills %}
+            {% for bill in bills %}
+            <div class="mobile-bill-card" onclick="window.location.href='{% url 'sales:detail' bill.pk %}'">
+                <div class="card-header-row">
+                    <div>
+                        <div class="card-bill-number">{{ bill.bill_number }}</div>
+                        <div class="card-date">
+                            <i class="fas fa-calendar"></i>
+                            {{ bill.bill_date|date:"d M Y, h:i A" }}
+                        </div>
+                    </div>
+                    <div class="card-amount">
+                        <div class="card-total">Rs. {{ bill.total_amount|floatformat:2|intcomma }}</div>
+                        {% if bill.balance_amount > 0 %}
+                        <div class="card-balance">Bal: Rs. {{ bill.balance_amount|floatformat:0|intcomma }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-info-row">
+                    <div>
+                        <div class="card-info-label">{% if bill.shop %}Shop{% else %}Customer{% endif %}</div>
+                        {% if bill.shop %}
+                            <div class="card-info-value">{{ bill.shop.shop_name }}</div>
+                            <div class="card-info-label">{{ bill.shop.owner_name }}</div>
+                        {% else %}
+                            <div class="card-info-value">{{ bill.customer_name|default:"Unregistered Customer" }}</div>
+                            <span class="badge bg-secondary">Unregistered</span>
+                        {% endif %}
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="card-info-label">Sales Rep</div>
+                        <div class="card-info-value">{{ bill.sales_rep.get_full_name|default:bill.sales_rep.username }}</div>
+                    </div>
+                </div>
+                
+                <div class="card-badges">
+                    {% if bill.settlement_status == 'settled' %}
+                        <span class="status-badge payment-paid">Settled</span>
+                    {% elif bill.settlement_status == 'partial_settled' %}
+                        <span class="status-badge payment-partial">Partially Settled</span>
+                    {% else %}
+                        <span class="status-badge payment-pending">Unsettled</span>
+                    {% endif %}
+                    
+                    {% if bill.bill_status == 'confirmed' %}
+                        <span class="status-badge status-confirmed">Confirmed</span>
+                    {% elif bill.bill_status == 'draft' %}
+                        <span class="status-badge status-draft">Draft</span>
+                    {% else %}
+                        <span class="status-badge status-cancelled">Cancelled</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-actions" onclick="event.stopPropagation()">
+                    <a href="{% url 'sales:detail' bill.pk %}" class="btn btn-outline-primary btn-card-action">
+                        <i class="fas fa-eye me-1"></i> View
+                    </a>
+                    {% if bill.balance_amount > 0 %}
+                    <a href="{% url 'sales:add_settlement' bill.pk %}" class="btn btn-outline-success btn-card-action">
+                        <i class="fas fa-money-bill-wave me-1"></i> Pay
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'sales:mobile_print' bill.pk %}" class="btn btn-outline-secondary btn-card-action" target="_blank">
+                        <i class="fas fa-print me-1"></i> Print
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox empty-state-icon"></i>
+                <h3>No Bills Found</h3>
+                <p>
+                    {% if request.GET.search or request.GET.status or request.GET.settlement_status %}
+                        No bills match your current filters. Try adjusting the filters above.
+                    {% else %}
+                        You haven't created any bills yet. Start by creating your first bill!
+                    {% endif %}
+                </p>
+                <a href="{% url 'sales:create' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Create Your First Bill
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Floating Action Button (Mobile) -->
+<a href="{% url 'sales:create' %}" class="fab-button">
+    <i class="fas fa-plus"></i>
+</a>
+{% endblock %}

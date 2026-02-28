@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Record Company Payment{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-money-bill me-2"></i>Record Payment to Company</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="paymentForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="company" class="form-label">Company *</label>
+                                <select name="company" id="company" class="form-select" required>
+                                    <option value="">-- Select Company --</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.id }}" {% if selected_company_id and selected_company_id|stringformat:"s" == company.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ company.company_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="payment_date" class="form-label">Payment Date *</label>
+                                <input type="date" 
+                                       name="payment_date" 
+                                       id="payment_date" 
+                                       class="form-control" 
+                                       required
+                                       value="{{ today|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="payment_method" class="form-label">Payment Method *</label>
+                                <select name="payment_method" id="payment_method" class="form-select" required>
+                                    <option value="">-- Select Method --</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="total_amount" class="form-label">Total Payment Amount (Rs.) *</label>
+                                <input type="number" 
+                                       name="total_amount" 
+                                       id="total_amount" 
+                                       class="form-control" 
+                                       step="0.01" 
+                                       required
+                                       placeholder="0.00"
+                                       onchange="updateAllocationSummary()">
+                            </div>
+                        </div>
+
+                        <!-- Method-specific fields -->
+                        <div id="chequeFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cheque_number" class="form-label">Cheque Number</label>
+                                    <input type="text" name="cheque_number" id="cheque_number" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cheque_date" class="form-label">Cheque Date</label>
+                                    <input type="date" name="cheque_date" id="cheque_date" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="bankFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_name" class="form-label">Bank Name</label>
+                                    <input type="text" name="bank_name" id="bank_name" class="form-control">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="transfer_reference" class="form-label">Transfer Reference</label>
+                                    <input type="text" name="transfer_reference" id="transfer_reference" class="form-control">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="transfer_date" class="form-label">Transfer Date</label>
+                                    <input type="date" name="transfer_date" id="transfer_date" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea name="notes" 
+                                      id="notes" 
+                                      class="form-control" 
+                                      rows="2"
+                                      placeholder="Optional notes about this payment..."></textarea>
+                        </div>
+
+                        <hr>
+
+                        <!-- GRN Allocation Section -->
+                        <div class="mb-3">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-tasks me-2"></i>Allocate Payment to GRNs
+                            </h5>
+                            <div id="grnListContainer">
+                                <p class="text-muted">Select a company to see outstanding GRNs...</p>
+                            </div>
+                        </div>
+
+                        <!-- Allocation Summary -->
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Payment Amount:</strong> <span id="summaryPaymentAmount">Rs. 0.00</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Allocated:</strong> <span id="summaryAllocated" class="text-success">Rs. 0.00</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Unallocated:</strong> <span id="summaryUnallocated" class="text-danger">Rs. 0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'products:company_account_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-check me-1"></i>Record Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load GRNs function
+function loadGRNs(companyId, preSelectGrnId) {
+    if (!companyId) {
+        document.getElementById('grnListContainer').innerHTML = '<p class="text-muted">Select a company to see outstanding GRNs...</p>';
+        return;
+    }
+    
+    console.log('Loading GRNs for company:', companyId, 'Pre-select GRN:', preSelectGrnId);
+    
+    // Fetch outstanding GRNs
+    fetch(`/products/api/company/${companyId}/outstanding-grns/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.grns && data.grns.length > 0) {
+                let html = '<div class="card border-0 shadow-sm">';
+                html += '<div class="card-header bg-white border-0 py-3">';
+                html += '<h6 class="mb-0 fw-bold text-primary"><i class="fas fa-file-invoice me-2"></i>Outstanding GRNs</h6>';
+                html += '</div>';
+                html += '<div class="card-body p-0">';
+                html += '<div class="table-responsive">';
+                html += '<table class="table table-hover mb-0">';
+                html += '<thead class="table-light">';
+                html += '<tr>';
+                html += '<th style="width: 50px;" class="text-center">Select</th>';
+                html += '<th style="width: 150px;">GRN Number</th>';
+                html += '<th style="width: 120px;">Date</th>';
+                html += '<th class="text-end" style="width: 110px;">Total</th>';
+                html += '<th class="text-end" style="width: 110px;">Paid</th>';
+                html += '<th class="text-end" style="width: 110px;">Returns</th>';
+                html += '<th class="text-end" style="width: 110px;">Outstanding</th>';
+                html += '<th style="width: 140px;">Allocate Amount</th>';
+                html += '</tr>';
+                html += '</thead><tbody>';
+                
+                data.grns.forEach(grn => {
+                    html += '<tr>';
+                    html += `<td class="text-center align-middle">
+                                <input type="checkbox" class="form-check-input grn-checkbox" 
+                                       value="${grn.id}" 
+                                       data-outstanding="${grn.outstanding}"
+                                       onchange="toggleAllocationRow(this)">
+                             </td>`;
+                    html += `<td class="align-middle"><span class="badge bg-primary">${grn.grn_number}</span></td>`;
+                    html += `<td class="align-middle text-muted small">${grn.grn_date}</td>`;
+                    html += `<td class="text-end align-middle fw-bold">Rs. ${parseFloat(grn.total_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>`;
+                    html += `<td class="text-end align-middle"><span class="text-success fw-bold">Rs. ${parseFloat(grn.paid_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</span></td>`;
+                    html += `<td class="text-end align-middle"><span class="text-warning fw-bold">Rs. ${parseFloat(grn.returns_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</span></td>`;
+                    html += `<td class="text-end align-middle"><span class="text-danger fw-bold">Rs. ${parseFloat(grn.outstanding).toLocaleString('en-US', {minimumFractionDigits: 2})}</span></td>`;
+                    html += `<td class="align-middle">
+                                <input type="number" 
+                                       class="form-control form-control-sm allocation-input" 
+                                       name="allocation_amounts[]"
+                                       data-grn-id="${grn.id}"
+                                       step="0.01" 
+                                       min="0" 
+                                       max="${grn.outstanding}"
+                                       placeholder="0.00"
+                                       disabled
+                                       onchange="updateAllocationSummary()">
+                                <input type="hidden" name="grn_ids[]" value="${grn.id}" disabled>
+                             </td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table></div></div></div>';
+                document.getElementById('grnListContainer').innerHTML = html;
+                
+                // Auto-select and allocate GRN if specified
+                if (preSelectGrnId) {
+                    const checkbox = document.querySelector(`input[type="checkbox"][value="${preSelectGrnId}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        toggleAllocationRow(checkbox);
+                    }
+                }
+            } else {
+                document.getElementById('grnListContainer').innerHTML = '<div class="alert alert-success border-0 shadow-sm"><i class="fas fa-check-circle me-2"></i>No outstanding GRNs for this company. All invoices are paid!</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('grnListContainer').innerHTML = '<div class="alert alert-danger border-0 shadow-sm"><i class="fas fa-exclamation-triangle me-2"></i>Error loading GRNs. Please try again.</div>';
+        });
+}
+
+// Toggle allocation input when checkbox is checked
+function toggleAllocationRow(checkbox) {
+    const row = checkbox.closest('tr');
+    const allocationInput = row.querySelector('.allocation-input');
+    const hiddenInput = row.querySelector('input[type="hidden"]');
+    
+    if (checkbox.checked) {
+        allocationInput.disabled = false;
+        hiddenInput.disabled = false;
+        // Auto-fill with outstanding amount
+        allocationInput.value = checkbox.dataset.outstanding;
+    } else {
+        allocationInput.disabled = true;
+        allocationInput.value = '';
+        hiddenInput.disabled = true;
+    }
+    
+    updateAllocationSummary();
+}
+
+// Update allocation summary
+function updateAllocationSummary() {
+    const paymentAmount = parseFloat(document.getElementById('total_amount').value) || 0;
+    let totalAllocated = 0;
+    
+    document.querySelectorAll('.allocation-input:not([disabled])').forEach(input => {
+        totalAllocated += parseFloat(input.value) || 0;
+    });
+    
+    const unallocated = paymentAmount - totalAllocated;
+    
+    document.getElementById('summaryPaymentAmount').textContent = `Rs. ${paymentAmount.toFixed(2)}`;
+    document.getElementById('summaryAllocated').textContent = `Rs. ${totalAllocated.toFixed(2)}`;
+    document.getElementById('summaryUnallocated').textContent = `Rs. ${unallocated.toFixed(2)}`;
+    
+    // Disable submit if amounts don't match
+    const submitBtn = document.getElementById('submitBtn');
+    if (Math.abs(unallocated) > 0.01) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('btn-secondary');
+        submitBtn.classList.remove('btn-success');
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-secondary');
+        submitBtn.classList.add('btn-success');
+    }
+}
+
+// Payment method change handler
+document.getElementById('payment_method').addEventListener('change', function() {
+    const chequeFields = document.getElementById('chequeFields');
+    const bankFields = document.getElementById('bankFields');
+    
+    // Hide all
+    chequeFields.style.display = 'none';
+    bankFields.style.display = 'none';
+    
+    // Show relevant fields
+    if (this.value === 'cheque') {
+        chequeFields.style.display = 'block';
+    } else if (this.value === 'bank_transfer') {
+        bankFields.style.display = 'block';
+    }
+});
+
+// Form validation
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    const paymentAmount = parseFloat(document.getElementById('total_amount').value) || 0;
+    let totalAllocated = 0;
+    
+    document.querySelectorAll('.allocation-input:not([disabled])').forEach(input => {
+        totalAllocated += parseFloat(input.value) || 0;
+    });
+    
+    if (Math.abs(paymentAmount - totalAllocated) > 0.01) {
+        e.preventDefault();
+        alert('Total allocated amount must equal payment amount!');
+        return false;
+    }
+});
+
+// Load GRNs when company changes
+document.getElementById('company').addEventListener('change', function() {
+    const grnId = window.preSelectGrnId || null;
+    window.preSelectGrnId = null; // Clear after use
+    loadGRNs(this.value, grnId);
+});
+
+// Auto-load GRNs if company is pre-selected from URL
+document.addEventListener('DOMContentLoaded', function() {
+    const companySelect = document.getElementById('company');
+    const selectedGrn = '{{ selected_grn_id|default:"" }}';
+    
+    console.log('Page loaded - Company value:', companySelect.value, 'Selected GRN:', selectedGrn);
+    
+    if (companySelect.value) {
+        console.log('Triggering company change event to load GRNs...');
+        // Store the GRN to pre-select
+        window.preSelectGrnId = selectedGrn;
+        // Trigger the change event to load GRNs
+        companySelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

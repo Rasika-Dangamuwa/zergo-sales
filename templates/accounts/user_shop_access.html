@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Shop Access — {{ user_obj.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --brand: #0078D7;
+    --brand-dark: #005BA1;
+    --brand-light: #e3f2fd;
+    --brand-gradient: linear-gradient(135deg, #0078D7 0%, #004E8C 100%);
+    --emerald: #10b981; --emerald-bg: #d1fae5;
+    --amber: #f59e0b; --amber-bg: #fef3c7;
+    --rose: #ef4444; --rose-bg: #fee2e2;
+    --violet: #8b5cf6; --violet-bg: #ede9fe;
+    --cyan: #06b6d4; --cyan-bg: #cffafe;
+    --s50: #f8fafc; --s100: #f1f5f9; --s200: #e2e8f0; --s300: #cbd5e1;
+    --s400: #94a3b8; --s500: #64748b; --s600: #475569; --s700: #334155;
+    --s800: #1e293b; --s900: #0f172a;
+    --r: 14px; --rs: 10px;
+    --sh1: 0 1px 3px rgba(0,0,0,.06);
+    --sh2: 0 4px 14px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; }
+.sa-container { max-width: 1280px; margin: 0 auto; padding: .75rem 1rem; }
+
+/* ===== BACK ===== */
+.sa-back {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .85rem; font-weight: 600; color: var(--brand);
+    text-decoration: none; margin-bottom: .6rem;
+}
+.sa-back:hover { text-decoration: underline; }
+
+/* ===== HEADER ===== */
+.sa-hdr {
+    background: var(--brand-gradient);
+    border-radius: var(--r);
+    padding: 1.25rem 1.5rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+.sa-hdr::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -8%;
+    width: 220px; height: 220px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+}
+.sa-hdr-inner {
+    display: flex; align-items: center; gap: 1.25rem;
+    position: relative; z-index: 1;
+}
+.sa-hdr-avatar {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 700;
+    flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,.25);
+}
+.sa-hdr-info { flex: 1; min-width: 0; }
+.sa-hdr-info h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
+.sa-hdr-info p { font-size: .85rem; opacity: .85; margin: .15rem 0 0; }
+
+/* ===== STATS ===== */
+.sa-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: .65rem;
+    margin-bottom: 1rem;
+}
+.sa-stat {
+    background: #fff;
+    border-radius: var(--rs);
+    padding: .75rem 1rem;
+    box-shadow: var(--sh1);
+    text-align: center;
+}
+.sa-stat-val { font-size: 1.3rem; font-weight: 800; color: var(--s900); }
+.sa-stat-lbl { font-size: .65rem; font-weight: 700; color: var(--s500); text-transform: uppercase; letter-spacing: .3px; margin-top: .1rem; }
+.sa-stat-val.gn { color: var(--emerald); }
+.sa-stat-val.rs { color: var(--rose); }
+.sa-stat-val.bl { color: var(--brand); }
+.sa-stat-val.am { color: var(--amber); }
+.sa-stat-val.vi { color: var(--violet); }
+
+/* ===== CONTROLS BAR ===== */
+.sa-cbar {
+    background: #fff; border-radius: var(--rs);
+    padding: .85rem 1rem; margin-bottom: .75rem;
+    box-shadow: var(--sh1);
+}
+.sa-cbar-row {
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+}
+.sa-filters {
+    display: flex; gap: .35rem; flex-wrap: wrap; align-items: center;
+}
+.sa-filter-btn {
+    padding: .4rem .7rem; border: none; background: var(--s100);
+    border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .78rem;
+    color: var(--s500); transition: all .15s; white-space: nowrap;
+    text-decoration: none;
+}
+.sa-filter-btn.active { background: var(--brand); color: #fff; }
+.sa-filter-btn:hover:not(.active) { background: var(--s200); color: var(--s700); text-decoration: none; }
+.sa-filter-lbl {
+    font-size: .7rem; font-weight: 700; color: var(--s500);
+    white-space: nowrap;
+}
+.sa-divider {
+    width: 1px; height: 20px; background: var(--s200);
+    margin: 0 .1rem; align-self: center;
+}
+.sa-search-wrap { flex: 1; min-width: 180px; position: relative; }
+.sa-search-wrap i {
+    position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+    color: var(--s400); font-size: .85rem;
+}
+.sa-search-wrap input {
+    width: 100%; padding: .5rem .75rem .5rem 2.3rem;
+    border: 2px solid var(--s200); border-radius: var(--rs);
+    font-size: .85rem; outline: none; transition: border .2s;
+}
+.sa-search-wrap input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(0,120,215,.08); }
+.sa-city-select {
+    padding: .45rem .65rem; border: 2px solid var(--s200); border-radius: 6px;
+    font-size: .82rem; color: var(--s600); outline: none; background: #fff;
+    cursor: pointer; min-width: 140px;
+}
+.sa-city-select:focus { border-color: var(--brand); }
+
+/* ===== BULK ACTIONS BAR ===== */
+.sa-bulk {
+    background: var(--brand-light);
+    border: 2px solid var(--brand);
+    border-radius: var(--rs);
+    padding: .7rem 1rem;
+    margin-bottom: .75rem;
+    display: none;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+}
+.sa-bulk.show { display: flex; }
+.sa-bulk-count {
+    font-size: .88rem; font-weight: 700; color: var(--brand-dark);
+    white-space: nowrap;
+}
+.sa-bulk-actions {
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; flex: 1;
+}
+.sa-bulk-label {
+    font-size: .78rem; font-weight: 600; color: var(--s600);
+}
+.sa-bulk-select {
+    padding: .4rem .6rem; border: 2px solid var(--brand);
+    border-radius: 6px; font-size: .82rem; font-weight: 600;
+    color: var(--brand-dark); background: #fff; outline: none; cursor: pointer;
+}
+.sa-bulk-btn {
+    padding: .4rem .85rem; border-radius: 6px;
+    font-size: .82rem; font-weight: 700; border: none;
+    cursor: pointer; display: inline-flex; align-items: center; gap: .3rem;
+    transition: all .15s;
+}
+.sa-bulk-btn.grant { background: var(--brand); color: #fff; }
+.sa-bulk-btn.grant:hover { background: var(--brand-dark); }
+.sa-bulk-btn.revoke { background: var(--rose); color: #fff; }
+.sa-bulk-btn.revoke:hover { background: #dc2626; }
+
+/* ===== COUNT ===== */
+.sa-count {
+    font-size: .8rem; font-weight: 600; color: var(--s500);
+    margin-bottom: .5rem;
+}
+
+/* ===== TABLE ===== */
+.sa-table-wrap {
+    background: #fff;
+    border-radius: var(--r);
+    box-shadow: var(--sh1);
+    overflow: hidden;
+}
+.sa-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+}
+.sa-tbl thead th {
+    text-align: left;
+    font-weight: 700;
+    color: var(--s500);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding: .75rem 1rem;
+    border-bottom: 2px solid var(--s100);
+    background: var(--s50);
+    white-space: nowrap;
+}
+.sa-tbl thead th:first-child {
+    width: 40px; text-align: center;
+}
+.sa-tbl tbody tr {
+    transition: background .15s;
+}
+.sa-tbl tbody tr:hover { background: var(--s50); }
+.sa-tbl tbody tr.has-access { background: rgba(16,185,129,.04); }
+.sa-tbl tbody tr.has-access:hover { background: rgba(16,185,129,.08); }
+.sa-tbl tbody td {
+    padding: .65rem 1rem;
+    border-bottom: 1px solid var(--s100);
+    color: var(--s700);
+    vertical-align: middle;
+}
+.sa-tbl tbody td:first-child { text-align: center; }
+.sa-tbl-check {
+    width: 18px; height: 18px; cursor: pointer;
+    accent-color: var(--brand);
+}
+.sa-tbl-code {
+    font-family: monospace; font-size: .82rem; color: var(--s600);
+}
+.sa-tbl-shop {
+    font-weight: 700; color: var(--s900); font-size: .88rem;
+}
+.sa-tbl-owner { font-size: .82rem; color: var(--s500); }
+.sa-tbl-city { font-size: .85rem; color: var(--s600); }
+
+/* Access badge */
+.sa-access-badge {
+    display: inline-flex; align-items: center; gap: .25rem;
+    padding: .2rem .55rem; border-radius: 10px;
+    font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .3px;
+}
+.sa-access-badge.l1 { background: var(--amber-bg); color: #92400e; }
+.sa-access-badge.l2 { background: var(--brand-light); color: var(--brand-dark); }
+.sa-access-badge.l3 { background: var(--emerald-bg); color: #065f46; }
+.sa-access-badge.none { background: var(--s100); color: var(--s400); }
+
+/* ===== CARD VIEW (MOBILE) ===== */
+.sa-cards { display: none; flex-direction: column; gap: .5rem; }
+.sa-card {
+    background: #fff; border-radius: var(--rs);
+    padding: .75rem .9rem; box-shadow: var(--sh1);
+    display: flex; align-items: center; gap: .65rem;
+    border: 2px solid transparent;
+}
+.sa-card.has-access { border-color: rgba(16,185,129,.2); background: rgba(16,185,129,.03); }
+.sa-card-check { flex-shrink: 0; }
+.sa-card-body { flex: 1; min-width: 0; }
+.sa-card-name {
+    font-weight: 700; color: var(--s900); font-size: .88rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sa-card-meta {
+    font-size: .72rem; color: var(--s500); margin-top: .1rem;
+    display: flex; flex-wrap: wrap; gap: .15rem .6rem;
+}
+.sa-card-right { flex-shrink: 0; }
+
+/* ===== EMPTY STATE ===== */
+.sa-empty {
+    text-align: center; padding: 3rem 1rem;
+    background: #fff; border-radius: var(--rs);
+    box-shadow: var(--sh1);
+}
+.sa-empty i { font-size: 2.5rem; color: var(--s300); margin-bottom: .75rem; }
+.sa-empty h3 { font-size: 1.1rem; color: var(--s700); margin-bottom: .3rem; }
+.sa-empty p { font-size: .85rem; color: var(--s500); }
+
+/* ===== RESPONSIVE ===== */
+@media (min-width: 992px) {
+    .sa-cards { display: none !important; }
+    .sa-table-wrap { display: block; }
+    .sa-cbar-row { flex-wrap: nowrap; }
+}
+@media (max-width: 991px) {
+    .sa-table-wrap { display: none !important; }
+    .sa-cards { display: flex !important; }
+    .sa-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 576px) {
+    .sa-container { padding: .35rem; }
+    .sa-hdr { padding: .85rem 1rem; }
+    .sa-hdr-info h1 { font-size: 1.15rem; }
+    .sa-stats { grid-template-columns: repeat(3, 1fr); gap: .35rem; }
+    .sa-stat { padding: .55rem .65rem; }
+    .sa-stat-val { font-size: 1rem; }
+    .sa-cbar { padding: .6rem .7rem; }
+    .sa-bulk { padding: .55rem .7rem; }
+    .sa-card { padding: .6rem .7rem; gap: .5rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-container">
+    <a href="{% url 'accounts:user_detail' user_obj.pk %}" class="sa-back">
+        <i class="fas fa-arrow-left"></i> Back to {{ user_obj.get_full_name }}
+    </a>
+
+    <!-- Header -->
+    <div class="sa-hdr">
+        <div class="sa-hdr-inner">
+            <div class="sa-hdr-avatar">
+                {{ user_obj.first_name|first }}{{ user_obj.last_name|first }}
+            </div>
+            <div class="sa-hdr-info">
+                <h1><i class="fas fa-store me-2"></i>Manage Shop Access</h1>
+                <p>Bulk assign or revoke shop access for <strong>{{ user_obj.get_full_name }}</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sa-stats">
+        <div class="sa-stat">
+            <div class="sa-stat-val bl">{{ total_shops }}</div>
+            <div class="sa-stat-lbl">Total Shops</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-val gn">{{ granted_count }}</div>
+            <div class="sa-stat-lbl">Access Granted</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-val rs">{{ not_granted_count }}</div>
+            <div class="sa-stat-lbl">No Access</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-val am">{{ level_counts.2 }}</div>
+            <div class="sa-stat-lbl">Standard (L2)</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-val vi">{{ level_counts.3 }}</div>
+            <div class="sa-stat-lbl">Full Access (L3)</div>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="sa-cbar">
+        <div class="sa-cbar-row">
+            <div class="sa-filters">
+                <span class="sa-filter-lbl">SHOW:</span>
+                <a href="?access=all&city={{ city_filter }}&q={{ search_query }}"
+                   class="sa-filter-btn {% if access_filter == 'all' %}active{% endif %}">All</a>
+                <a href="?access=granted&city={{ city_filter }}&q={{ search_query }}"
+                   class="sa-filter-btn {% if access_filter == 'granted' %}active{% endif %}">
+                    <i class="fas fa-check-circle me-1"></i>Granted
+                </a>
+                <a href="?access=none&city={{ city_filter }}&q={{ search_query }}"
+                   class="sa-filter-btn {% if access_filter == 'none' %}active{% endif %}">
+                    <i class="fas fa-times-circle me-1"></i>No Access
+                </a>
+            </div>
+            <span class="sa-divider"></span>
+            <form method="get" id="filterForm" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;flex:1;">
+                <input type="hidden" name="access" value="{{ access_filter }}">
+                <select name="city" class="sa-city-select" onchange="this.form.submit()">
+                    <option value="">All Cities</option>
+                    {% for city in cities %}
+                    <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
+                    {% endfor %}
+                </select>
+                <div class="sa-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" value="{{ search_query }}"
+                           placeholder="Search shop name, code, owner..."
+                           id="shopSearch">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Action Bar (hidden until selection) -->
+    <div class="sa-bulk" id="bulkBar">
+        <span class="sa-bulk-count"><span id="selectedCount">0</span> shop(s) selected</span>
+        <div class="sa-bulk-actions">
+            <form method="post" id="grantForm" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="bulk_update">
+                <div id="grantShopInputs"></div>
+                <span class="sa-bulk-label">Grant Level:</span>
+                <select name="access_level" class="sa-bulk-select">
+                    <option value="2" selected>Level 2 — Standard</option>
+                    <option value="1">Level 1 — View Only</option>
+                    <option value="3">Level 3 — Full Access</option>
+                </select>
+                <button type="submit" class="sa-bulk-btn grant">
+                    <i class="fas fa-check"></i> Grant Access
+                </button>
+            </form>
+            <form method="post" id="revokeForm" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="bulk_revoke">
+                <div id="revokeShopInputs"></div>
+                <button type="submit" class="sa-bulk-btn revoke"
+                        onclick="return confirm('Revoke access for selected shops?')">
+                    <i class="fas fa-ban"></i> Revoke Access
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Result Count -->
+    <div class="sa-count">
+        <i class="fas fa-store me-1"></i>{{ result_count }} shop{{ result_count|pluralize }} found
+    </div>
+
+    {% if shop_data %}
+    <!-- ===== DESKTOP TABLE VIEW ===== -->
+    <div class="sa-table-wrap">
+        <table class="sa-tbl">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" class="sa-tbl-check" id="selectAll" title="Select All"></th>
+                    <th>Shop Code</th>
+                    <th>Shop Name</th>
+                    <th>Owner</th>
+                    <th>City</th>
+                    <th>Current Access</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in shop_data %}
+                <tr class="{% if item.has_access %}has-access{% endif %}">
+                    <td>
+                        <input type="checkbox" class="sa-tbl-check shop-check"
+                               value="{{ item.shop.pk }}" data-name="{{ item.shop.shop_name }}">
+                    </td>
+                    <td><span class="sa-tbl-code">{{ item.shop.shop_code }}</span></td>
+                    <td><span class="sa-tbl-shop">{{ item.shop.shop_name }}</span></td>
+                    <td><span class="sa-tbl-owner">{{ item.shop.owner_name }}</span></td>
+                    <td><span class="sa-tbl-city">{{ item.shop.city }}</span></td>
+                    <td>
+                        {% if item.access_level == 3 %}
+                            <span class="sa-access-badge l3"><i class="fas fa-crown"></i> Level 3 — Full</span>
+                        {% elif item.access_level == 2 %}
+                            <span class="sa-access-badge l2"><i class="fas fa-user-check"></i> Level 2 — Standard</span>
+                        {% elif item.access_level == 1 %}
+                            <span class="sa-access-badge l1"><i class="fas fa-eye"></i> Level 1 — View</span>
+                        {% else %}
+                            <span class="sa-access-badge none"><i class="fas fa-minus-circle"></i> No Access</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== MOBILE CARD VIEW ===== -->
+    <div class="sa-cards">
+        {% for item in shop_data %}
+        <div class="sa-card {% if item.has_access %}has-access{% endif %}">
+            <div class="sa-card-check">
+                <input type="checkbox" class="sa-tbl-check shop-check"
+                       value="{{ item.shop.pk }}" data-name="{{ item.shop.shop_name }}">
+            </div>
+            <div class="sa-card-body">
+                <div class="sa-card-name">{{ item.shop.shop_name }}</div>
+                <div class="sa-card-meta">
+                    <span><i class="fas fa-barcode me-1"></i>{{ item.shop.shop_code }}</span>
+                    <span><i class="fas fa-user me-1"></i>{{ item.shop.owner_name }}</span>
+                    <span><i class="fas fa-map-marker-alt me-1"></i>{{ item.shop.city }}</span>
+                </div>
+            </div>
+            <div class="sa-card-right">
+                {% if item.access_level == 3 %}
+                    <span class="sa-access-badge l3"><i class="fas fa-crown"></i> L3</span>
+                {% elif item.access_level == 2 %}
+                    <span class="sa-access-badge l2"><i class="fas fa-user-check"></i> L2</span>
+                {% elif item.access_level == 1 %}
+                    <span class="sa-access-badge l1"><i class="fas fa-eye"></i> L1</span>
+                {% else %}
+                    <span class="sa-access-badge none"><i class="fas fa-minus-circle"></i> None</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sa-empty">
+        <i class="fas fa-store-slash d-block"></i>
+        <h3>No Shops Found</h3>
+        <p>No shops match your current filters. Try adjusting your search.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const selectAll = document.getElementById('selectAll');
+    const bulkBar = document.getElementById('bulkBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const grantInputs = document.getElementById('grantShopInputs');
+    const revokeInputs = document.getElementById('revokeShopInputs');
+
+    function getAllChecks() {
+        return document.querySelectorAll('.shop-check');
+    }
+
+    function getSelected() {
+        return document.querySelectorAll('.shop-check:checked');
+    }
+
+    function updateBulkBar() {
+        const selected = getSelected();
+        const count = selected.length;
+        selectedCountEl.textContent = count;
+
+        if (count > 0) {
+            bulkBar.classList.add('show');
+        } else {
+            bulkBar.classList.remove('show');
+        }
+
+        // Sync hidden inputs for both forms
+        grantInputs.innerHTML = '';
+        revokeInputs.innerHTML = '';
+        selected.forEach(cb => {
+            const inp1 = document.createElement('input');
+            inp1.type = 'hidden'; inp1.name = 'shop_ids'; inp1.value = cb.value;
+            grantInputs.appendChild(inp1);
+
+            const inp2 = document.createElement('input');
+            inp2.type = 'hidden'; inp2.name = 'shop_ids'; inp2.value = cb.value;
+            revokeInputs.appendChild(inp2);
+        });
+    }
+
+    // Select All
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            getAllChecks().forEach(cb => { cb.checked = this.checked; });
+            updateBulkBar();
+        });
+    }
+
+    // Individual checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('shop-check')) {
+            updateBulkBar();
+            // Update selectAll state
+            if (selectAll) {
+                const all = getAllChecks();
+                const checked = getSelected();
+                selectAll.checked = all.length > 0 && all.length === checked.length;
+                selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+            }
+        }
+    });
+
+    // Debounced search
+    let searchTimer;
+    const searchInput = document.getElementById('shopSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 500);
+        });
+    }
+})();
+</script>
+{% endblock %}

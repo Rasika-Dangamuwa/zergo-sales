@@ -1,0 +1,622 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Commission Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .settings-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: #f9fafb;
+        border-left: 4px solid;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-box.primary {
+        border-left-color: #667eea;
+    }
+    
+    .stat-box.success {
+        border-left-color: #10b981;
+    }
+    
+    .stat-box.warning {
+        border-left-color: #f59e0b;
+    }
+    
+    .stat-box h6 {
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-box h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .info-box {
+        background: #e0e7ff;
+        border-left: 4px solid #4338ca;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .rate-history-row.active {
+        background: #f0fdf4;
+        border-left: 4px solid #10b981;
+    }
+    
+    .font-monospace {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.85em;
+        letter-spacing: 0.5px;
+    }
+    
+    .timestamp-ms {
+        display: inline-block;
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-cog"></i> Commission Settings</h2>
+            <p class="text-muted">Configure commission rates with effective dates and track real-time commission</p>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:sales_rep' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'sales:commission_dashboard' %}">Commissions</a></li>
+                    <li class="breadcrumb-item active">Settings</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'sales:commission_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card" style="border: 2px solid #10b981; border-radius: 12px;">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="fas fa-bolt text-success"></i> Quick Actions</h5>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{% url 'sales:manual_payout_list' %}" class="btn btn-success btn-lg" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                            <i class="fas fa-money-bill-wave me-2"></i>Manual Commission Payout
+                        </a>
+                        <a href="{% url 'sales:manual_payout_list' %}#history" class="btn btn-outline-success btn-lg">
+                            <i class="fas fa-history me-2"></i>View Payout History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Set New Commission Rate with Effective Date -->
+        <div class="col-lg-12">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-plus"></i> Set New Commission Rate
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_rate_history">
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">New Commission Rate (%)</label>
+                                    <input type="number" step="0.01" min="0" max="100" 
+                                           name="new_rate" 
+                                           class="form-control form-control-lg" 
+                                           placeholder="e.g., 5.00"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Effective From</label>
+                                    <input type="date" name="effective_from" 
+                                           class="form-control form-control-lg" 
+                                           min="{{ today|date:'Y-m-d' }}"
+                                           value="{{ today|date:'Y-m-d' }}"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Action</label>
+                                <button type="submit" class="btn btn-success btn-lg w-100">
+                                    <i class="fas fa-plus"></i> Set New Rate
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Reason for Change (Optional)</label>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="e.g., Annual rate adjustment, Performance increase"></textarea>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Rate History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-history"></i> Commission Rate History
+                </div>
+                <div class="card-body">
+                    {% if rate_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 100px;">Rate</th>
+                                    <th style="width: 180px;">Effective From</th>
+                                    <th style="width: 120px;">Status</th>
+                                    <th>Created By</th>
+                                    <th style="width: 180px;">Created At</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rate in rate_history %}
+                                <tr class="{% if rate.is_active %}rate-history-row active{% endif %}">
+                                    <td>
+                                        <strong class="text-primary">{{ rate.rate }}%</strong>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap">{{ rate.effective_from|date:"d M Y" }}</div>
+                                        <small class="timestamp-ms font-monospace">
+                                            {{ rate.effective_from|date:"H:i:s" }}<span class="text-primary">.{{ rate.effective_from.microsecond|stringformat:"06d"|slice:":3" }}</span>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if rate.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Historical</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rate.created_by %}
+                                            {{ rate.created_by.get_full_name|default:rate.created_by.username }}
+                                        {% else %}
+                                            <span class="text-muted">System</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap">{{ rate.created_at|date:"d M Y" }}</div>
+                                        <small class="timestamp-ms font-monospace">
+                                            {{ rate.created_at|date:"H:i:s" }}<span class="text-primary">.{{ rate.created_at.microsecond|stringformat:"06d"|slice:":3" }}</span>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if rate.notes %}
+                                            <small>{{ rate.notes }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        No commission rate history found. Set your first rate with an effective date above.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Automated Payout Schedule -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-clock"></i> Automated Payout Schedule
+                </div>
+                <div class="card-body">
+                    {% if payout_schedule %}
+                    <div class="alert {% if payout_schedule.is_active %}alert-success{% else %}alert-secondary{% endif %} d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <i class="fas fa-{% if payout_schedule.is_active %}check-circle{% else %}pause-circle{% endif %} me-2"></i>
+                            <strong>Status:</strong> 
+                            {% if payout_schedule.is_active %}
+                                Active - Automatic payouts enabled
+                            {% else %}
+                                Inactive - Automatic payouts disabled
+                            {% endif %}
+                        </div>
+                        {% if payout_schedule.is_active and payout_schedule.next_run_date %}
+                        <div class="text-end">
+                            <small class="d-block">Next Payout:</small>
+                            <strong class="local-time" data-utc="{{ payout_schedule.next_run_date|date:'c' }}">
+                                {{ payout_schedule.next_run_date|date:"d M Y, h:i A" }}
+                            </strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="payoutScheduleForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="configure_payout_schedule">
+                        <input type="hidden" name="timezone_offset" id="timezoneOffset">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Payout Frequency</label>
+                                <select name="frequency" class="form-select" id="frequencySelect" required>
+                                    <option value="monthly" {% if payout_schedule.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                                    <option value="weekly" {% if payout_schedule.frequency == 'weekly' %}selected{% endif %}>Weekly (Every Monday)</option>
+                                    <option value="biweekly" {% if payout_schedule.frequency == 'biweekly' %}selected{% endif %}>Bi-weekly (1st & 15th)</option>
+                                    <option value="custom" {% if payout_schedule.frequency == 'custom' %}selected{% endif %}>Custom Date/Time</option>
+                                </select>
+                                <small class="text-muted">How often commissions should be credited</small>
+                            </div>
+
+                            <div class="col-md-3 mb-3" id="dayOfMonthGroup">
+                                <label class="form-label fw-bold">Day of Month</label>
+                                <select name="payout_day_of_month" class="form-select">
+                                    <option value="0" {% if payout_schedule.payout_day_of_month == 0 %}selected{% endif %}>Last Day</option>
+                                    {% for day in "x"|rjust:"28" %}
+                                        {% with day_num=forloop.counter %}
+                                        <option value="{{ day_num }}" {% if payout_schedule.payout_day_of_month == day_num %}selected{% endif %}>{{ day_num }}</option>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">For monthly payouts</small>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Payout Time</label>
+                                <input type="time" name="payout_time" class="form-control" 
+                                       value="{% if payout_schedule.payout_time %}{{ payout_schedule.payout_time|time:'H:i' }}{% else %}09:00{% endif %}" required>
+                                <small class="text-muted">Time of day</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Minimum Payout Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rs.</span>
+                                    <input type="number" name="minimum_payout_amount" class="form-control" 
+                                           step="0.01" min="0" 
+                                           value="{% if payout_schedule.minimum_payout_amount %}{{ payout_schedule.minimum_payout_amount }}{% else %}0{% endif %}" required>
+                                </div>
+                                <small class="text-muted">Only credit if balance exceeds this amount (0 = no minimum)</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3 d-flex align-items-end">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_active" 
+                                           id="isActiveSwitch" {% if payout_schedule.is_active %}checked{% endif %}>
+                                    <label class="form-check-label fw-bold" for="isActiveSwitch">
+                                        Enable Automatic Payouts
+                                    </label>
+                                    <div><small class="text-muted">Toggle to activate/deactivate scheduled payouts</small></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Schedule
+                            </button>
+                            {% if payout_schedule and payout_schedule.last_run_date %}
+                            <div class="text-muted d-flex align-items-center ms-3">
+                                <small>Last Run: <span class="local-time" data-utc="{{ payout_schedule.last_run_date|date:'c' }}">{{ payout_schedule.last_run_date|date:"d M Y, h:i A" }}</span></small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>How It Works:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>The system checks schedules every minute via a management command</li>
+                            <li>When the next run date/time is reached, commissions are automatically credited to user money accounts</li>
+                            <li>Only users with balances above the minimum threshold are processed</li>
+                            <li>A money transaction is created with type "Commission Payment"</li>
+                            <li>Setup Windows Task Scheduler to run: <code>python manage.py process_commission_payouts</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-history"></i> Payout History
+                </div>
+                <div class="card-body">
+                    {% if payout_history %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Users</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in payout_history %}
+                                <tr>
+                                    <td>
+                                        <small>{{ history.execution_date|date:"d M Y" }}</small><br>
+                                        <small class="text-muted">{{ history.execution_date|time:"h:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if history.status == 'success' %}
+                                            <span class="badge bg-success">Success</span>
+                                        {% elif history.status == 'partial' %}
+                                            <span class="badge bg-warning">Partial</span>
+                                        {% elif history.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Skipped</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ history.total_users_processed }}</td>
+                                    <td>
+                                        <small>Rs. {{ history.total_amount_credited|floatformat:2 }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light">
+                        <i class="fas fa-clock"></i>
+                        <small>No payout history yet. Configure and activate the schedule to begin automatic payouts.</small>
+                    </div>
+                    {% endif %}
+
+                    {% if payout_history %}
+                    <div class="mt-3">
+                        <small class="text-muted">Showing last 10 executions</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Commission Calculation -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-calculator"></i> Commission Calculation
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">How Commission is Calculated:</h6>
+                    
+                    <div class="alert alert-light border mb-4">
+                        <h6 class="fw-bold">Transaction Types:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Bill Created:</strong> Initial commission calculated</li>
+                            <li><strong>Payment Received:</strong> Commission on collected amount</li>
+                            <li><strong>Return Processed:</strong> Commission reduced</li>
+                            <li><strong>Write-off Executed:</strong> Commission adjusted</li>
+                        </ul>
+                    </div>
+                    
+                    <h6 class="fw-bold mb-3">Rate Application:</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Each transaction uses the <strong>rate effective on that date</strong>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Automatic calculation via <strong>Django signals</strong>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <strong>Running balance</strong> maintained per sales rep
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Commission based on <strong>bill creator</strong> (sales_rep)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="settings-card card">
+                <div class="card-header">
+                    <i class="fas fa-lightbulb"></i> How It Works
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Real-Time Tracking Process:</h6>
+                    
+                    <div class="timeline">
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">1</span>
+                            </div>
+                            <div>
+                                <strong>Bill Created</strong>
+                                <p class="text-muted mb-0 small">Commission transaction created automatically</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-success rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">2</span>
+                            </div>
+                            <div>
+                                <strong>Payment Received</strong>
+                                <p class="text-muted mb-0 small">Commission calculated on collected amount</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-warning rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">3</span>
+                            </div>
+                            <div>
+                                <strong>Return Processed</strong>
+                                <p class="text-muted mb-0 small">Commission reduced for returned amount</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <span class="badge bg-info rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">4</span>
+                            </div>
+                            <div>
+                                <strong>Running Balance Updated</strong>
+                                <p class="text-muted mb-0 small">Cumulative commission calculated instantly</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-rocket"></i>
+                        <strong>World-Class System:</strong> No manual calculation needed. Everything is automatic!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    // Convert server times to user's local timezone
+    document.addEventListener('DOMContentLoaded', function() {
+        // Convert all elements with class 'local-time' to user's timezone
+        document.querySelectorAll('.local-time').forEach(function(element) {
+            const utcTime = element.getAttribute('data-utc');
+            if (utcTime) {
+                const date = new Date(utcTime);
+                // Format: 28 Jan 2026, 08:54 AM
+                const options = { 
+                    day: '2-digit', 
+                    month: 'short', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                };
+                element.textContent = date.toLocaleString('en-GB', options).replace(',', '');
+            }
+        });
+        
+        // Handle frequency selection to show/hide day of month field
+        const frequencySelect = document.getElementById('frequencySelect');
+        const dayOfMonthGroup = document.getElementById('dayOfMonthGroup');
+        
+        function updateDayOfMonthVisibility() {
+            if (frequencySelect.value === 'monthly') {
+                dayOfMonthGroup.style.display = 'block';
+            } else {
+                dayOfMonthGroup.style.display = 'none';
+            }
+        }
+        
+        // Set initial state
+        updateDayOfMonthVisibility();
+        
+        // Listen for changes
+        frequencySelect.addEventListener('change', updateDayOfMonthVisibility);
+        
+        // Handle form submission to adjust time for timezone
+        const form = document.getElementById('payoutScheduleForm');
+        const timezoneOffsetInput = document.getElementById('timezoneOffset');
+        
+        // Store user's timezone offset in minutes (negative of JavaScript getTimezoneOffset)
+        const userTimezoneOffset = -new Date().getTimezoneOffset();
+        timezoneOffsetInput.value = userTimezoneOffset;
+        
+        // Sri Lanka timezone is UTC+5:30 (330 minutes)
+        const serverTimezoneOffset = 330;
+        
+        form.addEventListener('submit', function(e) {
+            const timeInput = document.querySelector('input[name="payout_time"]');
+            if (timeInput && timeInput.value) {
+                // Parse the time entered by user
+                const [hours, minutes] = timeInput.value.split(':').map(Number);
+                
+                // Convert user's local time to server time (Asia/Colombo)
+                const offsetDiff = serverTimezoneOffset - userTimezoneOffset; // difference in minutes
+                
+                // Create a date object with the user's selected time
+                let adjustedMinutes = hours * 60 + minutes - offsetDiff;
+                
+                // Handle day overflow/underflow
+                while (adjustedMinutes < 0) adjustedMinutes += 1440; // 24 hours = 1440 minutes
+                while (adjustedMinutes >= 1440) adjustedMinutes -= 1440;
+                
+                const adjustedHours = Math.floor(adjustedMinutes / 60);
+                const adjustedMins = adjustedMinutes % 60;
+                
+                // Update the input value with server timezone time
+                timeInput.value = String(adjustedHours).padStart(2, '0') + ':' + String(adjustedMins).padStart(2, '0');
+            }
+        });
+    });
+</script>
+{% endblock %}

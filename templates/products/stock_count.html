@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Stock Count{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .count-input {
+        width: 100px;
+        text-align: center;
+        background-color: #fff;
+        color: #000;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    .variance-cell {
+        font-weight: bold;
+    }
+    .variance-positive { 
+        color: #28a745;
+        font-weight: bold;
+    }
+    .variance-negative { 
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .variance-zero { 
+        color: #6c757d;
+    }
+    .bg-info-light {
+        background-color: #e7f3ff !important;
+    }
+    .table tbody td {
+        background-color: #fff;
+        color: #212529;
+    }
+    .table thead th {
+        background-color: #212529 !important;
+        color: #fff !important;
+        white-space: nowrap;
+    }
+    
+    /* Mobile Styles */
+    @media (max-width: 768px) {
+        h2 {
+            font-size: 1.5rem;
+        }
+        
+        main .btn,
+        .container-fluid .btn,
+        .card .btn {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .card {
+            margin-bottom: 1rem;
+        }
+        
+        .card-body {
+            padding: 0.75rem;
+        }
+        
+        /* Hide table and show mobile cards */
+        .table-container table {
+            display: none;
+        }
+        
+        .mobile-product-card {
+            display: block !important;
+        }
+        
+        .count-input {
+            width: 100%;
+            font-size: 18px;
+        }
+        
+        .product-count-section {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+    }
+    
+    /* Desktop - hide mobile cards */
+    .mobile-product-card {
+        display: none;
+    }
+    
+    /* Mobile product card styling */
+    .mobile-product-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .mobile-product-card .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .mobile-product-card .product-info h6 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .mobile-product-card .product-info small {
+        color: #6c757d;
+    }
+    
+    .mobile-product-card .system-stock {
+        text-align: right;
+    }
+    
+    .mobile-product-card .system-stock small {
+        display: block;
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+    
+    .mobile-product-card .system-stock strong {
+        font-size: 1.25rem;
+        color: #212529;
+    }
+    
+    .mobile-product-card .count-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-product-card .variance-display {
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.25rem;
+        text-align: center;
+    }
+    
+    .mobile-product-card .variance-display small {
+        display: block;
+        color: #6c757d;
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-3 mb-md-4">
+        <div class="col-12 col-md-8 mb-2 mb-md-0">
+            <h2><i class="fas fa-clipboard-check me-2"></i>Physical Stock Count</h2>
+            <p class="text-muted d-none d-md-block">Enter the physical count for each product</p>
+        </div>
+        <div class="col-12 col-md-4 text-md-end">
+            <a href="{% url 'products:stock_count_history' %}" class="btn btn-secondary w-100 w-md-auto">
+                <i class="fas fa-history me-1"></i>View History
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Products</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm" class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label class="form-label fw-bold">Filter by Company</label>
+                    <select name="company" class="form-select form-select-lg" onchange="this.form.submit()">
+                        <option value="">-- All Companies --</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}" {% if selected_company_id == company.id %}selected{% endif %}>
+                            {{ company.company_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    {% if selected_company_id %}
+                    <a href="{% url 'products:stock_count' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-times me-1"></i>Clear Filter
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-4 text-md-end">
+                    <span class="text-muted">
+                        <strong>{{ products|length }}</strong> product{{ products|length|pluralize }} shown
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock Count Form -->
+    <form method="post" id="stockCountForm">
+        {% csrf_token %}
+        
+        <div class="card">
+            <div class="card-body">
+                <!-- Desktop Table View -->
+                <div class="table-container">
+                    <table class="table table-hover table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 10%;">Code</th>
+                                <th style="width: 25%;">Product</th>
+                                <th style="width: 10%;">Size</th>
+                                <th style="width: 10%;" class="text-center">System Stock</th>
+                                <th style="width: 12%;" class="text-center bg-info-light">Physical Count</th>
+                                <th style="width: 8%;" class="text-center">Variance</th>
+                                <th style="width: 20%;">Reason (if needed)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td><strong>{{ product.product_code }}</strong></td>
+                                <td>{{ product.product_name }}</td>
+                                <td>{{ product.size }}</td>
+                                <td class="text-center">
+                                    <strong id="system_{{ product.id }}">{{ product.quantity_in_stock }}</strong>
+                                </td>
+                                <td class="text-center">
+                                    <input type="number" 
+                                           name="count_{{ product.id }}" 
+                                           id="count_{{ product.id }}"
+                                           class="form-control count-input"
+                                           min="0"
+                                           step="1"
+                                           placeholder="0"
+                                           onchange="updateVariance({{ product.id }}, {{ product.quantity_in_stock }})">
+                                </td>
+                                <td class="text-center variance-cell">
+                                    <span id="variance_{{ product.id }}" class="variance-zero">-</span>
+                                </td>
+                                <td>
+                                    <input type="text" 
+                                           name="reason_{{ product.id }}" 
+                                           id="reason_{{ product.id }}"
+                                           class="form-control form-control-sm"
+                                           placeholder="Optional">
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No products found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile Card View -->
+                <div class="product-count-section">
+                    {% for product in products %}
+                    <div class="mobile-product-card">
+                        <div class="product-header">
+                            <div class="product-info">
+                                <h6>{{ product.product_name }}</h6>
+                                <small class="d-block"><strong>Code:</strong> {{ product.product_code }}</small>
+                                <small class="d-block"><strong>Size:</strong> {{ product.size }}</small>
+                            </div>
+                            <div class="system-stock">
+                                <small>System Stock</small>
+                                <strong id="system_mobile_{{ product.id }}">{{ product.quantity_in_stock }}</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="count-section">
+                            <div>
+                                <label class="form-label fw-bold mb-1">Physical Count</label>
+                                <input type="number" 
+                                       name="count_{{ product.id }}_mobile" 
+                                       id="count_mobile_{{ product.id }}"
+                                       class="form-control count-input"
+                                       min="0"
+                                       step="1"
+                                       placeholder="0"
+                                       onchange="updateVarianceMobile({{ product.id }}, {{ product.quantity_in_stock }})">
+                            </div>
+                            <div class="variance-display">
+                                <small>Variance</small>
+                                <strong id="variance_mobile_{{ product.id }}" class="variance-zero">-</strong>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="form-label fw-bold mb-1">Reason (if needed)</label>
+                            <input type="text" 
+                                   name="reason_{{ product.id }}_mobile" 
+                                   id="reason_mobile_{{ product.id }}"
+                                   class="form-control"
+                                   placeholder="Optional">
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">No products found</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" 
+                                   class="form-check-input" 
+                                   name="update_stock" 
+                                   id="updateStock">
+                            <label class="form-check-label" for="updateStock">
+                                <strong>Update system stock with physical count</strong>
+                                <small class="d-block text-muted">This will adjust inventory to match your count</small>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 text-md-end">
+                        <button type="button" class="btn btn-secondary w-100 w-md-auto mb-2 mb-md-0 me-md-2" onclick="resetForm()">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                            <i class="fas fa-save me-1"></i>Save Stock Count
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Update variance when count is entered (Desktop)
+function updateVariance(productId, systemStock) {
+    const countInput = document.getElementById('count_' + productId);
+    const varianceSpan = document.getElementById('variance_' + productId);
+    
+    const countValue = countInput.value.trim();
+    
+    if (countValue === '') {
+        varianceSpan.textContent = '-';
+        varianceSpan.className = 'variance-zero';
+        return;
+    }
+    
+    const physicalCount = parseInt(countValue);
+    if (isNaN(physicalCount)) {
+        varianceSpan.textContent = '-';
+        varianceSpan.className = 'variance-zero';
+        return;
+    }
+    
+    const variance = physicalCount - systemStock;
+    
+    if (variance > 0) {
+        varianceSpan.textContent = '+' + variance;
+        varianceSpan.className = 'variance-positive';
+    } else if (variance < 0) {
+        varianceSpan.textContent = variance;
+        varianceSpan.className = 'variance-negative';
+    } else {
+        varianceSpan.textContent = '0';
+        varianceSpan.className = 'variance-zero';
+    }
+}
+
+// Update variance when count is entered (Mobile)
+function updateVarianceMobile(productId, systemStock) {
+    const countInput = document.getElementById('count_mobile_' + productId);
+    const varianceSpan = document.getElementById('variance_mobile_' + productId);
+    
+    const countValue = countInput.value.trim();
+    
+    if (countValue === '') {
+        varianceSpan.textContent = '-';
+        varianceSpan.className = 'variance-zero';
+        return;
+    }
+    
+    const physicalCount = parseInt(countValue);
+    if (isNaN(physicalCount)) {
+        varianceSpan.textContent = '-';
+        varianceSpan.className = 'variance-zero';
+        return;
+    }
+    
+    const variance = physicalCount - systemStock;
+    
+    if (variance > 0) {
+        varianceSpan.textContent = '+' + variance;
+        varianceSpan.className = 'variance-positive';
+    } else if (variance < 0) {
+        varianceSpan.textContent = variance;
+        varianceSpan.className = 'variance-negative';
+    } else {
+        varianceSpan.textContent = '0';
+        varianceSpan.className = 'variance-zero';
+    }
+}
+
+// Sync mobile and desktop inputs before submit
+document.getElementById('stockCountForm').addEventListener('submit', function(e) {
+    // Copy mobile values to desktop inputs (mobile names have _mobile suffix)
+    const mobileInputs = document.querySelectorAll('input[name*="_mobile"]');
+    mobileInputs.forEach(input => {
+        const baseName = input.name.replace('_mobile', '');
+        const desktopInput = document.querySelector(`input[name="${baseName}"]`);
+        if (desktopInput && input.value) {
+            desktopInput.value = input.value;
+        }
+    });
+});
+
+// Reset form
+function resetForm() {
+    if (confirm('Reset all entered values?')) {
+        document.getElementById('stockCountForm').reset();
+        
+        // Reset all variance displays (desktop)
+        const varianceSpans = document.querySelectorAll('[id^="variance_"]:not([id*="mobile"])');
+        varianceSpans.forEach(span => {
+            span.textContent = '-';
+            span.className = 'variance-zero';
+        });
+        
+        // Reset all variance displays (mobile)
+        const varianceSpansMobile = document.querySelectorAll('[id*="variance_mobile_"]');
+        varianceSpansMobile.forEach(span => {
+            span.textContent = '-';
+            span.className = 'variance-zero';
+        });
+    }
+}
+</script>
+{% endblock %}

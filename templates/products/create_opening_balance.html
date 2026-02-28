@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Opening Balance{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add/Update Opening Balance</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="company" class="form-label">Company *</label>
+                            <select name="company" id="company" class="form-select" required>
+                                <option value="">-- Select Company --</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">
+                                    {{ company.company_name }} ({{ company.company_code }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Select the company for which you want to set opening balance</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="opening_balance" class="form-label">Opening Balance (Rs.) *</label>
+                            <input type="number" 
+                                   name="opening_balance" 
+                                   id="opening_balance" 
+                                   class="form-control" 
+                                   step="0.01" 
+                                   required
+                                   placeholder="0.00">
+                            <small class="text-muted">
+                                Positive amount = We owe to company | Negative amount = Company owes us
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="opening_date" class="form-label">Opening Date *</label>
+                            <input type="date" 
+                                   name="opening_date" 
+                                   id="opening_date" 
+                                   class="form-control" 
+                                   required>
+                            <small class="text-muted">The date from which this opening balance is effective</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="opening_notes" class="form-label">Notes</label>
+                            <textarea name="opening_notes" 
+                                      id="opening_notes" 
+                                      class="form-control" 
+                                      rows="3"
+                                      placeholder="Optional notes about this opening balance..."></textarea>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> If an account already exists for this company, this will update the opening balance and recalculate the current balance based on all transactions.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'products:company_account_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Opening Balance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

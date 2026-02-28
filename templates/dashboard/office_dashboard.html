@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+
+{% block title %}Office Dashboard - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-card .icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+    }
+    
+    .stat-card small {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 768px) {
+        .stat-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card h3 {
+            font-size: 1.5rem;
+        }
+        
+        .table-responsive {
+            border: none;
+        }
+        
+        .table td, .table th {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3 mb-md-4">
+        <div>
+            <h2 class="fw-bold mb-0">Office Dashboard</h2>
+            <p class="text-muted mb-0">Welcome, {{ user.get_full_name }}!</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards Row 1 -->
+    <div class="row g-3 g-md-4 mb-3 mb-md-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Total Shops</h6>
+                        <h3 class="fw-bold mb-0">{{ total_shops }}</h3>
+                        <small class="d-block opacity-75">Active</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-shop"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Total Products</h6>
+                        <h3 class="fw-bold mb-0">{{ total_products }}</h3>
+                        <small class="d-block opacity-75">In Stock</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Low Stock</h6>
+                        <h3 class="fw-bold mb-0">{{ low_stock_products }}</h3>
+                        <small class="d-block opacity-75">Products</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-danger text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Pending Cheques</h6>
+                        <h3 class="fw-bold mb-0">{{ pending_cheques }}</h3>
+                        <small class="d-block opacity-75">To Verify</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-money-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Statistics Row -->
+    <div class="row g-3 g-md-4 mb-3 mb-md-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Today Sales</h6>
+                        <h3 class="fw-bold mb-0">Rs. {{ today_sales|floatformat:0 }}</h3>
+                        <small class="d-block opacity-75">{{ today_bills }} bills</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Week Sales</h6>
+                        <h3 class="fw-bold mb-0">Rs. {{ week_sales|floatformat:0 }}</h3>
+                        <small class="d-block opacity-75">{{ week_bills }} bills</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Month Sales</h6>
+                        <h3 class="fw-bold mb-0">Rs. {{ month_sales|floatformat:0 }}</h3>
+                        <small class="d-block opacity-75">{{ month_bills }} bills</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-dark text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 mb-md-2 opacity-75 small">Outstanding</h6>
+                        <h3 class="fw-bold mb-0">Rs. {{ total_outstanding|floatformat:0 }}</h3>
+                        <small class="d-block opacity-75">All Shops</small>
+                    </div>
+                    <div class="icon d-none d-md-block">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Statistics Row -->
+    <div class="row g-3 g-md-4 mb-3 mb-md-4">
+        <div class="col-6 col-md-4">
+            <div class="card stat-card border-start border-5 border-primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 text-muted small">Today Payments</h6>
+                        <h4 class="fw-bold mb-0 text-primary">Rs. {{ today_payments|floatformat:0 }}</h4>
+                        <small class="text-muted">{{ today_payment_count }} payments</small>
+                    </div>
+                    <div class="icon text-primary">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4">
+            <div class="card stat-card border-start border-5 border-success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 text-muted small">Week Payments</h6>
+                        <h4 class="fw-bold mb-0 text-success">Rs. {{ week_payments|floatformat:0 }}</h4>
+                        <small class="text-muted">This week</small>
+                    </div>
+                    <div class="icon text-success">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card stat-card border-start border-5 border-info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 text-muted small">Month Payments</h6>
+                        <h4 class="fw-bold mb-0 text-info">Rs. {{ month_payments|floatformat:0 }}</h4>
+                        <small class="text-muted">This month</small>
+                    </div>
+                    <div class="icon text-info">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <!-- Top Selling Products -->
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-star text-warning me-2"></i>Top Products (This Month)</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Sales</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ product.product__product_name }}</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-primary">{{ product.total_quantity }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-success">Rs. {{ product.total_sales|floatformat:0 }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        No sales data available
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Sales Reps -->
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-trophy text-warning me-2"></i>Top Sales Reps (This Month)</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sales Rep</th>
+                                    <th class="text-end">Bills</th>
+                                    <th class="text-end">Sales</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rep in top_reps %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {% if rep.sales_rep__first_name %}
+                                                {{ rep.sales_rep__first_name }} {{ rep.sales_rep__last_name }}
+                                            {% else %}
+                                                {{ rep.sales_rep__username }}
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-info">{{ rep.total_bills }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-success">Rs. {{ rep.total_sales|floatformat:0 }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        No sales data available
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Bills -->
+        <div class="col-12 col-md-8">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Recent Bills</h5>
+                    <a href="{% url 'sales:list' %}" class="btn btn-sm btn-outline-primary">
+                        View All <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Bill #</th>
+                                    <th>Shop</th>
+                                    <th>Sales Rep</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in recent_bills %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'sales:detail' bill.pk %}" class="text-decoration-none">
+                                            <strong>{{ bill.bill_number }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ bill.shop.shop_name }}</td>
+                                    <td>
+                                        <small>
+                                            {% if bill.sales_rep.first_name %}
+                                                {{ bill.sales_rep.first_name }} {{ bill.sales_rep.last_name }}
+                                            {% else %}
+                                                {{ bill.sales_rep.username }}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td><small>{{ bill.bill_date|date:"M d, Y H:i" }}</small></td>
+                                    <td class="text-end">
+                                        <strong>Rs. {{ bill.total_amount|floatformat:0 }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if bill.settlement_status == 'settled' %}
+                                        <span class="badge bg-success">Paid</span>
+                                        {% elif bill.settlement_status == 'partial_settled' %}
+                                        <span class="badge bg-warning">Partial</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Unpaid</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        No bills found
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="col-12 col-md-4">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Recent Payments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for payment in recent_payments %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <strong class="d-block">{{ payment.shop.shop_name }}</strong>
+                                    <small class="text-muted">
+                                        {% if payment.payment_number %}
+                                            {{ payment.payment_number }}
+                                        {% else %}
+                                            {{ payment.cash_receipt_number }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge 
+                                    {% if payment.payment_method == 'cash' %}bg-success
+                                    {% elif payment.payment_method == 'cheque' %}bg-warning
+                                    {% elif payment.payment_method == 'bank_transfer' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ payment.get_payment_method_display }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">{{ payment.payment_date|date:"M d, Y" }}</small>
+                                <strong class="text-success">Rs. {{ payment.amount|floatformat:0 }}</strong>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center py-3">No recent payments</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

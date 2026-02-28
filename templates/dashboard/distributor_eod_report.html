@@ -1,0 +1,601 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Distributor EOD Report - {{ report_date }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Header */
+    .eod-header {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .eod-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .eod-header .sub { opacity: 0.85; font-size: 0.88rem; margin-top: 0.25rem; }
+
+    /* Date Navigation */
+    .date-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.15);
+        border-radius: 8px;
+        padding: 0.35rem 0.6rem;
+    }
+    .date-nav a {
+        color: white;
+        text-decoration: none;
+        font-size: 1rem;
+        line-height: 1;
+        opacity: 0.85;
+        transition: opacity 0.15s;
+    }
+    .date-nav a:hover { opacity: 1; }
+    .date-nav a.disabled { opacity: 0.35; pointer-events: none; }
+    .date-nav .current-date {
+        font-weight: 700;
+        font-size: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.15rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 4px solid transparent;
+        height: 100%;
+        transition: transform 0.15s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card.sales { border-left-color: #2563eb; }
+    .stat-card.cash { border-left-color: #059669; }
+    .stat-card.cheque { border-left-color: #7c3aed; }
+    .stat-card.credit { border-left-color: #f59e0b; }
+    .stat-card.returns { border-left-color: #ef4444; }
+    .stat-card.pack { border-left-color: #06b6d4; }
+    .stat-card.visits { border-left-color: #8b5cf6; }
+    .stat-card.bills { border-left-color: #ec4899; }
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+    .stat-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .stat-sub {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.1rem;
+    }
+
+    /* Section Cards */
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
+    .section-card .card-header-custom {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .section-card .card-header-custom h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+    .section-card .card-body { padding: 0; }
+
+    /* Rep Breakdown Table */
+    .rep-table {
+        width: 100%;
+        margin: 0;
+    }
+    .rep-table thead th {
+        background: #f8fafc;
+        font-weight: 600;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #475569;
+        padding: 0.7rem 0.6rem;
+        white-space: nowrap;
+        border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    .rep-table tbody td {
+        font-size: 0.85rem;
+        padding: 0.6rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .rep-table tbody tr:hover {
+        background: #f0f9ff;
+    }
+    .rep-table .rep-name {
+        font-weight: 600;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+    .rep-table .rep-route {
+        font-size: 0.78rem;
+        color: #6b7280;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .rep-table .text-end { text-align: right; }
+    .rep-table tfoot td {
+        font-weight: 700;
+        background: #f0fdf4;
+        border-top: 2px solid #059669;
+        padding: 0.7rem 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    /* Amount formatting */
+    .amt { font-variant-numeric: tabular-nums; }
+    .amt-positive { color: #059669; }
+    .amt-negative { color: #dc2626; }
+
+    /* Cheque Collection Table */
+    .cheque-table {
+        width: 100%;
+        margin: 0;
+    }
+    .cheque-table thead th {
+        background: #f8fafc;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #475569;
+        padding: 0.65rem 0.75rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .cheque-table tbody td {
+        font-size: 0.85rem;
+        padding: 0.55rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .cheque-table .overdue { background: #fef2f2; }
+
+    /* Product Breakdown */
+    .product-section {
+        margin-bottom: 0.75rem;
+    }
+    .product-section:last-child { margin-bottom: 0; }
+    .size-header {
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: #1e40af;
+        background: #eff6ff;
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .product-list { list-style: none; padding: 0; margin: 0; }
+    .product-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.82rem;
+        border-bottom: 1px solid #f8fafc;
+    }
+    .product-item:last-child { border-bottom: none; }
+    .product-name { color: #374151; }
+    .product-qty {
+        font-weight: 600;
+        color: #1e293b;
+        min-width: 40px;
+        text-align: right;
+    }
+    .product-qty.zero { color: #d1d5db; }
+
+    /* Filter */
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Badge */
+    .count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 11px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: white;
+    }
+    .badge-blue { background: #3b82f6; }
+    .badge-amber { background: #f59e0b; }
+    .badge-red { background: #ef4444; }
+    .badge-green { background: #059669; }
+
+    /* No data state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: #9ca3af;
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+    .empty-state p { font-size: 0.9rem; margin: 0; }
+
+    /* Responsive table wrapper */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Collapse toggle */
+    .collapse-toggle {
+        cursor: pointer;
+        user-select: none;
+    }
+    .collapse-toggle .fa-chevron-down {
+        transition: transform 0.2s;
+        font-size: 0.7rem;
+    }
+    .collapse-toggle[aria-expanded="true"] .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .eod-header { padding: 1.2rem; }
+        .eod-header h1 { font-size: 1.2rem; }
+        .stat-value { font-size: 1.1rem; }
+        .stat-card { padding: 0.9rem; }
+        .rep-table thead th, .rep-table tbody td { font-size: 0.75rem; padding: 0.45rem 0.35rem; }
+    }
+
+    @media print {
+        .no-print { display: none !important; }
+        .eod-header { background: #1e40af !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .stat-card { box-shadow: none; border: 1px solid #e5e7eb; }
+        .section-card { box-shadow: none; border: 1px solid #e5e7eb; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Header -->
+    <div class="eod-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-clipboard-check me-2"></i>Distributor EOD Report</h1>
+                <div class="sub">{{ business_name }} &bull; {{ area }} &bull; {{ rep_count }} active rep{{ rep_count|pluralize }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="date-nav">
+                    <a href="?date={{ prev_date|date:'Y-m-d' }}" title="Previous day"><i class="fas fa-chevron-left"></i></a>
+                    <span class="current-date">{{ report_date|date:"D, d M Y" }}</span>
+                    <a href="{% if is_future %}#{% else %}?date={{ next_date|date:'Y-m-d' }}{% endif %}"
+                       class="{% if is_future %}disabled{% endif %}" title="Next day">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+                {% if is_today %}
+                <span class="badge bg-white text-primary fw-bold px-3 py-2">TODAY</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Picker -->
+    <div class="filter-card mb-4 no-print">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small fw-semibold mb-1">Select Date</label>
+                    <input type="date" name="date" class="form-control form-control-sm"
+                           value="{{ report_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search me-1"></i>View Report
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <a href="?date={% now 'Y-m-d' %}" class="btn btn-outline-secondary btn-sm">Today</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if rep_count == 0 %}
+    <!-- No Activity -->
+    <div class="section-card">
+        <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <p>No sales activity recorded for {{ report_date|date:"D, d M Y" }}</p>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Grand Total Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card sales">
+                <div class="stat-label">Total Sales</div>
+                <div class="stat-value text-primary amt">Rs. {{ grand.total_sale|floatformat:2|intcomma }}</div>
+                <div class="stat-sub">{{ grand.bill_count }} bill{{ grand.bill_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card cash">
+                <div class="stat-label">Net Cash to Collect</div>
+                <div class="stat-value amt-positive amt">Rs. {{ grand.net_cash|floatformat:2|intcomma }}</div>
+                <div class="stat-sub">
+                    Cash {{ grand.total_cash|floatformat:0|intcomma }}
+                    {% if grand.cash_refunds > 0 %} &minus; Refunds {{ grand.cash_refunds|floatformat:0|intcomma }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card cheque">
+                <div class="stat-label">Cheques Received</div>
+                <div class="stat-value amt" style="color:#7c3aed;">Rs. {{ grand.total_cheque|floatformat:2|intcomma }}</div>
+                <div class="stat-sub">
+                    {% if all_uncollected_count > 0 %}
+                    <span class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ all_uncollected_count }} uncollected</span>
+                    {% else %}
+                    All collected
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card credit">
+                <div class="stat-label">Credit (Unpaid)</div>
+                <div class="stat-value amt" style="color:#f59e0b;">Rs. {{ grand.total_credit|floatformat:2|intcomma }}</div>
+                <div class="stat-sub">Remaining balance from today's bills</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-4 col-lg-2">
+            <div class="stat-card pack">
+                <div class="stat-label">Total Pack</div>
+                <div class="stat-value amt" style="color:#06b6d4;">{{ grand.total_pack|floatformat:2 }}</div>
+                <div class="stat-sub">@ Rs. {{ case_value|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-4 col-lg-2">
+            <div class="stat-card bills">
+                <div class="stat-label">Total Bills</div>
+                <div class="stat-value" style="color:#ec4899;">{{ grand.bill_count }}</div>
+                <div class="stat-sub">{{ rep_count }} rep{{ rep_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="col-4 col-lg-2">
+            <div class="stat-card visits">
+                <div class="stat-label">Shops Visited</div>
+                <div class="stat-value" style="color:#8b5cf6;">{{ grand.shops_visited }}</div>
+                <div class="stat-sub">New: {{ grand.new_outlets }}</div>
+            </div>
+        </div>
+        <div class="col-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#14b8a6;">
+                <div class="stat-label">Bank Transfer</div>
+                <div class="stat-value amt" style="color:#14b8a6;">{{ grand.total_bank|floatformat:0|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-4 col-lg-2">
+            <div class="stat-card returns">
+                <div class="stat-label">Returns</div>
+                <div class="stat-value amt-negative amt">{{ grand.total_return_value|floatformat:0|intcomma }}</div>
+                <div class="stat-sub">{{ grand.return_count }} return{{ grand.return_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="col-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#f472b6;">
+                <div class="stat-label">FOC Given</div>
+                <div class="stat-value amt" style="color:#f472b6;">{{ grand.total_foc_given|floatformat:0|intcomma }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ PER-REP BREAKDOWN ═══════ -->
+    <div class="section-card mb-4">
+        <div class="card-header-custom">
+            <h5><i class="fas fa-users me-2 text-primary"></i>Per-Rep Performance</h5>
+            <span class="count-badge badge-blue">{{ rep_count }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table class="rep-table">
+                    <thead>
+                        <tr>
+                            <th>Rep</th>
+                            <th>Route</th>
+                            <th class="text-center">Shops</th>
+                            <th class="text-center">Bills</th>
+                            <th class="text-end">Total Sale</th>
+                            <th class="text-end">Pack</th>
+                            <th class="text-end">Cash (Net)</th>
+                            <th class="text-end">Cheque</th>
+                            <th class="text-end">Bank</th>
+                            <th class="text-end">Credit</th>
+                            <th class="text-end">Returns</th>
+                            <th class="text-end">FOC</th>
+                            <th class="text-center">N/O</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rd in rep_data %}
+                        <tr>
+                            <td class="rep-name">{{ rd.user_name }}</td>
+                            <td class="rep-route" title="{{ rd.route }}">{{ rd.route|default:"—" }}</td>
+                            <td class="text-center">{{ rd.shops_visited }}</td>
+                            <td class="text-center">{{ rd.bill_count }}</td>
+                            <td class="text-end amt">{{ rd.total_sale|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt">{{ rd.total_pack|floatformat:2 }}</td>
+                            <td class="text-end amt {% if rd.net_cash > 0 %}amt-positive{% elif rd.net_cash < 0 %}amt-negative{% endif %}">
+                                {{ rd.net_cash|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-end amt" style="color:#7c3aed;">{{ rd.total_cheque|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#14b8a6;">{{ rd.total_bank|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#f59e0b;">{{ rd.total_credit|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt {% if rd.total_return_value > 0 %}amt-negative{% endif %}">
+                                {{ rd.total_return_value|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-end amt" style="color:#f472b6;">{{ rd.total_foc_given|floatformat:0|intcomma }}</td>
+                            <td class="text-center">{{ rd.new_outlets }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2"><strong>GRAND TOTAL</strong></td>
+                            <td class="text-center">{{ grand.shops_visited }}</td>
+                            <td class="text-center">{{ grand.bill_count }}</td>
+                            <td class="text-end amt">{{ grand.total_sale|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt">{{ grand.total_pack|floatformat:2 }}</td>
+                            <td class="text-end amt amt-positive">{{ grand.net_cash|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#7c3aed;">{{ grand.total_cheque|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#14b8a6;">{{ grand.total_bank|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#f59e0b;">{{ grand.total_credit|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt amt-negative">{{ grand.total_return_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end amt" style="color:#f472b6;">{{ grand.total_foc_given|floatformat:0|intcomma }}</td>
+                            <td class="text-center">{{ grand.new_outlets }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ UNCOLLECTED CHEQUES ═══════ -->
+    {% if uncollected_cheques %}
+    <div class="section-card mb-4">
+        <div class="card-header-custom">
+            <h5><i class="fas fa-money-check-alt me-2" style="color:#7c3aed;"></i>Uncollected Cheques — {{ report_date|date:"d M" }}</h5>
+            <span class="count-badge badge-amber">{{ uncollected_cheques|length }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table class="cheque-table">
+                    <thead>
+                        <tr>
+                            <th>Settlement #</th>
+                            <th>Rep</th>
+                            <th>Shop</th>
+                            <th class="text-end">Amount</th>
+                            <th>Cheque Date</th>
+                            <th>Bank</th>
+                            <th class="text-center no-print">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in uncollected_cheques %}
+                        <tr class="{% if s.cheque_date and s.cheque_date < report_date %}overdue{% endif %}">
+                            <td>
+                                <a href="{% url 'sales:settlement_detail' pk=s.pk %}" class="text-decoration-none">
+                                    {{ s.settlement_number }}
+                                </a>
+                            </td>
+                            <td>{{ s.received_by.get_full_name|default:s.received_by.username }}</td>
+                            <td>{{ s.bill.shop.shop_name|default:"—" }}</td>
+                            <td class="text-end amt fw-bold">Rs. {{ s.amount|floatformat:2|intcomma }}</td>
+                            <td>
+                                {{ s.cheque_date|date:"d M Y"|default:"—" }}
+                                {% if s.cheque_date and s.cheque_date < report_date %}
+                                <span class="text-danger ms-1" title="Overdue"><i class="fas fa-exclamation-circle"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>{{ s.bank_name|default:"—" }}</td>
+                            <td class="text-center no-print">
+                                <a href="{% url 'sales:mark_cheque_collected' pk=s.pk %}?next={% url 'dashboard:distributor_eod_report' %}?date={{ report_date|date:'Y-m-d' }}"
+                                   class="btn btn-sm btn-outline-success"
+                                   onclick="return confirm('Mark cheque {{ s.reference_number|default:s.settlement_number }} as collected?')">
+                                    <i class="fas fa-check me-1"></i>Collect
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════ PRODUCT BREAKDOWN (Combined) ═══════ -->
+    <div class="section-card mb-4">
+        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#productBreakdown" aria-expanded="false">
+            <h5><i class="fas fa-box-open me-2 text-primary"></i>Product Breakdown (All Reps)</h5>
+            <i class="fas fa-chevron-down text-muted"></i>
+        </div>
+        <div class="collapse" id="productBreakdown">
+            <div class="p-3">
+                {% if product_breakdown %}
+                    {% for size, products in product_breakdown.items %}
+                    <div class="product-section">
+                        <div class="size-header">{{ size }}</div>
+                        <ul class="product-list">
+                            {% for product in products %}
+                            <li class="product-item">
+                                <span class="product-name">{{ product.name }}</span>
+                                <span class="product-qty {% if product.quantity == 0 %}zero{% endif %}">{{ product.quantity|floatformat:0 }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                    <p>No products sold on this date</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% endif %} {# end of rep_count > 0 check #}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Print button shortcut
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'p') {
+            // Allow default print behavior
+        }
+    });
+</script>
+{% endblock %}

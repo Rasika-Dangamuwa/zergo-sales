@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Request Advance{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-hand-holding-usd me-2"></i>Request Advance</h2>
+        <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label">Requested Amount <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">Rs.</span>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00" required autofocus>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Reason for Advance <span class="text-danger">*</span></label>
+                    <textarea name="reason" class="form-control" rows="5" placeholder="Please explain why you need this advance..." required></textarea>
+                    <small class="text-muted">Be specific about how you'll use this advance.</small>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>What happens next:</h6>
+                    <ol class="mb-0">
+                        <li>Your request will be reviewed by management</li>
+                        <li>You'll be notified when it's approved or rejected</li>
+                        <li>If approved, the advance will be disbursed to you</li>
+                        <li>The amount will be deducted from your balance due</li>
+                    </ol>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="fas fa-paper-plane me-2"></i> Submit Request
+                    </button>
+                    <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

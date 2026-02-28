@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Credit to Account{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">Credit Commission to Account</h2>
+                    <p class="text-muted mb-0">Record commission, bonus, or other earnings to user's account</p>
+                </div>
+                <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="creditForm">
+                        {% csrf_token %}
+                        
+                        <!-- User Selection -->
+                        <div class="mb-4">
+                            <label for="user_id" class="form-label fw-semibold">
+                                Select User <span class="text-danger">*</span>
+                            </label>
+                            <select name="user_id" id="user_id" class="form-select form-select-lg" required>
+                                <option value="">Choose user...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                                    {{ user.get_full_name }} ({{ user.get_user_type_display }})
+                                    {% if user.money_account %}
+                                    - Balance Due: Rs. {{ user.money_account.current_balance|floatformat:2 }}
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Transaction Type -->
+                        <div class="mb-4">
+                            <label for="transaction_type" class="form-label fw-semibold">
+                                Transaction Type <span class="text-danger">*</span>
+                            </label>
+                            <select name="transaction_type" id="transaction_type" class="form-select" required>
+                                <option value="credit">Credit (General)</option>
+                                <option value="commission_payment">Commission Payment</option>
+                                <option value="bonus">Bonus</option>
+                                <option value="adjustment_credit">Adjustment Credit</option>
+                            </select>
+                            <div class="form-text">
+                                <small>
+                                    <strong>Credit:</strong> General credit to account<br>
+                                    <strong>Commission Payment:</strong> Commission earned from sales<br>
+                                    <strong>Bonus:</strong> Performance bonus or incentive<br>
+                                    <strong>Adjustment Credit:</strong> Correction or adjustment entry
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Amount -->
+                        <div class="mb-4">
+                            <label for="amount" class="form-label fw-semibold">
+                                Amount (Rs.) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="amount" id="amount" 
+                                   class="form-control form-control-lg" 
+                                   step="0.01" min="0.01" required
+                                   placeholder="0.00">
+                        </div>
+
+                        <!-- Commission Reference (conditional) -->
+                        <div class="mb-4" id="commissionReferenceField" style="display: none;">
+                            <label for="commission_reference" class="form-label fw-semibold">
+                                Commission Reference Number
+                            </label>
+                            <input type="text" name="commission_reference" id="commission_reference" 
+                                   class="form-control" 
+                                   placeholder="e.g., SAL-20260110-001">
+                            <div class="form-text">Bill or sale number related to this commission</div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                Description <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="description" id="description" 
+                                   class="form-control" required
+                                   placeholder="Brief description of this credit">
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label fw-semibold">Additional Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                      placeholder="Any additional information (optional)"></textarea>
+                        </div>
+
+                        <!-- Transaction Date -->
+                        <div class="mb-4">
+                            <label for="transaction_date" class="form-label fw-semibold">
+                                Transaction Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" name="transaction_date" id="transaction_date" 
+                                   class="form-control" required>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success btn-lg px-4">
+                                <i class="bi bi-plus-circle me-2"></i>Add Credit
+                            </button>
+                            <a href="{% url 'accounts:money_account_dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Text Card -->
+            <div class="card border-info mt-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle me-2"></i>Quick Guide</h6>
+                    <ul class="mb-0 small">
+                        <li>Credits increase the user's account balance</li>
+                        <li>Commission payments should reference the related sale/bill number</li>
+                        <li>Bonuses are one-time payments for achievements or performance</li>
+                        <li>Adjustments are for corrections or manual entries</li>
+                        <li>Once credited, the amount becomes available for payment to the user</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide commission reference field based on transaction type
+document.getElementById('transaction_type').addEventListener('change', function() {
+    const commissionField = document.getElementById('commissionReferenceField');
+    if (this.value === 'commission_payment') {
+        commissionField.style.display = 'block';
+        document.getElementById('commission_reference').required = true;
+    } else {
+        commissionField.style.display = 'none';
+        document.getElementById('commission_reference').required = false;
+    }
+});
+
+// Set today's date as default
+document.getElementById('transaction_date').valueAsDate = new Date();
+
+// Form validation
+document.getElementById('creditForm').addEventListener('submit', function(e) {
+    const amount = parseFloat(document.getElementById('amount').value);
+    if (amount <= 0) {
+        e.preventDefault();
+        alert('Amount must be greater than zero');
+        return false;
+    }
+});
+</script>
+{% endblock %}

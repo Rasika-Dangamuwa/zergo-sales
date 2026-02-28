@@ -1,0 +1,911 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}GRN {{ purchase.grn_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Page Background */
+    body {
+        background-color: #f8f9fa;
+    }
+    
+    /* Breadcrumb Navigation - World-Class */
+    .breadcrumb-nav {
+        background: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .breadcrumb-nav .breadcrumb {
+        margin: 0;
+        background: transparent;
+    }
+    
+    .breadcrumb-item a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+    
+    .breadcrumb-item.active {
+        color: #6c757d;
+    }
+    
+    /* Header Card - World-Class Design */
+    .grn-header-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.15);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+    
+    .grn-header-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px;
+        color: white;
+    }
+    
+    .grn-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+    }
+    
+    .grn-meta {
+        font-size: 0.95rem;
+        opacity: 0.9;
+    }
+    
+    .grn-meta i {
+        margin-right: 8px;
+        width: 16px;
+        text-align: center;
+    }
+    
+    /* Action Buttons Header */
+    .action-buttons-header {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    
+    .btn-action {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* KPI Metric Cards - Enhanced */
+    .metric-card {
+        border-radius: 12px;
+        padding: 25px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        transform: translate(30%, -30%);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .metric-icon {
+        font-size: 2.5rem;
+        opacity: 0.3;
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+    }
+    
+    .metric-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .metric-value {
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-subtext {
+        font-size: 0.8rem;
+        opacity: 0.85;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Gradient Backgrounds for Metrics */
+    .gradient-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .gradient-pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .gradient-blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .gradient-green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .gradient-orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .gradient-teal { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+    .gradient-red { background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%); }
+    
+    /* Cards */
+    .card-enhanced {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .card-enhanced:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .card-header-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 12px 12px 0 0 !important;
+    }
+    
+    /* Product Table */
+    .product-table {
+        width: 100%;
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .product-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .product-table thead th {
+        padding: 15px 10px;
+        font-weight: 600;
+        text-align: center;
+        border: none;
+        font-size: 0.85rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .product-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+    
+    .product-table tbody tr:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transform: translateX(2px);
+    }
+    
+    .product-table tbody td {
+        padding: 12px 10px;
+        vertical-align: middle;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    
+    .product-table tbody td:first-child {
+        text-align: left;
+    }
+    
+    /* Category Headers */
+    .category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: white !important;
+        border-left: 5px solid #f5576c;
+    }
+    
+    .category-header td {
+        padding: 12px !important;
+        text-align: left !important;
+        color: white !important;
+        font-weight: 600;
+        background: transparent !important;
+    }
+    
+    /* Financial Columns */
+    .product-table td:nth-child(6),
+    .product-table td:nth-child(7),
+    .product-table td:nth-child(9),
+    .product-table td:nth-child(10) {
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: 500;
+    }
+    
+    .product-table tfoot {
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .product-table tfoot th {
+        padding: 14px 10px;
+        border-top: 2px solid #dee2e6;
+        text-align: right;
+    }
+    
+    .product-table tfoot .table-primary th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    /* Product Details */
+    .product-name {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.9rem;
+    }
+    
+    .pack-size {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Status Badges */
+    .badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.3px;
+    }
+    
+    .status-draft { background-color: #6c757d; }
+    .status-pending { background-color: #ffc107; color: #000; }
+    .status-received { background-color: #198754; }
+    .status-cancelled { background-color: #dc3545; }
+    
+    .badge-paid { background-color: #198754; color: white; }
+    .badge-unpaid { background-color: #dc3545; color: white; }
+    .badge-partial { background-color: #ffc107; color: #000; }
+    
+    /* Payment/Return Cards in Sidebar */
+    .sidebar-item-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: white;
+        transition: all 0.2s ease;
+    }
+    
+    .sidebar-item-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        transform: translateX(3px);
+    }
+    
+    /* Settlement Progress */
+    .settlement-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .settlement-card .progress {
+        height: 8px;
+        border-radius: 10px;
+        background: #e9ecef;
+    }
+    
+    .settlement-card .progress-bar {
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+    
+    /* Sticky Sidebar */
+    @media (min-width: 992px) {
+        .sticky-sidebar {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .sticky-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sticky-sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .sticky-sidebar::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .sticky-sidebar::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    }
+    
+    /* Collapse Animation */
+    .collapse {
+        transition: height 0.3s ease;
+    }
+    
+    [data-bs-toggle="collapse"] i.fa-chevron-down {
+        transition: transform 0.3s ease;
+    }
+    
+    [data-bs-toggle="collapse"]:not(.collapsed) i.fa-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    /* Quick Stats Table */
+    .stats-table {
+        font-size: 0.9rem;
+    }
+    
+    .stats-table td {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .stats-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Alert Styles */
+    .alert-enhanced {
+        border-radius: 10px;
+        border-left: 4px solid;
+        padding: 15px;
+    }
+    
+    .alert-success {
+        border-left-color: #198754;
+    }
+    
+    .alert-warning {
+        border-left-color: #ffc107;
+    }
+    
+    /* Animation for metric cards */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .metric-card:nth-child(1) { animation: fadeInUp 0.5s ease 0.1s both; }
+    .metric-card:nth-child(2) { animation: fadeInUp 0.5s ease 0.2s both; }
+    .metric-card:nth-child(3) { animation: fadeInUp 0.5s ease 0.3s both; }
+    .metric-card:nth-child(4) { animation: fadeInUp 0.5s ease 0.4s both; }
+    .metric-card:nth-child(5) { animation: fadeInUp 0.5s ease 0.5s both; }
+    .metric-card:nth-child(6) { animation: fadeInUp 0.5s ease 0.6s both; }
+    
+    /* Print Styles */
+    @media print {
+        .btn, .sticky-sidebar, .breadcrumb-nav {
+            display: none !important;
+        }
+        
+        .card {
+            border: 1px solid #dee2e6 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+        }
+        
+        .collapse {
+            display: block !important;
+            height: auto !important;
+        }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .grn-title {
+            font-size: 1.5rem;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+        }
+        
+        .product-table thead th {
+            font-size: 0.7rem;
+            padding: 10px 6px;
+        }
+        
+        .product-table tbody td {
+            font-size: 0.8rem;
+            padding: 8px 6px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb-nav">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'products:purchase_list' %}"><i class="fas fa-clipboard-list me-1"></i>Purchases</a></li>
+                <li class="breadcrumb-item active">{{ purchase.grn_number }}</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Header Card -->
+    <div class="grn-header-card">
+        <div class="grn-header-gradient">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <h1 class="grn-title mb-0 me-3">
+                            <i class="fas fa-file-invoice me-2"></i>{{ purchase.grn_number }}
+                        </h1>
+                        <span class="badge status-{{ purchase.status }} fs-6">{{ purchase.get_status_display }}</span>
+                    </div>
+                    <div class="grn-meta">
+                        <p class="mb-2">
+                            <i class="fas fa-building"></i>
+                            <strong>{{ purchase.company.company_name }}</strong>
+                        </p>
+                        <p class="mb-2">
+                            <i class="far fa-calendar"></i>
+                            <strong>GRN Date:</strong> {{ purchase.grn_date|date:"d M Y, g:i A" }}
+                        </p>
+                        {% if purchase.supplier_invoice_number %}
+                        <p class="mb-0">
+                            <i class="fas fa-file-alt"></i>
+                            <strong>Invoice:</strong> {{ purchase.supplier_invoice_number }}
+                            {% if purchase.invoice_date %}
+                            ({{ purchase.invoice_date|date:"d M Y" }})
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-4 mt-3 mt-lg-0">
+                    <div class="action-buttons-header">
+                        <button type="button" class="btn btn-light btn-action" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print
+                        </button>
+                        <a href="{% url 'products:purchase_list' %}" class="btn btn-outline-light btn-action">
+                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                        </a>
+                        {% if not purchase.stock_updated and purchase.status == 'draft' %}
+                        <a href="{% url 'products:edit_purchase' purchase.pk %}" class="btn btn-warning btn-action">
+                            <i class="fas fa-edit me-2"></i>Edit GRN
+                        </a>
+                        <a href="{% url 'products:update_purchase_stock' purchase.pk %}" 
+                           class="btn btn-success btn-action w-100 mt-2"
+                           onclick="return confirm('Receive goods and update stock from this GRN?')">
+                            <i class="fas fa-check-circle me-2"></i>Receive & Update Stock
+                        </a>
+                        <form method="post" action="{% url 'products:delete_purchase' purchase.pk %}" class="w-100 mt-2" onsubmit="return confirm('Are you sure you want to delete this draft GRN? This action cannot be undone.')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-action w-100">
+                                <i class="fas fa-trash-alt me-2"></i>Delete GRN
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card gradient-purple">
+                <div class="metric-label">Total Amount</div>
+                <div class="metric-value">{{ purchase.total_amount|floatformat:0|intcomma }}</div>
+                <div class="metric-subtext">Rs. {{ purchase.total_amount|floatformat:2|intcomma }}</div>
+                <i class="fas fa-dollar-sign metric-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card gradient-pink">
+                <div class="metric-label">Products</div>
+                <div class="metric-value">{{ items|length }}</div>
+                <div class="metric-subtext">{{ summary.total_items }} line items</div>
+                <i class="fas fa-boxes metric-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card gradient-blue">
+                <div class="metric-label">Total Quantity</div>
+                <div class="metric-value">{{ summary.total_bottles|intcomma }}</div>
+                <div class="metric-subtext">{{ summary.total_packs }} cases, {{ summary.total_loose }} loose</div>
+                <i class="fas fa-cubes metric-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card gradient-green">
+                <div class="metric-label">Paid</div>
+                <div class="metric-value">{{ purchase.payment_percentage|floatformat:0 }}%</div>
+                <div class="metric-subtext">Rs. {{ purchase.total_paid|floatformat:2|intcomma }}</div>
+                <i class="fas fa-check-circle metric-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card {% if purchase.amount_outstanding > 0 %}gradient-orange{% else %}gradient-teal{% endif %}">
+                <div class="metric-label">Outstanding</div>
+                <div class="metric-value">{{ purchase.amount_outstanding|floatformat:0|intcomma }}</div>
+                <div class="metric-subtext">{% if purchase.amount_outstanding > 0 %}Payment pending{% else %}Fully settled{% endif %}</div>
+                <i class="fas fa-exclamation-triangle metric-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="metric-card gradient-red">
+                <div class="metric-label">FOC Items</div>
+                <div class="metric-value">{{ summary.total_foc|default:"0" }}</div>
+                <div class="metric-subtext">Free of charge</div>
+                <i class="fas fa-gift metric-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-xl-8 col-lg-7">
+            <!-- Products Table -->
+            <div class="card card-enhanced mb-4">
+                <div class="card-header card-header-gradient">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-boxes me-2"></i>Products Received
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table product-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18%">Description</th>
+                                    <th style="width: 7%">Cases</th>
+                                    <th style="width: 7%">Loose</th>
+                                    <th style="width: 8%">Qty</th>
+                                    <th style="width: 6%">FOC</th>
+                                    <th style="width: 10%">Unit Price</th>
+                                    <th style="width: 12%">Val. Be. Disc</th>
+                                    <th style="width: 8%">Disc %</th>
+                                    <th style="width: 11%">Disc Amt</th>
+                                    <th style="width: 11%">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% regroup items by product.size as size_list %}
+                                {% for size_group in size_list %}
+                                    {% regroup size_group.list by product.marked_price as price_list %}
+                                    {% for price_group in price_list %}
+                                        <tr class="category-header">
+                                            <td colspan="10">
+                                                <i class="fas fa-tag me-2"></i>
+                                                {{ size_group.grouper }} - Rs. {{ price_group.grouper }}
+                                            </td>
+                                        </tr>
+                                        {% for item in price_group.list %}
+                                        <tr>
+                                            <td>
+                                                <div class="product-name">{{ item.product.product_name }}</div>
+                                                <div class="pack-size">{{ item.bottles_per_pack }} btl/case</div>
+                                                {% if item.batch_number %}
+                                                <div class="mt-1"><small class="badge bg-secondary">Batch: {{ item.batch_number }}</small></div>
+                                                {% endif %}
+                                                {% if item.expiry_date %}
+                                                <div class="mt-1"><small class="badge bg-warning text-dark">Exp: {{ item.expiry_date|date:"M Y" }}</small></div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ item.packs }}</td>
+                                            <td>{{ item.loose_bottles }}</td>
+                                            <td><span class="badge bg-secondary">{{ item.quantity }}</span></td>
+                                            <td>{{ item.foc_quantity|default:"-" }}</td>
+                                            <td>Rs. {{ item.invoice_price|floatformat:2|intcomma }}</td>
+                                            <td>Rs. {{ item.value_before_discount|floatformat:2|intcomma }}</td>
+                                            <td>{{ item.company_discount_percentage|floatformat:2 }}%</td>
+                                            <td>Rs. {{ item.company_discount_amount|floatformat:2|intcomma }}</td>
+                                            <td>Rs. {{ item.line_total|floatformat:2|intcomma }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="9" class="text-end py-3">Subtotal:</th>
+                                    <th class="text-end py-3">Rs. {{ purchase.subtotal|floatformat:2|intcomma }}</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="9" class="text-end">Discount:</th>
+                                    <th class="text-end">Rs. {{ purchase.discount_amount|floatformat:2|intcomma }}</th>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th colspan="9" class="text-end py-3">Total Amount:</th>
+                                    <th class="text-end py-3">Rs. {{ purchase.total_amount|floatformat:2|intcomma }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRN Information (Collapsible) -->
+            <div class="card card-enhanced mb-4">
+                <div class="card-header bg-white border-0 p-0">
+                    <button class="btn btn-link w-100 text-start text-decoration-none p-4 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#grnInfoCollapse" aria-expanded="false">
+                        <h5 class="mb-0 fw-bold d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-info-circle me-2 text-primary"></i>GRN Information</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </h5>
+                    </button>
+                </div>
+                <div class="collapse" id="grnInfoCollapse">
+                    <div class="card-body px-4 pb-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Purchase Order</label>
+                                <div class="form-control-plaintext">
+                                    {% if purchase.purchase_order %}
+                                        <a href="{% url 'products:po_detail' purchase.purchase_order.pk %}" class="text-decoration-none">
+                                            <i class="fas fa-file-alt me-1"></i>{{ purchase.purchase_order.po_number }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">Direct GRN (No PO)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Invoice Date</label>
+                                <div class="form-control-plaintext">{{ purchase.invoice_date|date:"d M Y"|default:"Not specified" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Created By</label>
+                                <div class="form-control-plaintext">
+                                    <i class="fas fa-user me-2"></i>
+                                    {% if purchase.created_by %}
+                                        {{ purchase.created_by.get_full_name|default:purchase.created_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Received By</label>
+                                <div class="form-control-plaintext">
+                                    <i class="fas fa-user-check me-2"></i>
+                                    {% if purchase.received_by %}
+                                        {{ purchase.received_by.get_full_name|default:purchase.received_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if purchase.notes %}
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-muted small">Notes</label>
+                                <div class="alert alert-secondary mb-0">
+                                    <i class="fas fa-sticky-note me-2"></i>{{ purchase.notes }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="sticky-sidebar">
+                <!-- Settlement Status Card -->
+                <div class="card card-enhanced mb-3">
+                    <div class="card-header card-header-gradient">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-wallet me-2"></i>Payment Settlement
+                            </h6>
+                            {% if purchase.calculated_payment_status == 'settled' %}
+                                <span class="badge bg-light text-success">PAID</span>
+                            {% elif purchase.calculated_payment_status == 'partially_paid' %}
+                                <span class="badge bg-light text-warning">{{ purchase.payment_percentage|floatformat:0 }}%</span>
+                            {% else %}
+                                <span class="badge bg-light text-danger">UNPAID</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <!-- Progress Bar -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted fw-bold">Payment Progress</small>
+                                <small class="fw-bold text-primary">{{ purchase.payment_percentage|floatformat:1 }}%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar {% if purchase.payment_percentage >= 100 %}bg-success{% elif purchase.payment_percentage >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                     style="width: {{ purchase.payment_percentage }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Summary Table -->
+                        <table class="table table-sm stats-table mb-0">
+                            <tr>
+                                <td class="text-muted ps-0">
+                                    <i class="fas fa-receipt me-2"></i>Total Amount
+                                </td>
+                                <td class="text-end fw-bold pe-0">Rs. {{ purchase.total_amount|floatformat:2|intcomma }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-success ps-0">
+                                    <i class="fas fa-check-circle me-2"></i>Paid
+                                </td>
+                                <td class="text-end text-success fw-bold pe-0">Rs. {{ purchase.total_paid|floatformat:2|intcomma }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-info ps-0">
+                                    <i class="fas fa-undo-alt me-2"></i>Returns
+                                </td>
+                                <td class="text-end text-info fw-bold pe-0">Rs. {{ purchase.total_settled_via_returns|floatformat:2|intcomma }}</td>
+                            </tr>
+                            <tr class="{% if purchase.amount_outstanding > 0 %}table-warning{% else %}table-success{% endif %}">
+                                <td class="fw-bold ps-0">
+                                    <i class="fas fa-exclamation-circle me-2"></i>Outstanding
+                                </td>
+                                <td class="text-end fw-bold pe-0">Rs. {{ purchase.amount_outstanding|floatformat:2|intcomma }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments -->
+                {% with allocations=purchase.payment_allocations.all %}
+                {% if allocations %}
+                <div class="card card-enhanced mb-3">
+                    <div class="card-header bg-white py-3 px-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-success fw-bold">
+                                <i class="fas fa-money-bill-wave me-2"></i>Payments
+                            </h6>
+                            <span class="badge bg-success">{{ allocations.count }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        {% for alloc in allocations %}
+                        <div class="sidebar-item-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="fw-bold text-truncate" style="max-width: 60%;">
+                                    <i class="fas fa-hashtag me-1"></i>{{ alloc.payment.payment_number }}
+                                </small>
+                                <span class="badge {% if alloc.payment.payment_method == 'cash' %}bg-success{% elif alloc.payment.payment_method == 'cheque' %}bg-info{% else %}bg-primary{% endif %}">
+                                    {{ alloc.payment.get_payment_method_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted d-block mb-2">
+                                <i class="far fa-calendar me-1"></i>{{ alloc.payment.payment_date|date:"M d, Y" }}
+                            </small>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="fw-bold text-success">Rs. {{ alloc.allocated_amount|floatformat:2|intcomma }}</span>
+                                <a href="{% url 'products:payment_detail' alloc.payment.pk %}" class="btn btn-sm btn-outline-primary py-1 px-3">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Returns -->
+                {% if settled_returns %}
+                <div class="card card-enhanced mb-3">
+                    <div class="card-header bg-white py-3 px-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-info fw-bold">
+                                <i class="fas fa-undo-alt me-2"></i>Purchase Returns
+                            </h6>
+                            <span class="badge bg-info">{{ settled_returns|length }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        {% for return in settled_returns %}
+                        <div class="sidebar-item-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="fw-bold text-truncate" style="max-width: 60%;">
+                                    <i class="fas fa-hashtag me-1"></i>{{ return.pr_number }}
+                                </small>
+                                <span class="badge {% if return.status == 'settled' %}bg-success{% elif return.status == 'company_approved' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ return.get_status_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted d-block mb-2">
+                                <i class="far fa-calendar me-1"></i>{{ return.return_date|date:"M d, Y" }}
+                            </small>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="fw-bold text-info">Rs. {{ return.replacement_received_value|default:"0.00"|floatformat:2|intcomma }}</span>
+                                <a href="{% url 'products:purchase_return_detail' return.pk %}" class="btn btn-sm btn-outline-info py-1 px-3">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Quick Actions -->
+                {% if purchase.amount_outstanding > 0 %}
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{% url 'products:record_company_payment' %}?company={{ purchase.company.pk }}&grn={{ purchase.pk }}" 
+                       class="btn btn-success btn-lg">
+                        <i class="fas fa-plus-circle me-2"></i>Record Payment
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Stock Status Alert -->
+                {% if purchase.stock_updated %}
+                <div class="alert alert-success alert-enhanced mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Stock Updated</strong>
+                    <p class="small mb-0 mt-2">Inventory has been updated from this GRN.</p>
+                </div>
+                {% else %}
+                <div class="alert alert-warning alert-enhanced mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Stock Pending</strong>
+                    <p class="small mb-0 mt-2">Click "Receive & Update Stock" button above to update inventory.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

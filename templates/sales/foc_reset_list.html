@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}FOC Reset History{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .cumulative-stats {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-top: 4px solid #667eea;
+    }
+    
+    .cumulative-stats h5 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .reset-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        border-left: 5px solid #e5e7eb;
+    }
+    
+    .reset-card:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        transform: translateX(4px);
+        border-left-color: #667eea;
+    }
+    
+    .reset-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+    }
+    
+    .reset-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.25rem;
+    }
+    
+    .reset-date {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    .reset-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .reset-stat {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+    
+    .reset-stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+    
+    .reset-stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .btn-view-reset {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-view-reset:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container-fluid">
+        <h1><i class="fas fa-history me-3"></i>FOC Reset History</h1>
+        <p>Complete archive of all FOC data resets</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Cumulative Totals -->
+    <div class="cumulative-stats">
+        <h5><i class="fas fa-chart-line me-2"></i>Cumulative Totals Across All Resets</h5>
+        <div class="stat-row">
+            <div class="stat-item">
+                <div class="stat-label">Total FOC Received</div>
+                <div class="stat-value text-success">Rs. {{ cumulative_totals.total_foc_received|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total FOC Given</div>
+                <div class="stat-value text-warning">Rs. {{ cumulative_totals.total_foc_given|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total FOC Returned</div>
+                <div class="stat-value text-info">Rs. {{ cumulative_totals.total_foc_returned|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Net FOC Value</div>
+                <div class="stat-value {% if cumulative_totals.net_foc_value >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    Rs. {{ cumulative_totals.net_foc_value|floatformat:2|intcomma }}
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value">{{ cumulative_totals.total_transactions|intcomma }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product-wise Summary Table -->
+    {% if product_summary %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-box me-2"></i>Product-wise Summary (All Resets Combined)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Company</th>
+                            <th class="text-center">Received Qty</th>
+                            <th class="text-end">Received Value</th>
+                            <th class="text-center">Given Qty</th>
+                            <th class="text-end">Given Value</th>
+                            <th class="text-end">Implicit Value</th>
+                            <th class="text-center">Returned Qty</th>
+                            <th class="text-end">Returned Value</th>
+                            <th class="text-end">Net FOC Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_summary %}
+                        <tr>
+                            <td><strong>{{ product.product }}</strong></td>
+                            <td>{{ product.company }}</td>
+                            <td class="text-center">{{ product.foc_received_qty|floatformat:0 }}</td>
+                            <td class="text-end text-success">Rs. {{ product.foc_received_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ product.foc_given_qty|floatformat:0 }}</td>
+                            <td class="text-end text-warning">Rs. {{ product.foc_given_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-info">Rs. {{ product.implicit_foc_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ product.foc_returned_qty|floatformat:0 }}</td>
+                            <td class="text-end text-primary">Rs. {{ product.foc_returned_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end fw-bold {% if product.net_foc_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Rs. {{ product.net_foc_value|floatformat:2|intcomma }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr class="fw-bold">
+                            <td colspan="2" class="text-end">TOTAL</td>
+                            <td class="text-center">{{ product_grand_totals.total_foc_received_qty|floatformat:0 }}</td>
+                            <td class="text-end text-success">Rs. {{ product_grand_totals.total_foc_received_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ product_grand_totals.total_foc_given_qty|floatformat:0 }}</td>
+                            <td class="text-end text-warning">Rs. {{ product_grand_totals.total_foc_given_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-info">Rs. {{ product_grand_totals.total_implicit_foc_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ product_grand_totals.total_foc_returned_qty|floatformat:0 }}</td>
+                            <td class="text-end text-primary">Rs. {{ product_grand_totals.total_foc_returned_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end {% if product_grand_totals.net_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Rs. {{ product_grand_totals.net_total|floatformat:2|intcomma }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sales Rep Summary Table -->
+    {% if sales_rep_summary %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Sales Rep Summary (All Resets Combined)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sales Representative</th>
+                            <th class="text-center">Given Qty</th>
+                            <th class="text-end">Given Value</th>
+                            <th class="text-end">Implicit Value</th>
+                            <th class="text-center">Returned Qty</th>
+                            <th class="text-end">Returned Value</th>
+                            <th class="text-end">Total FOC Used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rep in sales_rep_summary %}
+                        <tr>
+                            <td><strong>{{ rep.sales_rep }}</strong></td>
+                            <td class="text-center">{{ rep.foc_given_qty|floatformat:0 }}</td>
+                            <td class="text-end text-warning">Rs. {{ rep.foc_given_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-info">Rs. {{ rep.implicit_foc_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ rep.foc_returned_qty|floatformat:0 }}</td>
+                            <td class="text-end text-primary">Rs. {{ rep.foc_returned_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end fw-bold">Rs. {{ rep.total_foc_used|floatformat:2|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr class="fw-bold">
+                            <td class="text-end">TOTAL</td>
+                            <td class="text-center">{{ rep_grand_totals.total_foc_given_qty|floatformat:0 }}</td>
+                            <td class="text-end text-warning">Rs. {{ rep_grand_totals.total_foc_given_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end text-info">Rs. {{ rep_grand_totals.total_implicit_foc_value|floatformat:2|intcomma }}</td>
+                            <td class="text-center">{{ rep_grand_totals.total_foc_returned_qty|floatformat:0 }}</td>
+                            <td class="text-end text-primary">Rs. {{ rep_grand_totals.total_foc_returned_value|floatformat:2|intcomma }}</td>
+                            <td class="text-end">Rs. {{ rep_grand_totals.total_foc_used|floatformat:2|intcomma }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{% url 'sales:foc_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to FOC Dashboard
+        </a>
+    </div>
+
+    <!-- Reset Records -->
+    {% if resets %}
+        <h5 class="mb-3 fw-bold">
+            <i class="fas fa-list me-2"></i>Reset Records ({{ resets.count }})
+        </h5>
+        
+        {% for reset in resets %}
+        <div class="reset-card">
+            <div class="reset-header">
+                <div>
+                    <div class="reset-number">
+                        <i class="fas fa-redo me-2"></i>{{ reset.reset_number }}
+                    </div>
+                    <div class="reset-date">
+                        <i class="far fa-calendar me-1"></i>{{ reset.reset_date|date:"F d, Y - g:i A" }}
+                    </div>
+                    <small class="text-muted">
+                        Reset by: <strong>{{ reset.reset_by.get_full_name }}</strong>
+                    </small>
+                </div>
+                <div>
+                    <a href="{% url 'sales:foc_reset_detail' reset.id %}" class="btn-view-reset">
+                        <i class="fas fa-eye me-2"></i>View Details
+                    </a>
+                </div>
+            </div>
+            
+            <div class="reset-stats">
+                <div class="reset-stat">
+                    <div class="reset-stat-label">FOC Received</div>
+                    <div class="reset-stat-value text-success">Rs. {{ reset.total_foc_received|floatformat:2|intcomma }}</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">FOC Given</div>
+                    <div class="reset-stat-value text-warning">Rs. {{ reset.total_foc_given|floatformat:2|intcomma }}</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">FOC Returned</div>
+                    <div class="reset-stat-value text-info">Rs. {{ reset.total_foc_returned|floatformat:2|intcomma }}</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">Net Value</div>
+                    <div class="reset-stat-value {% if reset.net_foc_value >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                        Rs. {{ reset.net_foc_value|floatformat:2|intcomma }}
+                    </div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">Utilization</div>
+                    <div class="reset-stat-value">{{ reset.avg_utilization|floatformat:1 }}%</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">Transactions</div>
+                    <div class="reset-stat-value">{{ reset.total_transactions|intcomma }}</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">Products</div>
+                    <div class="reset-stat-value">{{ reset.total_products }}</div>
+                </div>
+                <div class="reset-stat">
+                    <div class="reset-stat-label">Sales Reps</div>
+                    <div class="reset-stat-value">{{ reset.total_sales_reps }}</div>
+                </div>
+            </div>
+            
+            {% if reset.notes %}
+            <div class="mt-3 pt-3 border-top">
+                <small class="text-muted"><i class="fas fa-sticky-note me-1"></i>Notes:</small>
+                <p class="mb-0">{{ reset.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No reset records found</h5>
+            <p class="text-muted">Reset records will appear here when you perform FOC data resets</p>
+            <a href="{% url 'sales:foc_dashboard' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-arrow-left me-2"></i>Go to FOC Dashboard
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

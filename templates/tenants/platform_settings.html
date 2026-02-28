@@ -1,0 +1,227 @@
+{% extends 'tenants/base_platform.html' %}
+
+{% block title %}Platform Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .settings-card {
+        background: var(--card);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .section-title {
+        font-weight: 600;
+        font-size: 1.05rem;
+        color: #1E293B;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-title i {
+        color: var(--primary);
+    }
+    .history-table {
+        width: 100%;
+        font-size: 0.88rem;
+    }
+    .history-table th {
+        background: #F8FAFC;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748B;
+    }
+    .active-badge {
+        background: #10B981;
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.25em 0.6em;
+        border-radius: 6px;
+    }
+    .inactive-badge {
+        background: #94A3B8;
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.25em 0.6em;
+        border-radius: 6px;
+    }
+    .active-value-display {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .active-value-display h3 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .active-value-display small {
+        opacity: 0.85;
+    }
+    @media (max-width: 767px) {
+        .settings-container {
+            padding: 1rem 0.75rem;
+        }
+        .settings-card {
+            padding: 1rem;
+        }
+        .history-table {
+            font-size: 0.82rem;
+        }
+        .history-table td, .history-table th {
+            padding: 6px 4px !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1" style="font-weight: 700; color: #1E293B;">
+                <i class="fas fa-sliders-h me-2" style="color: var(--primary);"></i>Platform Settings
+            </h4>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">
+                Global settings applied across all distributors
+            </p>
+        </div>
+        <a href="{% url 'tenants:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+
+    <!-- Active Case Value -->
+    <div class="settings-card">
+        <div class="section-title">
+            <i class="fas fa-box"></i> Active Case Value
+        </div>
+        {% if active_setting %}
+        <div class="active-value-display">
+            <div>
+                <h3>Rs. {{ active_setting.case_value|floatformat:2 }}</h3>
+                <small>Effective from {{ active_setting.effective_date|date:"M d, Y" }}</small>
+            </div>
+            <i class="fas fa-check-circle fa-2x" style="opacity: 0.6;"></i>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            No active case value set. Using default Rs. 2,160.00. Add one below.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Add New Case Value -->
+    <div class="settings-card">
+        <div class="section-title">
+            <i class="fas fa-plus-circle"></i> Set New Case Value
+        </div>
+        <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" style="font-size: 0.85rem;">Case Value (Rs.)</label>
+                    <input type="number" step="0.01" name="case_value" class="form-control"
+                           placeholder="e.g., 2160.00" required
+                           {% if active_setting %}value="{{ active_setting.case_value }}"{% endif %}>
+                    <div class="invalid-feedback">Please enter a case value</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" style="font-size: 0.85rem;">Effective Date</label>
+                    <input type="date" name="effective_date" class="form-control" required>
+                    <div class="invalid-feedback">Please select a date</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" style="font-size: 0.85rem;">Notes (Optional)</label>
+                    <input type="text" name="notes" class="form-control" placeholder="Reason for change...">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Case Value
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- History -->
+    <div class="settings-card">
+        <div class="section-title">
+            <i class="fas fa-history"></i> Case Value History
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover history-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Effective Date</th>
+                        <th class="text-end">Case Value</th>
+                        <th class="d-none d-md-table-cell">Set By</th>
+                        <th class="d-none d-md-table-cell">Notes</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for setting in settings %}
+                    <tr>
+                        <td>{{ setting.effective_date|date:"M d, Y" }}</td>
+                        <td class="text-end fw-semibold">Rs. {{ setting.case_value|floatformat:2 }}</td>
+                        <td class="d-none d-md-table-cell">
+                            {% if setting.created_by %}
+                                {{ setting.created_by.get_full_name|default:setting.created_by.username }}
+                            {% else %}
+                                System
+                            {% endif %}
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <small class="text-muted">{{ setting.notes|default:"-"|truncatewords:10 }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if setting.is_active %}
+                            <span class="active-badge">Active</span>
+                            {% else %}
+                            <span class="inactive-badge">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">No history available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

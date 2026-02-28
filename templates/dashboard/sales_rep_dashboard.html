@@ -1,0 +1,609 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Dashboard — Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── SALES REP DASHBOARD — World-Class Mobile-First ── */
+:root {
+    --d-blue: #2563eb;
+    --d-green: #059669;
+    --d-orange: #ea580c;
+    --d-red: #dc2626;
+    --d-purple: #7c3aed;
+    --d-teal: #0891b2;
+    --d-slate: #475569;
+    --d-bg: #f1f5f9;
+    --d-card: #ffffff;
+    --d-radius: 16px;
+    --d-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --d-shadow-lg: 0 4px 24px rgba(0,0,0,.08);
+}
+
+.rep-dash { background: var(--d-bg); min-height: 100vh; padding-bottom: 2rem; }
+.rep-dash * { box-sizing: border-box; }
+
+/* ── GREETING STRIP ── */
+.dash-greeting {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);
+    color: #fff; padding: 1.2rem 1rem .9rem; position: relative; overflow: hidden;
+}
+.dash-greeting::after {
+    content: ''; position: absolute; top: -40%; right: -10%; width: 200px; height: 200px;
+    background: rgba(255,255,255,.06); border-radius: 50%;
+}
+.dash-greeting h1 { font-size: 1.15rem; font-weight: 700; margin: 0; line-height: 1.3; }
+.dash-greeting .sub { font-size: .74rem; opacity: .8; margin-top: .15rem; }
+
+/* ── KPI STRIP (horizontal scroll) ── */
+.kpi-scroll { display: flex; gap: .55rem; overflow-x: auto; padding: .75rem .75rem .4rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.kpi-scroll::-webkit-scrollbar { display: none; }
+.kpi-card {
+    flex: 0 0 auto; min-width: 120px; background: var(--d-card);
+    border-radius: 12px; padding: .65rem .75rem; box-shadow: var(--d-shadow);
+    position: relative; overflow: hidden;
+}
+.kpi-card .kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-card .kpi-icon { font-size: .85rem; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: .4rem; }
+.kpi-card .kpi-val { font-size: 1.05rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
+.kpi-card .kpi-lbl { font-size: .62rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; margin-top: .15rem; }
+.kpi-card .kpi-sub { font-size: .58rem; color: #94a3b8; margin-top: .1rem; }
+.kpi-card .kpi-period { display: inline-block; font-size: .5rem; font-weight: 700; padding: .1rem .3rem; border-radius: 4px; background: #f1f5f9; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: .3rem; }
+
+/* Compare badge */
+.cmp { font-size: .55rem; font-weight: 700; padding: .1rem .3rem; border-radius: 4px; display: inline-block; margin-top: .2rem; }
+.cmp.up { background: #dcfce7; color: #15803d; }
+.cmp.dn { background: #fee2e2; color: #dc2626; }
+.cmp.eq { background: #f1f5f9; color: #64748b; }
+
+/* ── QUICK ACTIONS ── */
+.qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .55rem; padding: .4rem .75rem .6rem; }
+.qa-btn {
+    background: var(--d-card); border-radius: 12px; padding: .6rem .35rem; text-align: center;
+    text-decoration: none; box-shadow: var(--d-shadow); transition: transform .15s, box-shadow .15s;
+    display: flex; flex-direction: column; align-items: center; gap: .3rem;
+}
+.qa-btn:active { transform: scale(.96); }
+.qa-btn .qa-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; }
+.qa-btn .qa-txt { font-size: .6rem; font-weight: 700; color: #334155; line-height: 1.2; text-transform: uppercase; letter-spacing: .2px; }
+
+/* ── SECTION CARDS ── */
+.dash-section { margin: .55rem .75rem; background: var(--d-card); border-radius: var(--d-radius); box-shadow: var(--d-shadow); overflow: hidden; }
+.dash-section .sec-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .7rem .85rem; border-bottom: 1px solid #f1f5f9;
+}
+.dash-section .sec-head h3 { font-size: .78rem; font-weight: 700; color: #1e293b; margin: 0; }
+.dash-section .sec-head .sec-link { font-size: .62rem; font-weight: 600; color: var(--d-blue); text-decoration: none; }
+.dash-section .sec-body { padding: .6rem .85rem; }
+
+/* ── CHART ── */
+.chart-wrap { position: relative; padding: .5rem 0; }
+.chart-bars { display: flex; align-items: flex-end; height: 120px; gap: 6px; }
+.chart-bar { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.chart-bar .bar-val { font-size: .5rem; font-weight: 700; color: #64748b; white-space: nowrap; margin-bottom: 3px; min-height: 14px; }
+.chart-bar .bar { width: 100%; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); min-height: 4px; transition: height .6s cubic-bezier(.4,0,.2,1); }
+.chart-bar .bar.today { background: linear-gradient(180deg, #10b981 0%, #059669 100%); }
+.chart-labels { display: flex; gap: 6px; margin-top: 6px; }
+.chart-labels .bar-lbl { flex: 1; text-align: center; font-size: .55rem; font-weight: 600; color: #94a3b8; }
+
+/* ── MINI STAT ROW ── */
+.mstat-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.mstat {
+    background: #f8fafc; border-radius: 10px; padding: .55rem .65rem;
+    display: flex; align-items: center; gap: .5rem;
+}
+.mstat .ms-ico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .75rem; flex-shrink: 0; }
+.mstat .ms-val { font-size: .85rem; font-weight: 800; color: #1e293b; line-height: 1; }
+.mstat .ms-lbl { font-size: .56rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .2px; }
+
+/* ── ACTIVITY FEED ── */
+.act-item {
+    display: flex; align-items: flex-start; gap: .6rem; padding: .55rem 0;
+    border-bottom: 1px solid #f8fafc;
+}
+.act-item:last-child { border-bottom: none; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.act-dot.bill { background: var(--d-blue); }
+.act-dot.payment { background: var(--d-green); }
+.act-body { flex: 1; min-width: 0; }
+.act-title { font-size: .72rem; font-weight: 600; color: #1e293b; }
+.act-sub { font-size: .6rem; color: #94a3b8; margin-top: .05rem; }
+.act-amt { font-size: .72rem; font-weight: 700; text-align: right; white-space: nowrap; flex-shrink: 0; }
+.act-amt.bill-a { color: var(--d-blue); }
+.act-amt.pay-a { color: var(--d-green); }
+
+/* ── TOP SHOPS ── */
+.top-shop { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-bottom: 1px solid #f8fafc; }
+.top-shop:last-child { border-bottom: none; }
+.ts-rank { width: 22px; height: 22px; border-radius: 6px; font-size: .6rem; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.ts-rank.r1 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.ts-rank.r2 { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.ts-rank.r3 { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+.ts-rank.r4,.ts-rank.r5 { background: #e2e8f0; color: #64748b; }
+.ts-name { font-size: .72rem; font-weight: 600; color: #1e293b; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-amt { font-size: .72rem; font-weight: 700; color: var(--d-blue); white-space: nowrap; }
+.ts-ct { font-size: .55rem; color: #94a3b8; }
+
+/* ── OUTSTANDING BADGE ── */
+.out-banner {
+    margin: .55rem .75rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca; border-radius: 12px; padding: .65rem .85rem;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.out-banner .ob-left { }
+.out-banner .ob-lbl { font-size: .6rem; font-weight: 600; color: #991b1b; text-transform: uppercase; letter-spacing: .3px; }
+.out-banner .ob-val { font-size: 1.1rem; font-weight: 800; color: #dc2626; line-height: 1.1; }
+.out-banner .ob-sub { font-size: .56rem; color: #b91c1c; }
+.out-banner .ob-btn { font-size: .6rem; font-weight: 700; padding: .35rem .7rem; border-radius: 8px; background: #dc2626; color: #fff; text-decoration: none; white-space: nowrap; }
+
+/* ── PENDING ALERTS ── */
+.alert-strip { display: flex; gap: .5rem; padding: 0 .75rem; overflow-x: auto; scrollbar-width: none; margin-bottom: .3rem; }
+.alert-strip::-webkit-scrollbar { display: none; }
+.alert-pill {
+    flex: 0 0 auto; display: flex; align-items: center; gap: .35rem;
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 20px;
+    padding: .3rem .65rem; font-size: .6rem; font-weight: 600; color: #92400e;
+    text-decoration: none; white-space: nowrap;
+}
+.alert-pill .ap-ct { background: #f59e0b; color: #fff; padding: .05rem .3rem; border-radius: 10px; font-size: .55rem; font-weight: 800; }
+.alert-pill.red { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.alert-pill.red .ap-ct { background: #dc2626; }
+
+/* ── DESKTOP ENHANCEMENTS (768px+) ── */
+@media (min-width: 768px) {
+    .rep-dash { padding-bottom: 3rem; }
+
+    /* Greeting — wider, taller, more dramatic */
+    .dash-greeting { padding: 2rem 2.5rem 1.6rem; }
+    .dash-greeting h1 { font-size: 1.65rem; }
+    .dash-greeting .sub { font-size: .85rem; margin-top: .3rem; }
+    .dash-greeting::after { width: 350px; height: 350px; right: -5%; top: -60%; }
+
+    /* Alerts */
+    .alert-strip { padding: .4rem 2rem; gap: .65rem; }
+    .alert-pill { font-size: .75rem; padding: .4rem .85rem; gap: .45rem; }
+    .alert-pill .ap-ct { font-size: .65rem; padding: .1rem .4rem; }
+
+    /* KPI — proper grid, not scroll strip */
+    .kpi-scroll {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: .85rem; padding: 1.2rem 2rem .8rem;
+        overflow-x: visible;
+    }
+    .kpi-card {
+        min-width: unset; padding: 1.1rem 1.25rem;
+        border-radius: 14px; box-shadow: var(--d-shadow-lg);
+    }
+    .kpi-card .kpi-accent { height: 4px; }
+    .kpi-card .kpi-icon { width: 38px; height: 38px; font-size: 1rem; border-radius: 10px; margin-bottom: .55rem; }
+    .kpi-card .kpi-val { font-size: 1.45rem; }
+    .kpi-card .kpi-lbl { font-size: .72rem; margin-top: .2rem; letter-spacing: .5px; }
+    .kpi-card .kpi-sub { font-size: .68rem; margin-top: .15rem; }
+    .kpi-card .kpi-period { font-size: .58rem; padding: .12rem .38rem; }
+    .cmp { font-size: .65rem; padding: .15rem .4rem; margin-top: .3rem; }
+
+    /* Quick Actions — 8-col row, bigger buttons */
+    .qa-grid {
+        grid-template-columns: repeat(8, 1fr); padding: .5rem 2rem .9rem; gap: .65rem;
+    }
+    .qa-btn {
+        padding: .85rem .5rem; border-radius: 14px; gap: .4rem;
+        box-shadow: var(--d-shadow); transition: transform .2s, box-shadow .2s;
+    }
+    .qa-btn:hover { transform: translateY(-3px); box-shadow: var(--d-shadow-lg); }
+    .qa-btn .qa-ico { width: 44px; height: 44px; border-radius: 12px; font-size: 1.1rem; }
+    .qa-btn .qa-txt { font-size: .68rem; }
+
+    /* Outstanding banner */
+    .out-banner { margin: .8rem 2rem; padding: .9rem 1.25rem; border-radius: 14px; }
+    .out-banner .ob-lbl { font-size: .72rem; }
+    .out-banner .ob-val { font-size: 1.4rem; }
+    .out-banner .ob-sub { font-size: .68rem; }
+    .out-banner .ob-btn { font-size: .75rem; padding: .5rem 1rem; border-radius: 10px; }
+
+    /* Section cards */
+    .dash-section { margin: .85rem 2rem; border-radius: 18px; box-shadow: var(--d-shadow-lg); }
+    .dash-section .sec-head { padding: .9rem 1.15rem; }
+    .dash-section .sec-head h3 { font-size: .92rem; }
+    .dash-section .sec-head .sec-link { font-size: .75rem; }
+    .dash-section .sec-body { padding: .8rem 1.15rem; }
+
+    /* Chart — much taller */
+    .chart-bars { height: 220px; gap: 14px; }
+    .chart-labels { gap: 14px; margin-top: 8px; }
+    .chart-bar .bar { border-radius: 8px 8px 3px 3px; min-height: 6px; }
+    .chart-bar .bar-val { font-size: .72rem; min-height: 18px; }
+    .chart-labels .bar-lbl { font-size: .75rem; }
+
+    /* Two-column area */
+    .dash-cols { display: grid; grid-template-columns: 1.2fr .8fr; gap: 1rem; padding: 0 2rem; }
+    .dash-cols .dash-section { margin: 0; }
+
+    /* Activity feed */
+    .act-item { padding: .7rem 0; gap: .75rem; }
+    .act-dot { width: 10px; height: 10px; margin-top: 4px; }
+    .act-title { font-size: .85rem; }
+    .act-sub { font-size: .72rem; }
+    .act-amt { font-size: .85rem; }
+
+    /* Top shops */
+    .top-shop { padding: .6rem 0; gap: .65rem; }
+    .ts-rank { width: 28px; height: 28px; font-size: .72rem; border-radius: 8px; }
+    .ts-name { font-size: .85rem; }
+    .ts-amt { font-size: .85rem; }
+    .ts-ct { font-size: .68rem; }
+
+    /* Period summary — 4 cols */
+    .mstat-row { grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+    .mstat { padding: .75rem .85rem; border-radius: 12px; gap: .65rem; }
+    .mstat .ms-ico { width: 40px; height: 40px; font-size: .9rem; border-radius: 10px; }
+    .mstat .ms-val { font-size: 1.05rem; }
+    .mstat .ms-lbl { font-size: .65rem; }
+}
+
+/* ── LARGE DESKTOP (1200px+) ── */
+@media (min-width: 1200px) {
+    .rep-dash { max-width: 1400px; margin: 0 auto; }
+
+    .dash-greeting { padding: 2.2rem 2.8rem 1.8rem; }
+    .dash-greeting h1 { font-size: 1.85rem; }
+
+    .kpi-scroll { grid-template-columns: repeat(6, 1fr); padding: 1.4rem 2.5rem 1rem; gap: 1rem; }
+    .kpi-card { padding: 1.2rem 1.3rem; border-radius: 16px; }
+    .kpi-card .kpi-icon { width: 42px; height: 42px; font-size: 1.1rem; }
+    .kpi-card .kpi-val { font-size: 1.55rem; }
+
+    .qa-grid { padding: .5rem 2.5rem 1rem; gap: .85rem; }
+    .qa-btn .qa-ico { width: 50px; height: 50px; font-size: 1.2rem; }
+    .qa-btn .qa-txt { font-size: .72rem; }
+
+    .out-banner { margin: 1rem 2.5rem; }
+    .dash-section { margin: 1rem 2.5rem; border-radius: 20px; }
+    .dash-section .sec-head { padding: 1rem 1.4rem; }
+    .dash-section .sec-head h3 { font-size: 1rem; }
+    .dash-section .sec-body { padding: .9rem 1.4rem; }
+
+    .chart-bars { height: 270px; gap: 20px; }
+    .chart-labels { gap: 20px; }
+    .chart-bar .bar-val { font-size: .8rem; }
+    .chart-labels .bar-lbl { font-size: .8rem; }
+
+    .dash-cols { padding: 0 2.5rem; gap: 1.2rem; }
+
+    .alert-strip { padding: .4rem 2.5rem; }
+    .alert-pill { font-size: .8rem; }
+
+    .mstat-row { gap: 1rem; }
+    .mstat .ms-val { font-size: 1.15rem; }
+}
+
+/* No-data states */
+.empty-state { text-align: center; padding: 1.5rem .5rem; color: #94a3b8; }
+.empty-state i { font-size: 1.5rem; margin-bottom: .4rem; display: block; opacity: .4; }
+.empty-state p { font-size: .7rem; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rep-dash">
+
+    <!-- ══════════ GREETING ══════════ -->
+    <div class="dash-greeting">
+        <h1>👋 Hello, {{ user.first_name|default:user.username }}</h1>
+        <div class="sub"><i class="fas fa-calendar-day me-1"></i>{{ today|date:"l, j M Y" }}</div>
+    </div>
+
+    <!-- ══════════ PENDING ALERTS ══════════ -->
+    {% if pending_verifications or pending_returns or shops_not_visited %}
+    <div class="alert-strip" style="margin-top:.55rem">
+        {% if pending_verifications %}
+        <a href="{% url 'sales:pending' %}" class="alert-pill">
+            <i class="fas fa-clock"></i> Pending Verifications <span class="ap-ct">{{ pending_verifications }}</span>
+        </a>
+        {% endif %}
+        {% if pending_returns %}
+        <a href="{% url 'sales:return_list' %}" class="alert-pill red">
+            <i class="fas fa-undo"></i> Unsettled Returns <span class="ap-ct">{{ pending_returns }}</span>
+        </a>
+        {% endif %}
+        {% if shops_not_visited %}
+        <a href="{% url 'shops:list' %}" class="alert-pill">
+            <i class="fas fa-store"></i> Not Visited Today <span class="ap-ct">{{ shops_not_visited }}</span>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ══════════ KPI STRIP ══════════ -->
+    <div class="kpi-scroll">
+        <!-- Today Sales -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#2563eb,#3b82f6)"></div>
+            <span class="kpi-period">Today</span>
+            <div class="kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-receipt"></i></div>
+            <div class="kpi-val">Rs.{{ today_sales|floatformat:0|intcomma }}</div>
+            <div class="kpi-lbl">Net Sales</div>
+            <div class="kpi-sub">{{ today_bills_count }} bill{{ today_bills_count|pluralize }}{% if today_returns_total %} · Returns Rs.{{ today_returns_total|floatformat:0|intcomma }}{% endif %}</div>
+            {% if yesterday_total > 0 %}
+                {% widthratio today_sales 1 1 as ts_int %}
+                {% widthratio yesterday_total 1 1 as yt_int %}
+                {% if today_sales > yesterday_total %}
+                <span class="cmp up"><i class="fas fa-arrow-up"></i> vs yesterday</span>
+                {% elif today_sales < yesterday_total %}
+                <span class="cmp dn"><i class="fas fa-arrow-down"></i> vs yesterday</span>
+                {% else %}
+                <span class="cmp eq">= yesterday</span>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Collections -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#059669,#10b981)"></div>
+            <span class="kpi-period">Today</span>
+            <div class="kpi-icon" style="background:#ecfdf5;color:#059669"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="kpi-val">Rs.{{ today_collections|floatformat:0|intcomma }}</div>
+            <div class="kpi-lbl">Net Collected</div>
+            <div class="kpi-sub">{{ today_collections_count }} payment{{ today_collections_count|pluralize }}{% if today_cash_refunds %} · Refunds Rs.{{ today_cash_refunds|floatformat:0|intcomma }}{% endif %}</div>
+        </div>
+
+        <!-- Visits -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div>
+            <span class="kpi-period">Today</span>
+            <div class="kpi-icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-map-marker-alt"></i></div>
+            <div class="kpi-val">{{ today_visit_count }}<span style="font-size:.65rem;font-weight:600;color:#94a3b8">/{{ total_my_shops }}</span></div>
+            <div class="kpi-lbl">Visits</div>
+            <div class="kpi-sub">{{ shops_not_visited }} remaining</div>
+        </div>
+
+        <!-- Commission -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#ea580c,#f97316)"></div>
+            <span class="kpi-period" style="background:#fff7ed;color:#ea580c">Current</span>
+            <div class="kpi-icon" style="background:#fff7ed;color:#ea580c"><i class="fas fa-percentage"></i></div>
+            <div class="kpi-val">Rs.{{ commission_balance|floatformat:0|intcomma }}</div>
+            <div class="kpi-lbl">Commission Balance</div>
+            <div class="kpi-sub">{{ commission_rate_pct }}% rate</div>
+        </div>
+
+        <!-- Outstanding -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#dc2626,#ef4444)"></div>
+            <span class="kpi-period" style="background:#fef2f2;color:#dc2626">Current</span>
+            <div class="kpi-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="kpi-val">Rs.{{ total_outstanding|floatformat:0|intcomma }}</div>
+            <div class="kpi-lbl">Outstanding</div>
+            <div class="kpi-sub">{{ outstanding_count }} unpaid bill{{ outstanding_count|pluralize }}</div>
+        </div>
+
+        <!-- Month Total -->
+        <div class="kpi-card">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,#475569,#64748b)"></div>
+            <span class="kpi-period">This Month</span>
+            <div class="kpi-icon" style="background:#f1f5f9;color:#475569"><i class="fas fa-chart-line"></i></div>
+            <div class="kpi-val">Rs.{{ month_net_sales|floatformat:0|intcomma }}</div>
+            <div class="kpi-lbl">Net Sales</div>
+            <div class="kpi-sub">{{ month_count }} bill{{ month_count|pluralize }}{% if month_returns_total %} · Returns Rs.{{ month_returns_total|floatformat:0|intcomma }}{% endif %}</div>
+        </div>
+    </div>
+
+    <!-- ══════════ QUICK ACTIONS ══════════ -->
+    <div class="qa-grid">
+        <a href="{% url 'sales:create' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#eff6ff;color:#2563eb"><i class="fas fa-plus"></i></div>
+            <div class="qa-txt">New Bill</div>
+        </a>
+        <a href="{% url 'sales:add_settlement_form' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#ecfdf5;color:#059669"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="qa-txt">Payment</div>
+        </a>
+        <a href="{% url 'shops:list' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-store"></i></div>
+            <div class="qa-txt">Shops</div>
+        </a>
+        <a href="{% url 'shops:map' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#fff7ed;color:#ea580c"><i class="fas fa-map-marked-alt"></i></div>
+            <div class="qa-txt">Map</div>
+        </a>
+        <a href="{% url 'sales:create_return' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#fef2f2;color:#dc2626"><i class="fas fa-undo"></i></div>
+            <div class="qa-txt">Return</div>
+        </a>
+        <a href="{% url 'sales:create_exchange' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#ecfeff;color:#0891b2"><i class="fas fa-exchange-alt"></i></div>
+            <div class="qa-txt">Exchange</div>
+        </a>
+        <a href="{% url 'sales:commission_dashboard' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#fefce8;color:#ca8a04"><i class="fas fa-coins"></i></div>
+            <div class="qa-txt">Commission</div>
+        </a>
+        <a href="{% url 'accounts:money_account_dashboard' %}" class="qa-btn">
+            <div class="qa-ico" style="background:#f0fdf4;color:#16a34a"><i class="fas fa-wallet"></i></div>
+            <div class="qa-txt">Account</div>
+        </a>
+    </div>
+
+    <!-- ══════════ OUTSTANDING BANNER ══════════ -->
+    {% if total_outstanding > 0 %}
+    <div class="out-banner">
+        <div class="ob-left">
+            <div class="ob-lbl"><i class="fas fa-exclamation-triangle me-1"></i>Total Outstanding</div>
+            <div class="ob-val">Rs. {{ total_outstanding|floatformat:0|intcomma }}</div>
+            <div class="ob-sub">{{ outstanding_count }} unpaid bill{{ outstanding_count|pluralize }}</div>
+        </div>
+        <a href="{% url 'sales:list' %}" class="ob-btn"><i class="fas fa-list me-1"></i>View</a>
+    </div>
+    {% endif %}
+
+    <!-- ══════════ WEEKLY CHART ══════════ -->
+    <div class="dash-section">
+        <div class="sec-head">
+            <h3><i class="fas fa-chart-bar me-2" style="color:var(--d-blue)"></i>This Week</h3>
+            <span class="sec-link">Rs.{{ week_total|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="sec-body">
+            <div class="chart-wrap">
+                <div class="chart-bars" id="chartBars"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ TWO-COLUMN AREA ══════════ -->
+    <div class="dash-cols">
+
+        <!-- RECENT ACTIVITY -->
+        <div class="dash-section">
+            <div class="sec-head">
+                <h3><i class="fas fa-stream me-2" style="color:var(--d-purple)"></i>Recent Activity</h3>
+                <a href="{% url 'sales:list' %}" class="sec-link">All Bills →</a>
+            </div>
+            <div class="sec-body" style="padding-top:0">
+                {% for item in recent_activity %}
+                <div class="act-item">
+                    <span class="act-dot {{ item.activity_type }}"></span>
+                    <div class="act-body">
+                        {% if item.activity_type == 'bill' %}
+                        <div class="act-title">{{ item.bill_number }}</div>
+                        <div class="act-sub">{{ item.shop__shop_name }} · {{ item.activity_time|date:"M d, g:i A" }}</div>
+                        {% else %}
+                        <div class="act-title">{{ item.settlement_number }}</div>
+                        <div class="act-sub">{{ item.shop__shop_name }} · {{ item.settlement_method|title }} · {{ item.activity_time|date:"M d, g:i A" }}</div>
+                        {% endif %}
+                    </div>
+                    {% if item.activity_type == 'bill' %}
+                    <div class="act-amt bill-a">Rs.{{ item.total_amount|floatformat:0|intcomma }}</div>
+                    {% else %}
+                    <div class="act-amt pay-a">Rs.{{ item.amount|floatformat:0|intcomma }}</div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No activity yet today</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- TOP SHOPS -->
+        <div class="dash-section">
+            <div class="sec-head">
+                <h3><i class="fas fa-trophy me-2" style="color:#f59e0b"></i>Top Shops (This Month)</h3>
+                <a href="{% url 'shops:list' %}" class="sec-link">All Shops →</a>
+            </div>
+            <div class="sec-body" style="padding-top:.2rem">
+                {% for shop in top_shops %}
+                <div class="top-shop">
+                    <span class="ts-rank r{{ forloop.counter }}">{{ forloop.counter }}</span>
+                    <span class="ts-name">{{ shop.shop__shop_name }}</span>
+                    <span class="ts-ct">{{ shop.bill_count }}x</span>
+                    <span class="ts-amt">Rs.{{ shop.total_sales|floatformat:0|intcomma }}</span>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-store-slash"></i>
+                    <p>No sales data this period</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ SUMMARY STATS ══════════ -->
+    <div class="dash-section">
+        <div class="sec-head">
+            <h3><i class="fas fa-chart-pie me-2" style="color:var(--d-teal)"></i>Period Summary</h3>
+        </div>
+        <div class="sec-body">
+            <div class="mstat-row">
+                <div class="mstat">
+                    <div class="ms-ico" style="background:#eff6ff;color:#2563eb"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div>
+                        <div class="ms-val">Rs.{{ week_total|floatformat:0|intcomma }}</div>
+                        <div class="ms-lbl">7-Day Net Sales</div>
+                    </div>
+                </div>
+                <div class="mstat">
+                    <div class="ms-ico" style="background:#ecfdf5;color:#059669"><i class="fas fa-hand-holding-usd"></i></div>
+                    <div>
+                        <div class="ms-val">Rs.{{ month_collections|floatformat:0|intcomma }}</div>
+                        <div class="ms-lbl">Monthly Net Collections</div>
+                    </div>
+                </div>
+                <div class="mstat">
+                    <div class="ms-ico" style="background:#fff7ed;color:#ea580c"><i class="fas fa-coins"></i></div>
+                    <div>
+                        <div class="ms-val">Rs.{{ month_commission|floatformat:0|intcomma }}</div>
+                        <div class="ms-lbl">Monthly Commission</div>
+                    </div>
+                </div>
+                <div class="mstat">
+                    <div class="ms-ico" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-undo-alt"></i></div>
+                    <div>
+                        <div class="ms-val">{{ today_returns }}</div>
+                        <div class="ms-lbl">Returns Today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /rep-dash -->
+{% endblock %}
+
+{% block extra_js %}
+{{ daily_sales|json_script:"daily-sales-data" }}
+<script>
+// ── WEEKLY SALES CHART ──
+(function(){
+    const data = JSON.parse(document.getElementById('daily-sales-data').textContent);
+    const max = Math.max(...data.map(d=>d.total), 1);
+    const barsEl = document.getElementById('chartBars');
+    if(!barsEl) return;
+
+    // Create labels row
+    const labelsEl = document.createElement('div');
+    labelsEl.className = 'chart-labels';
+    barsEl.parentNode.appendChild(labelsEl);
+
+    const todayIdx = data.length - 1;
+
+    // Build bars first with 0 height (for animation)
+    const barEls = [];
+    data.forEach((d, i) => {
+        const col = document.createElement('div');
+        col.className = 'chart-bar';
+        const val = d.total >= 1000 ? (d.total/1000).toFixed(1)+'k' : d.total.toFixed(0);
+        const barDiv = document.createElement('div');
+        barDiv.className = 'bar' + (i === todayIdx ? ' today' : '');
+        barDiv.style.height = '4px';
+        const valDiv = document.createElement('div');
+        valDiv.className = 'bar-val';
+        valDiv.textContent = d.total > 0 ? val : '';
+        col.appendChild(valDiv);
+        col.appendChild(barDiv);
+        barsEl.appendChild(col);
+        barEls.push({ el: barDiv, pct: (d.total / max) * 100 });
+
+        // Label
+        const lbl = document.createElement('div');
+        lbl.className = 'bar-lbl';
+        lbl.textContent = d.date;
+        labelsEl.appendChild(lbl);
+    });
+
+    // Animate bars after a short delay
+    requestAnimationFrame(() => {
+        const containerH = barsEl.clientHeight - 20; // subtract value label space
+        barEls.forEach(b => {
+            const px = Math.max(Math.round((b.pct / 100) * containerH), 4);
+            b.el.style.height = px + 'px';
+        });
+    });
+})();
+</script>
+{% endblock %}
+

@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Manual Commission Disbursement{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payout-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .payout-card .card-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .balance-cell {
+        font-weight: 600;
+        color: #10b981;
+    }
+    
+    .balance-zero {
+        color: #9ca3af;
+        font-style: italic;
+    }
+    
+    .select-all-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .payout-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    .process-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25);
+    }
+    
+    .process-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(16, 185, 129, 0.35);
+    }
+    
+    .notes-textarea {
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+    }
+    
+    .notes-textarea:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
+    }
+    
+    .history-table {
+        font-size: 0.9rem;
+    }
+    
+    .badge-success {
+        background-color: #10b981;
+    }
+    
+    .badge-failure {
+        background-color: #ef4444;
+    }
+    
+    .badge-partial {
+        background-color: #f59e0b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Manual Commission Disbursement</h2>
+            <p class="text-muted mt-2">Process commission payouts to sales representatives' money accounts</p>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card payout-card">
+                <div class="card-header">
+                    <i class="fas fa-users me-2"></i>Users - Commission Balances
+                </div>
+                <div class="card-body">
+                    {% if payout_candidates %}
+                    <form id="payoutForm">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th class="select-all-header" id="selectAllHeader">
+                                            <input type="checkbox" class="payout-checkbox" id="selectAll">
+                                            <label for="selectAll" class="ms-2 mb-0">Select All</label>
+                                        </th>
+                                        <th>Sales Representative</th>
+                                        <th class="text-end">Commission Balance</th>
+                                        <th class="text-end">Money Account Balance</th>
+                                        <th>Last Payout Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for candidate in payout_candidates %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" class="payout-checkbox user-checkbox" 
+                                                   data-user-id="{{ candidate.user.id }}"
+                                                   data-balance="{{ candidate.commission_balance }}"
+                                                   {% if candidate.commission_balance <= 0 %}disabled{% endif %}>
+                                        </td>
+                                        <td>
+                                            <strong>{{ candidate.user.get_full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ candidate.user.username }}</small>
+                                        </td>
+                                        <td class="text-end {% if candidate.commission_balance > 0 %}balance-cell{% else %}balance-zero{% endif %}">
+                                            {% if candidate.commission_balance > 0 %}
+                                                Rs. {{ candidate.commission_balance|floatformat:2|intcomma }}
+                                            {% else %}
+                                                Rs. 0.00
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if candidate.money_account %}
+                                                Rs. {{ candidate.money_balance|floatformat:2|intcomma }}
+                                            {% else %}
+                                                <span class="text-muted">No Account</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if candidate.last_payout_date %}
+                                                {{ candidate.last_payout_date|date:"M d, Y" }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-8">
+                                <label for="payoutNotes" class="form-label fw-bold">Payout Notes (Optional)</label>
+                                <textarea class="form-control notes-textarea" id="payoutNotes" rows="3" 
+                                          placeholder="Enter reason or notes for this payout (e.g., Monthly commission disbursement - January 2026)"></textarea>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="w-100">
+                                    <div id="selectionSummary" class="mb-3 text-muted">
+                                        <small>No users selected</small>
+                                    </div>
+                                    <button type="button" class="btn btn-success process-btn w-100" id="processBtn" disabled>
+                                        <i class="fas fa-check-circle me-2"></i>Process Selected Payouts
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No users found with active commission balances.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Payout History -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card payout-card">
+                <div class="card-header">
+                    <i class="fas fa-history me-2"></i>Recent Manual Payouts
+                </div>
+                <div class="card-body">
+                    {% if recent_payouts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm history-table">
+                            <thead>
+                                <tr>
+                                    <th>Payout Voucher No.</th>
+                                    <th>Execution Date</th>
+                                    <th>Executed By</th>
+                                    <th class="text-center">Users</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th class="text-center">Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payout in recent_payouts %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ payout.payout_number }}</strong>
+                                    </td>
+                                    <td>{{ payout.execution_date|date:"M d, Y g:i A" }}</td>
+                                    <td>
+                                        {% if payout.executed_by %}
+                                            {{ payout.executed_by.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">System</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ payout.total_users_processed }}</td>
+                                    <td class="text-end">Rs. {{ payout.total_amount_credited|floatformat:2|intcomma }}</td>
+                                    <td class="text-center">
+                                        {% if payout.status == 'success' %}
+                                            <span class="badge badge-success">Success</span>
+                                        {% elif payout.status == 'partial' %}
+                                            <span class="badge badge-partial">Partial</span>
+                                        {% else %}
+                                            <span class="badge badge-failure">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'sales:payout_history_detail' payout.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No manual payouts recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                <h5>Processing Commission Payouts</h5>
+                <p class="text-muted mb-0">Please wait while we credit money accounts...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Select All functionality
+    $('#selectAll').on('change', function() {
+        $('.user-checkbox:not(:disabled)').prop('checked', this.checked);
+        updateSelectionSummary();
+    });
+    
+    // Individual checkbox change
+    $('.user-checkbox').on('change', function() {
+        updateSelectionSummary();
+        
+        // Update select all checkbox
+        var totalEnabled = $('.user-checkbox:not(:disabled)').length;
+        var totalChecked = $('.user-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalEnabled > 0 && totalEnabled === totalChecked);
+    });
+    
+    // Update selection summary
+    function updateSelectionSummary() {
+        var selectedCount = $('.user-checkbox:checked').length;
+        var totalAmount = 0;
+        
+        $('.user-checkbox:checked').each(function() {
+            totalAmount += parseFloat($(this).data('balance'));
+        });
+        
+        if (selectedCount > 0) {
+            $('#selectionSummary').html(
+                '<strong class="text-success">' + selectedCount + ' user(s) selected</strong><br>' +
+                '<small>Total: Rs. ' + totalAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') + '</small>'
+            );
+            $('#processBtn').prop('disabled', false);
+        } else {
+            $('#selectionSummary').html('<small>No users selected</small>');
+            $('#processBtn').prop('disabled', true);
+        }
+    }
+    
+    // Process payout button
+    $('#processBtn').on('click', function() {
+        var selectedUsers = [];
+        $('.user-checkbox:checked').each(function() {
+            selectedUsers.push($(this).data('user-id'));
+        });
+        
+        if (selectedUsers.length === 0) {
+            alert('Please select at least one user to process payout.');
+            return;
+        }
+        
+        var notes = $('#payoutNotes').val().trim();
+        
+        if (!confirm('Process commission payout for ' + selectedUsers.length + ' user(s)?')) {
+            return;
+        }
+        
+        // Show processing modal
+        $('#processingModal').modal('show');
+        
+        // Send AJAX request
+        $.ajax({
+            url: '{% url "sales:process_manual_payout" %}',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            contentType: 'application/json',
+            data: JSON.stringify({
+                user_ids: selectedUsers,
+                notes: notes
+            }),
+            success: function(response) {
+                $('#processingModal').modal('hide');
+                
+                if (response.success) {
+                    var message = 'Payout processed successfully!\n\n';
+                    message += 'Voucher No.: ' + response.payout_number + '\n';
+                    message += 'Successful: ' + response.successful_count + '\n';
+                    message += 'Failed: ' + response.failed_count + '\n';
+                    message += 'Total Amount: Rs. ' + response.total_amount.toFixed(2);
+                    
+                    alert(message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                $('#processingModal').modal('hide');
+                var errorMsg = 'Failed to process payout. Please try again.';
+                
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.error) {
+                        errorMsg = response.error;
+                    }
+                } catch (e) {}
+                
+                alert(errorMsg);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

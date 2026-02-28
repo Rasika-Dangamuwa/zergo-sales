@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Recurring Expenses - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rec-header {
+        background: linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #22d3ee 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .rec-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .rec-header p { opacity: 0.85; font-size: 0.9rem; margin: 0.25rem 0 0; }
+    .rec-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
+    .table th {
+        font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+        color: #64748b; font-weight: 600; background: #f8fafc;
+    }
+    .table td { vertical-align: middle; font-size: 0.85rem; }
+    .freq-badge {
+        font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 4px;
+        font-weight: 600;
+    }
+    .freq-weekly { background: #dbeafe; color: #2563eb; }
+    .freq-monthly { background: #ede9fe; color: #7c3aed; }
+    .freq-quarterly { background: #fef3c7; color: #d97706; }
+    .freq-yearly { background: #d1fae5; color: #059669; }
+    .due-today { background: #fef2f2; }
+    .due-overdue { background: #fff7ed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-3">
+    <div class="rec-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-sync-alt me-2"></i>Recurring Expenses</h1>
+                <p>Manage automatic expense generation schedules</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'expenses:recurring_create' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-1"></i>New Recurring
+                </a>
+                <a href="{% url 'expenses:expense_dashboard' %}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rec-card">
+        {% if recurring_expenses %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Frequency</th>
+                        <th class="text-end">Amount</th>
+                        <th>Next Due</th>
+                        <th class="text-center">Generated</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% load tz %}
+                    {% now "Y-m-d" as today_str %}
+                    {% for rec in recurring_expenses %}
+                    <tr class="{% if rec.next_due_date|date:'Y-m-d' == today_str %}due-today{% elif rec.next_due_date|date:'Y-m-d' < today_str and rec.is_active %}due-overdue{% endif %}">
+                        <td class="fw-semibold">{{ rec.name }}</td>
+                        <td>
+                            <span class="badge" style="background: {{ rec.category.color }}; font-size: 0.72rem;">
+                                <i class="fas {{ rec.category.icon }} me-1"></i>{{ rec.category.name }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="freq-badge freq-{{ rec.frequency }}">{{ rec.get_frequency_display }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-danger">{{ rec.amount|floatformat:2|intcomma }}</td>
+                        <td class="text-nowrap">
+                            {{ rec.next_due_date|date:"M d, Y" }}
+                            {% if rec.next_due_date|date:'Y-m-d' <= today_str and rec.is_active %}
+                            <i class="fas fa-exclamation-circle text-warning ms-1" title="Due!"></i>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="text-muted">{{ rec.generated_count|default:0 }}</span>
+                            {% if rec.total_generated %}
+                            <small class="d-block text-muted">{{ rec.total_generated|floatformat:2|intcomma }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if rec.is_active %}
+                            <span class="badge bg-success-subtle text-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-nowrap">
+                            {% if rec.is_active and rec.next_due_date|date:'Y-m-d' <= today_str %}
+                            <form method="post" action="{% url 'expenses:recurring_generate' rec.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-sm" title="Generate Now">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <a href="{% url 'expenses:recurring_edit' rec.pk %}" class="btn btn-outline-secondary btn-sm" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if request.user.user_type == 'admin' %}
+                            <a href="{% url 'expenses:recurring_delete' rec.pk %}" class="btn btn-outline-danger btn-sm" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-sync-alt fa-3x mb-3 opacity-25"></i>
+            <h5>No recurring expenses</h5>
+            <p>Set up automatic expense generation for regular bills like rent.</p>
+            <a href="{% url 'expenses:recurring_create' %}" class="btn btn-primary btn-sm mt-2">
+                <i class="fas fa-plus me-1"></i>Create Recurring Expense
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

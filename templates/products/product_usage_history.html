@@ -1,0 +1,694 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Product Transaction History{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .page-header h2 {
+        margin: 0 0 8px 0;
+        font-size: 1.75rem;
+        font-weight: 600;
+    }
+    .page-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 0.95rem;
+    }
+
+    /* Product Selector Card */
+    .product-selector-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .product-selector-card .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .product-selector-card .card-title i {
+        color: #667eea;
+    }
+    .selector-grid {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: end;
+    }
+    .form-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 6px;
+        display: block;
+    }
+    .form-select {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    .btn-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 28px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.2s;
+        white-space: nowrap;
+    }
+    .btn-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Product Info Banner */
+    .product-info-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .product-info-banner h3 {
+        margin: 0 0 16px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .product-info-banner h3 i {
+        opacity: 0.9;
+    }
+    .product-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+    }
+    .detail-box {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .detail-box .label {
+        font-size: 0.75rem;
+        opacity: 0.9;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .detail-box .value {
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+
+    /* Summary Cards */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .summary-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        position: relative;
+        overflow: hidden;
+    }
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+    .summary-card.success::before { background: #28a745; }
+    .summary-card.danger::before { background: #dc3545; }
+    .summary-card.info::before { background: #17a2b8; }
+    .summary-card.warning::before { background: #ffc107; }
+    .summary-card.primary::before { background: #667eea; }
+    
+    .summary-card .label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .summary-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #212529;
+    }
+    .summary-card .icon {
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        font-size: 2rem;
+        opacity: 0.1;
+    }
+
+    /* Filter Panel */
+    .filter-panel {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .filter-panel h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .filter-panel h5 i {
+        color: #667eea;
+    }
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .form-group {
+        margin-bottom: 0;
+    }
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 10px 14px;
+        transition: all 0.2s;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    .filter-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .btn-filter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .btn-reset, .btn-change {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-reset:hover, .btn-change:hover {
+        background: #5a6268;
+        color: white;
+    }
+
+    /* Transaction Card */
+    .transactions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .transactions-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    .transactions-count {
+        background: #f8f9fa;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .transaction-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-left: 4px solid #6c757d;
+        border-radius: 10px;
+        padding: 18px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .transaction-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .transaction-card.opening_balance { border-left-color: #17a2b8; }
+    .transaction-card.purchase { border-left-color: #28a745; }
+    .transaction-card.sale { border-left-color: #007bff; }
+    .transaction-card.return { border-left-color: #ffc107; }
+    .transaction-card.damage { border-left-color: #dc3545; }
+    .transaction-card.adjustment { border-left-color: #6610f2; }
+    .transaction-card.foc_out { border-left-color: #fd7e14; }
+    .transaction-card.status_adjustment { border-left-color: #e83e8c; }
+    
+    .transaction-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f8f9fa;
+    }
+    .type-badge {
+        background: #6c757d;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .transaction-card.opening_balance .type-badge { background: #17a2b8; }
+    .transaction-card.purchase .type-badge { background: #28a745; }
+    .transaction-card.sale .type-badge { background: #007bff; }
+    .transaction-card.return .type-badge { background: #ffc107; color: #333; }
+    .transaction-card.damage .type-badge { background: #dc3545; }
+    .transaction-card.adjustment .type-badge { background: #6610f2; }
+    .transaction-card.foc_out .type-badge { background: #fd7e14; }
+    .transaction-card.status_adjustment .type-badge { background: #e83e8c; }
+    
+    .transaction-date {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 6px;
+    }
+    .transaction-ref {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+    }
+    .info-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 6px;
+    }
+    .info-item .label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .info-item .value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #212529;
+        margin-top: 4px;
+    }
+    .info-item.in .value { color: #28a745; }
+    .info-item.out .value { color: #dc3545; }
+    .transaction-notes {
+        margin-top: 12px;
+        padding: 10px;
+        background: #fff3cd;
+        border-left: 3px solid #ffc107;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #856404;
+    }
+    .transaction-notes strong {
+        color: #533f03;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        border: 2px dashed #dee2e6;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 16px;
+    }
+    .empty-state h4 {
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    .empty-state p {
+        color: #adb5bd;
+        margin: 0;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        .selector-grid {
+            grid-template-columns: 1fr;
+        }
+        .product-details-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .filter-row {
+            grid-template-columns: 1fr;
+        }
+        .filter-actions {
+            flex-direction: column;
+        }
+        .btn-filter, .btn-reset, .btn-change {
+            width: 100%;
+        }
+        .info-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .transactions-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2><i class="fas fa-history"></i> Product Transaction History</h2>
+        <p>Complete transaction history for products - sales, returns, stock movements, and adjustments</p>
+    </div>
+
+    <!-- Product Selector (Always Visible) -->
+    <div class="product-selector-card">
+        <div class="card-title">
+            <i class="fas fa-box"></i> Select Product
+        </div>
+        <form method="get" action="{% url 'products:product_usage_history' %}">
+            <div class="selector-grid">
+                <div class="form-group">
+                    <label class="form-label">Choose a product to view its transaction history</label>
+                    <select name="product" class="form-select" required onchange="this.form.submit()">
+                        <option value="">-- Select Product --</option>
+                        {% for p in products %}
+                            <option value="{{ p.id }}" {% if selected_product == p.id|stringformat:"s" %}selected{% endif %}>
+                                [{{ p.display_order }}] {{ p.product_code }} - {{ p.product_name }} ({{ p.company.company_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn-view">
+                    <i class="fas fa-search"></i> View History
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if selected_product %}
+    <!-- Product Info Banner -->
+    <div class="product-info-banner">
+        <h3><i class="fas fa-cube"></i> {{ product.product_name }}</h3>
+        <div class="product-details-grid">
+            <div class="detail-box">
+                <div class="label">Product Code</div>
+                <div class="value">{{ product.product_code }}</div>
+            </div>
+            <div class="detail-box">
+                <div class="label">Company</div>
+                <div class="value">{{ product.company.company_name }}</div>
+            </div>
+            <div class="detail-box">
+                <div class="label">Current Stock</div>
+                <div class="value">{{ product.quantity_in_stock }} units</div>
+            </div>
+            <div class="detail-box">
+                <div class="label">Non-Resaleable</div>
+                <div class="value">{{ product.non_resaleable_stock }} units</div>
+            </div>
+            <div class="detail-box">
+                <div class="label">Unit Price</div>
+                <div class="value">Rs. {{ product.final_price|default:"0"|floatformat:2|intcomma }}</div>
+            </div>
+            <div class="detail-box">
+                <div class="label">Display Order</div>
+                <div class="value">#{{ product.display_order }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Calculation Breakdown -->
+    {% if summary.calculated_stock != product.quantity_in_stock %}
+    <div class="alert alert-warning" style="margin: 20px 0;">
+        <h6><i class="fas fa-exclamation-triangle"></i> Stock Calculation Breakdown</h6>
+        <div style="margin-top: 10px; font-size: 14px;">
+            <strong>From Transactions (showing {{ total_transactions }} transactions):</strong><br>
+            Stock In: {{ summary.total_in|floatformat:2|intcomma }}<br>
+            Stock Out (including FOC): {{ summary.total_out|floatformat:2|intcomma }}<br>
+            <strong>Calculated Stock: {{ summary.total_in|floatformat:2|intcomma }} - {{ summary.total_out|floatformat:2|intcomma }} = {{ summary.calculated_stock|floatformat:2|intcomma }}</strong><br>
+            <br>
+            <strong style="color: #856404;">Database Current Stock: {{ product.quantity_in_stock|floatformat:2|intcomma }} units</strong><br>
+            <strong style="color: #721c24;">Difference: {{ product.quantity_in_stock|add:summary.calculated_stock|floatformat:2|slice:"1:"|intcomma }} units ({{ product.quantity_in_stock|floatformat:2|intcomma }} - {{ summary.calculated_stock|floatformat:2|intcomma }})</strong>
+            <br><br>
+            <em>Note: The "Stock In" and "Stock Out" totals shown above are calculated from the transactions displayed on this page. If you've applied date filters, these numbers only reflect filtered transactions, not the complete history. The database stock ({{ product.quantity_in_stock|floatformat:2|intcomma }} units) reflects ALL transactions from the beginning.</em>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+        <div class="summary-card success">
+            <i class="fas fa-arrow-down icon"></i>
+            <div class="label">Stock In</div>
+            <div class="value">{{ summary.total_in|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="summary-card danger">
+            <i class="fas fa-arrow-up icon"></i>
+            <div class="label">Stock Out</div>
+            <div class="value">{{ summary.total_out|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="summary-card info">
+            <i class="fas fa-gift icon"></i>
+            <div class="label">FOC Given</div>
+            <div class="value">{{ summary.total_foc|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="summary-card warning">
+            <i class="fas fa-dollar-sign icon"></i>
+            <div class="label">Total Value</div>
+            <div class="value">Rs. {{ summary.total_value|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="summary-card primary">
+            <i class="fas fa-list icon"></i>
+            <div class="label">Transactions</div>
+            <div class="value">{{ total_transactions }}</div>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+        <h5><i class="fas fa-filter"></i> Filters</h5>
+        <form method="get" action="{% url 'products:product_usage_history' %}">
+            <input type="hidden" name="product" value="{{ selected_product }}">
+            
+            <div class="filter-row">
+                <div class="form-group">
+                    <label class="form-label">Transaction Type</label>
+                    <select name="transaction_type" class="form-select">
+                        {% for code, name in transaction_types %}
+                            <option value="{{ code }}" {% if transaction_type == code %}selected{% endif %}>
+                                {{ name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-check"></i> Apply Filters
+                </button>
+                <a href="{% url 'products:product_usage_history' %}?product={{ selected_product }}" class="btn-reset">
+                    <i class="fas fa-redo"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transactions List -->
+    <div>
+        <div class="transactions-header">
+            <h5><i class="fas fa-list-ul"></i> Transaction History</h5>
+            <div class="transactions-count">
+                Showing {{ transactions|length }} of {{ total_transactions }} transactions
+            </div>
+        </div>
+        
+        {% if transactions %}
+            {% for trans in transactions %}
+            <div class="transaction-card {{ trans.type_code }}">
+                <div class="transaction-header">
+                    <div>
+                        <div class="type-badge">{{ trans.type }}</div>
+                        <div class="transaction-date">
+                            <i class="far fa-calendar-alt"></i> {{ trans.date|date:"M d, Y H:i" }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="transaction-ref">
+                            <i class="fas fa-hashtag"></i> 
+                            {% if trans.type_code == 'sale' and trans.reference_id %}
+                                <a href="{% url 'sales:detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% elif trans.type_code == 'return' and trans.reference_id %}
+                                <a href="{% url 'sales:return_detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% elif trans.type_code == 'status_adjustment' and trans.reference_id %}
+                                <a href="{% url 'products:product_status_detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% elif trans.type_code == 'exchange' and trans.reference_id %}
+                                <a href="{% url 'sales:exchange_detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% elif trans.type_code == 'purchase' and trans.reference_id %}
+                                <a href="{% url 'products:purchase_detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% elif trans.type_code == 'purchase_return' and trans.reference_id %}
+                                <a href="{% url 'products:purchase_return_detail' trans.reference_id %}" class="text-decoration-none">{{ trans.reference }}</a>
+                            {% else %}
+                                {{ trans.reference }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-grid">
+                    {% if trans.quantity_in > 0 %}
+                    <div class="info-item in">
+                        <div class="label"><i class="fas fa-arrow-down"></i> Stock In</div>
+                        <div class="value">+{{ trans.quantity_in|floatformat:0 }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if trans.quantity_out > 0 %}
+                    <div class="info-item out">
+                        <div class="label"><i class="fas fa-arrow-up"></i> Stock Out</div>
+                        <div class="value">-{{ trans.quantity_out|floatformat:0 }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if trans.foc_quantity > 0 %}
+                    <div class="info-item">
+                        <div class="label"><i class="fas fa-gift"></i> FOC</div>
+                        <div class="value">{{ trans.foc_quantity|floatformat:0 }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if trans.unit_price %}
+                    <div class="info-item">
+                        <div class="label"><i class="fas fa-tag"></i> Price</div>
+                        <div class="value">Rs. {{ trans.unit_price|floatformat:2|intcomma }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if trans.value %}
+                    <div class="info-item">
+                        <div class="label"><i class="fas fa-dollar-sign"></i> Value</div>
+                        <div class="value">Rs. {{ trans.value|floatformat:0|intcomma }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="info-item">
+                        <div class="label"><i class="fas fa-user"></i> User</div>
+                        <div class="value">{{ trans.user }}</div>
+                    </div>
+                </div>
+                
+                {% if trans.notes and trans.notes != '-' %}
+                <div class="transaction-notes">
+                    <strong><i class="fas fa-sticky-note"></i> Notes:</strong> {{ trans.notes }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h4>No Transactions Found</h4>
+                <p>No transactions match the selected filters. Try adjusting your filters or select a different product.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% else %}
+    <!-- No Product Selected State -->
+    <div class="empty-state">
+        <i class="fas fa-box-open"></i>
+        <h4>No Product Selected</h4>
+        <p>Please select a product from the dropdown above to view its transaction history</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

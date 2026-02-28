@@ -1,0 +1,116 @@
+{% extends "tenants/base_platform.html" %}
+
+{% block title %}{{ title }} - Zergo Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'tenants:distributor_list' %}" class="text-muted text-decoration-none mb-1 d-inline-block" style="font-size: 0.85rem;">
+                <i class="fas fa-arrow-left me-1"></i> All Distributors
+            </a>
+            <h4 class="fw-bold mb-0" style="color: #1E293B;">{{ title }}</h4>
+        </div>
+    </div>
+
+    <div class="stat-card" style="max-width: 700px;">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Business Name *</label>
+                    <input type="text" name="name" value="{{ form.name.value|default:'' }}" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Code *</label>
+                    <input type="text" name="code" value="{{ form.code.value|default:'' }}" class="form-control" required 
+                           {% if distributor %}readonly{% endif %}>
+                </div>
+                
+                {% if not distributor %}
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Subdomain</label>
+                    <div class="input-group">
+                        <input type="text" name="subdomain" value="{{ form.subdomain.value|default:'' }}" class="form-control" placeholder="e.g., abc">
+                        <span class="input-group-text">.localhost</span>
+                    </div>
+                    <small class="text-muted">Leave empty to use the code as subdomain</small>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Owner Name</label>
+                    <input type="text" name="owner_name" value="{{ form.owner_name.value|default:'' }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Email</label>
+                    <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Phone</label>
+                    <input type="text" name="phone" value="{{ form.phone.value|default:'' }}" class="form-control">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Address</label>
+                    <textarea name="address" class="form-control" rows="2">{{ form.address.value|default:'' }}</textarea>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Business Registration</label>
+                    <input type="text" name="business_registration" value="{{ form.business_registration.value|default:'' }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Tax ID</label>
+                    <input type="text" name="tax_id" value="{{ form.tax_id.value|default:'' }}" class="form-control">
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Plan</label>
+                    <select name="plan" class="form-select">
+                        {% for value, label in form.plan.field.choices %}
+                            <option value="{{ value }}" {% if form.plan.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Plan Expires</label>
+                    <input type="date" name="plan_expires" value="{{ form.plan_expires.value|default:'' }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Max Users</label>
+                    <input type="number" name="max_users" value="{{ form.max_users.value|default:'10' }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Max Shops</label>
+                    <input type="number" name="max_shops" value="{{ form.max_shops.value|default:'500' }}" class="form-control">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Logo</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Notes</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ form.notes.value|default:'' }}</textarea>
+                </div>
+            </div>
+
+            {% if form.errors %}
+            <div class="alert alert-danger mt-3">
+                {% for field, errors in form.errors.items %}
+                    <div>{{ field }}: {{ errors.0 }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i> {% if distributor %}Update{% else %}Create Distributor{% endif %}
+                </button>
+                <a href="{% url 'tenants:distributor_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

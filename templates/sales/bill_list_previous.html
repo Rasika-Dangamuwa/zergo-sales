@@ -1,0 +1,846 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Bills - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #1f43b4;
+        --primary-dark: #1a3891;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.total { border-color: #1f43b4; }
+    .stat-card.paid { border-color: #10b981; }
+    .stat-card.pending { border-color: #ef4444; }
+    .stat-card.revenue { border-color: #f59e0b; }
+    
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        opacity: 0.15;
+        float: right;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1e293b;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0.25rem 0 0 0;
+    }
+    
+    .search-filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+    
+    .search-box input:focus {
+        border-color: #1f43b4;
+        box-shadow: 0 0 0 3px rgba(31, 67, 180, 0.1);
+        outline: none;
+    }
+    
+    .search-box .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+    
+    .filter-section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .filter-tabs {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+    }
+    
+    .filter-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f1f5f9;
+        border: 2px solid transparent;
+        color: #475569;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .filter-tab:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+    
+    .filter-tab.active {
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        border-color: transparent;
+    }
+    
+    .filter-tab .badge {
+        background: rgba(255,255,255,0.25);
+        padding: 0.1rem 0.4rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+    }
+    
+    .bill-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: all 0.3s;
+        cursor: pointer;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .bill-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        transform: scaleY(0);
+        transition: transform 0.3s;
+    }
+    
+    .bill-card:hover {
+        transform: translateX(3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        border-color: #e2e8f0;
+    }
+    
+    .bill-card:hover::before {
+        transform: scaleY(1);
+    }
+    
+    .bill-number {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+    
+    .bill-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .filter-tab .badge {
+        background: rgba(255,255,255,0.3);
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+    }
+    
+    .bill-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        cursor: pointer;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .bill-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        background: var(--primary-gradient);
+        transform: scaleY(0);
+        transition: transform 0.3s;
+    }
+    
+    .bill-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-color: #667eea;
+    }
+    
+    .bill-card:hover::before {
+        transform: scaleY(1);
+    }
+    
+    .bill-number {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+    }
+    
+    .bill-date {
+        font-size: 0.875rem;
+        color: #718096;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .shop-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .shop-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    
+    .shop-details h6 {
+        margin: 0;
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+    
+    .shop-details p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    
+    .amount-section {
+        text-align: right;
+    }
+    
+    .total-amount {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+    
+    .balance-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: flex-end;
+    }
+    
+    .paid-badge {
+        background: #d1fae5;
+        color: #065f46;
+        padding: 0.25rem 0.75rem;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .balance-badge {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 0.25rem 0.75rem;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-badges {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    
+    .status-badge {
+        padding: 0.3rem 0.75rem;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .status-confirmed { background: #dbeafe; color: #1e40af; }
+    .status-draft { background: #f1f5f9; color: #475569; }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    
+    .payment-paid { background: #d1fae5; color: #065f46; }
+    .payment-partial { background: #fef3c7; color: #92400e; }
+    .payment-pending { background: #fee2e2; color: #991b1b; }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #475569;
+        text-decoration: none;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .quick-action-btn:hover {
+        background: #f8fafc;
+        border-color: #1f43b4;
+        color: #1f43b4;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #cbd5e0;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .empty-state p {
+        color: #64748b;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .fab-button {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2952cc 0%, #1f43b4 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 20px rgba(31, 67, 180, 0.4);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 6px 30px rgba(31, 67, 180, 0.6);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .fab-button {
+            display: flex;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.25rem 0;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .page-header p {
+            font-size: 0.85rem;
+        }
+        
+        .quick-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+        }
+        
+        .stat-card {
+            padding: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.25rem;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+        }
+        
+        .bill-card {
+            padding: 1rem;
+        }
+        
+        .bill-number {
+            font-size: 0.9rem;
+        }
+        
+        .amount-section {
+            text-align: left;
+            margin-top: 1rem;
+        }
+        
+        .total-amount {
+            font-size: 1.125rem;
+        }
+        
+        .status-badges {
+            justify-content: flex-start;
+            margin-top: 0.75rem;
+        }
+        
+        .quick-actions {
+            gap: 0.4rem;
+        }
+        
+        .quick-action-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+        }
+        
+        .search-filter-section {
+            padding: 1rem;
+        }
+        
+        .filter-tabs {
+            gap: 0.4rem;
+        }
+        
+        .filter-tab {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-file-invoice"></i> Bills Management</h1>
+            <a href="{% url 'sales:create' %}" class="btn btn-light d-none d-md-inline-block">
+                <i class="fas fa-plus"></i> New Bill
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" style="padding: 0 1rem;">
+    <!-- Summary Statistics -->
+    <div class="quick-stats">
+        <!-- Row 1: Main Overview -->
+        <div class="stat-card total">
+            <div class="stat-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <p class="stat-value">{{ total_bills }}</p>
+            <p class="stat-label">Total Bills</p>
+        </div>
+        <div class="stat-card revenue">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <p class="stat-value">{{ total_sales|floatformat:2|intcomma }}</p>
+            <p class="stat-label">Total Sales</p>
+        </div>
+        <div class="stat-card paid">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <p class="stat-value">{{ cash_total|floatformat:2|intcomma }}</p>
+            <p class="stat-label">Cash Sales</p>
+        </div>
+        <div class="stat-card" style="border-color: #8b5cf6;">
+            <div class="stat-icon" style="color: #8b5cf6;">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <p class="stat-value">{{ credit_total|floatformat:2|intcomma }}</p>
+            <p class="stat-label">Credit Balance</p>
+        </div>
+    </div>
+    
+    <!-- Payment Method Breakdown -->
+    <div class="quick-stats" style="margin-top: 1rem;">
+        <div class="stat-card" style="border-color: #3b82f6;">
+            <div class="stat-icon" style="color: #3b82f6;">
+                <i class="fas fa-money-check"></i>
+            </div>
+            <p class="stat-value" style="font-size: 1.25rem;">{{ cheque_total|floatformat:2|intcomma }}</p>
+            <p class="stat-label" style="margin-bottom: 0.5rem;">Total Cheque</p>
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">
+                <span style="color: #f59e0b;">⏳ {{ cheque_pending|floatformat:2|intcomma }}</span>
+                <span style="margin: 0 0.25rem;">|</span>
+                <span style="color: #10b981;">✓ {{ cheque_completed|floatformat:2|intcomma }}</span>
+            </div>
+        </div>
+        <div class="stat-card" style="border-color: #059669;">
+            <div class="stat-icon" style="color: #059669;">
+                <i class="fas fa-university"></i>
+            </div>
+            <p class="stat-value" style="font-size: 1.25rem;">{{ bank_total|floatformat:2|intcomma }}</p>
+            <p class="stat-label" style="margin-bottom: 0.5rem;">Total Bank Transfer</p>
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">
+                <span style="color: #f59e0b;">⏳ {{ bank_pending|floatformat:2|intcomma }}</span>
+                <span style="margin: 0 0.25rem;">|</span>
+                <span style="color: #10b981;">✓ {{ bank_completed|floatformat:2|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="search-filter-section">
+        <!-- Search Box -->
+        <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search by bill number, shop name, or owner..." onkeyup="filterBills()">
+        </div>
+
+        <!-- Date Filters -->
+        <div class="mb-3">
+            <div class="filter-section-title">
+                <i class="fas fa-calendar-alt me-1"></i> Date Filter
+            </div>
+            <div class="filter-tabs">
+                <a href="?date=today{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if date_filter == 'today' %}active{% endif %}">
+                    <i class="fas fa-calendar-day"></i> Today
+                </a>
+                <a href="?date=yesterday{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if date_filter == 'yesterday' %}active{% endif %}">
+                    <i class="fas fa-calendar-minus"></i> Yesterday
+                </a>
+                <a href="?date=this_week{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if date_filter == 'this_week' %}active{% endif %}">
+                    <i class="fas fa-calendar-week"></i> This Week
+                </a>
+                <a href="?date=this_month{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if date_filter == 'this_month' %}active{% endif %}">
+                    <i class="fas fa-calendar"></i> This Month
+                </a>
+                <a href="?date=all{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if date_filter == 'all' %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i> All Time
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Filters -->
+        <div class="mb-3">
+            <div class="filter-section-title">
+                <i class="fas fa-filter me-1"></i> Bill Status
+            </div>
+            <div class="filter-tabs">
+                <a href="?date={{ date_filter }}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if not request.GET.status %}active{% endif %}">
+                    <i class="fas fa-list"></i> All
+                </a>
+                <a href="?date={{ date_filter }}&status=confirmed{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.status == 'confirmed' %}active{% endif %}">
+                    <i class="fas fa-check"></i> Confirmed
+                </a>
+                <a href="?date={{ date_filter }}&status=draft{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.status == 'draft' %}active{% endif %}">
+                    <i class="fas fa-file-alt"></i> Draft
+                </a>
+                <a href="?date={{ date_filter }}&status=cancelled{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.status == 'cancelled' %}active{% endif %}">
+                    <i class="fas fa-ban"></i> Cancelled
+                </a>
+            </div>
+        </div>
+
+        <!-- Payment Status Filters -->
+        <div>
+            <div class="filter-section-title">
+                <i class="fas fa-money-bill-wave me-1"></i> Payment Status
+            </div>
+            <div class="filter-tabs">
+                <a href="?date={{ date_filter }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                   class="filter-tab {% if not request.GET.payment_status %}active{% endif %}">
+                    <i class="fas fa-list"></i> All
+                </a>
+                <a href="?date={{ date_filter }}&payment_status=paid{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.payment_status == 'paid' %}active{% endif %}">
+                    <i class="fas fa-check-circle"></i> Paid
+                </a>
+                <a href="?date={{ date_filter }}&payment_status=partial{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.payment_status == 'partial' %}active{% endif %}">
+                    <i class="fas fa-circle-half-stroke"></i> Partial
+                </a>
+                <a href="?date={{ date_filter }}&payment_status=pending{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                   class="filter-tab {% if request.GET.payment_status == 'pending' %}active{% endif %}">
+                    <i class="fas fa-clock"></i> Unpaid
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bills List -->
+    <div id="billsList">
+        {% if bills %}
+            {% for bill in bills %}
+            <div class="bill-card" data-bill-search="{{ bill.bill_number|lower }} {{ bill.shop.shop_name|lower }} {{ bill.shop.owner_name|lower }}">
+                <div class="row align-items-center">
+                    <!-- Left: Bill Info & Shop -->
+                    <div class="col-md-6">
+                        <div class="bill-number">
+                            <i class="fas fa-receipt me-2" style="color: #667eea;"></i>{{ bill.bill_number }}
+                        </div>
+                        <div class="bill-date mb-3">
+                            <i class="fas fa-calendar"></i>
+                            {{ bill.bill_date|date:"d M Y, h:i A" }}
+                        </div>
+                        
+                        <div class="shop-info">
+                            <div class="shop-avatar">
+                                {{ bill.shop.shop_name|first|upper }}
+                            </div>
+                            <div class="shop-details">
+                                <h6>{{ bill.shop.shop_name }}</h6>
+                                <p><i class="fas fa-user me-1"></i>{{ bill.shop.owner_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Middle: Sales Rep -->
+                    <div class="col-md-3">
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1">SALES REPRESENTATIVE</small>
+                            <strong style="color: #2d3748;">
+                                <i class="fas fa-user-tie me-1"></i>
+                                {{ bill.sales_rep.get_full_name|default:bill.sales_rep.username }}
+                            </strong>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Amount & Status -->
+                    <div class="col-md-3">
+                        <div class="amount-section">
+                            <h3 class="total-amount">Rs. {{ bill.total_amount|floatformat:2 }}</h3>
+                            <div class="balance-info">
+                                {% if bill.balance_amount > 0 %}
+                                    <span class="balance-badge">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        Balance: Rs. {{ bill.balance_amount|floatformat:2 }}
+                                    </span>
+                                {% else %}
+                                    <span class="paid-badge">
+                                        <i class="fas fa-check"></i> Fully Paid
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="status-badges mt-2">
+                                <span class="status-badge status-{{ bill.bill_status }}">
+                                    {{ bill.get_bill_status_display }}
+                                </span>
+                                <span class="status-badge payment-{{ bill.payment_status }}">
+                                    {{ bill.get_payment_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <a href="{% url 'sales:detail' bill.pk %}" class="quick-action-btn" onclick="event.stopPropagation()">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                    {% if bill.balance_amount > 0 %}
+                    <a href="{% url 'sales:add_settlement' bill.pk %}" class="quick-action-btn" onclick="event.stopPropagation()">
+                        <i class="fas fa-money-bill-wave"></i> Add Payment
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'sales:mobile_print' bill.pk %}" class="quick-action-btn" onclick="event.stopPropagation()" target="_blank">
+                        <i class="fas fa-print"></i> Print
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox empty-state-icon"></i>
+                <h3>No Bills Found</h3>
+                <p>
+                    {% if request.GET.status or request.GET.payment_status %}
+                        No bills match your current filters. Try adjusting the filters above.
+                    {% else %}
+                        You haven't created any bills yet. Start by creating your first bill!
+                    {% endif %}
+                </p>
+                <a href="{% url 'sales:create' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Create Your First Bill
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div id="noResults" class="empty-state" style="display: none;">
+        <i class="fas fa-search empty-state-icon"></i>
+        <h3>No Results Found</h3>
+        <p>Try searching with different keywords</p>
+    </div>
+</div>
+
+<!-- Floating Action Button (Mobile) -->
+<a href="{% url 'sales:create' %}" class="fab-button">
+    <i class="fas fa-plus"></i>
+</a>
+
+<script>
+function filterBills() {
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const billCards = document.querySelectorAll('.bill-card');
+    const billsList = document.getElementById('billsList');
+    const noResults = document.getElementById('noResults');
+    let visibleCount = 0;
+    
+    billCards.forEach(card => {
+        const searchText = card.getAttribute('data-bill-search');
+        if (searchText.includes(searchInput)) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    if (visibleCount === 0 && searchInput !== '') {
+        billsList.style.display = 'none';
+        noResults.style.display = 'block';
+    } else {
+        billsList.style.display = 'block';
+        noResults.style.display = 'none';
+    }
+}
+
+// Make bill cards clickable
+document.querySelectorAll('.bill-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+        if (!e.target.closest('.quick-actions')) {
+            const viewLink = this.querySelector('.quick-action-btn[href*="detail"]');
+            if (viewLink) {
+                window.location.href = viewLink.href;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

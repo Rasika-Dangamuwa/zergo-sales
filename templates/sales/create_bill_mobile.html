@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile-First Design */
+    .bill-form-container {
+        max-width: 100%;
+        padding: 10px;
+    }
+    
+    .form-control, .form-select {
+        font-size: 16px; /* Prevent iOS zoom */
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .product-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .product-name {
+        font-weight: 600;
+        color: #212529;
+        flex: 1;
+    }
+    
+    .remove-product {
+        background: #dc3545;
+        border: none;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .quantity-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .price-display {
+        background: #e9ecef;
+        padding: 10px;
+        border-radius: 6px;
+        margin-top: 10px;
+        text-align: right;
+        font-weight: 600;
+    }
+    
+    .bill-summary {
+        background: #ffffff;
+        border: 2px solid #0d6efd;
+        border-radius: 10px;
+        padding: 15px;
+        position: sticky;
+        bottom: 0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .summary-row:last-child {
+        border-bottom: none;
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #0d6efd;
+        padding-top: 12px;
+        border-top: 2px solid #0d6efd;
+    }
+    
+    .add-product-btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1em;
+        font-weight: 600;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .submit-btn {
+        width: 100%;
+        padding: 18px;
+        font-size: 1.2em;
+        font-weight: 700;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        border: none;
+    }
+    
+    .submit-btn:hover {
+        background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+    }
+    
+    /* Product selector modal */
+    .modal-product-item {
+        cursor: pointer;
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        transition: background 0.2s;
+    }
+    
+    .modal-product-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .stock-badge {
+        font-size: 0.85em;
+        padding: 4px 8px;
+    }
+    
+    @media (min-width: 768px) {
+        .bill-form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .quantity-controls {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid bill-form-container">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h3 class="mb-0"><i class="fas fa-file-invoice me-2"></i>{{ page_title }}</h3>
+        </div>
+    </div>
+
+    <form method="post" id="billForm">
+        {% csrf_token %}
+        
+        <!-- Shop Selection -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <label for="shop_id" class="form-label fw-bold">
+                    <i class="fas fa-store me-2"></i>Select Shop
+                </label>
+                <select class="form-select" name="shop_id" id="shop_id" required>
+                    <option value="">-- Choose Shop --</option>
+                    {% for shop in shops %}
+                    <option value="{{ shop.id }}" 
+                            data-balance="{{ shop.current_balance }}"
+                            data-name="{{ shop.shop_name }}"
+                            {% if preselected_shop_id and shop.id|stringformat:"s" == preselected_shop_id %}selected{% endif %}>
+                        {{ shop.shop_name }} - {{ shop.owner_name }}
+                        {% if shop.current_balance > 0 %}
+                        (Balance: Rs. {{ shop.current_balance|floatformat:2 }})
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="shopInfo" class="mt-2 text-muted small" style="display: none;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span id="shopInfoText"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-box me-2"></i>Products</h5>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-success add-product-btn" data-bs-toggle="modal" data-bs-target="#productModal">
+                    <i class="fas fa-plus-circle me-2"></i>Add Product
+                </button>
+                
+                <div id="productsContainer"></div>
+                
+                <div id="emptyState" class="text-center text-muted py-4">
+                    <i class="fas fa-box-open fa-3x mb-3"></i>
+                    <p>No products added yet. Click "Add Product" to start.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discount & Notes -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="discount_percentage" class="form-label">
+                            <i class="fas fa-percent me-2"></i>Discount %
+                        </label>
+                        <input type="number" class="form-control" name="discount_percentage" id="discount_percentage" 
+                               value="0" min="0" max="100" step="0.01">
+                    </div>
+                    <div class="col-12">
+                        <label for="notes" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Notes (Optional)
+                        </label>
+                        <textarea class="form-control" name="notes" id="notes" rows="3" 
+                                  placeholder="Additional notes for this bill..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Summary -->
+        <div class="bill-summary">
+            <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>Bill Summary</h5>
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span id="summarySubtotal">Rs. 0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Discount:</span>
+                <span id="summaryDiscount">Rs. 0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Tax:</span>
+                <span id="summaryTax">Rs. 0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Total:</span>
+                <span id="summaryTotal">Rs. 0.00</span>
+            </div>
+        </div>
+
+        <!-- Hidden field for items data -->
+        <input type="hidden" name="items" id="itemsData">
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary submit-btn" id="submitBtn" disabled>
+            <i class="fas fa-check-circle me-2"></i>Create Bill
+        </button>
+    </form>
+</div>
+
+<!-- Product Selection Modal -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-search me-2"></i>Select Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control mb-3" id="productSearch" placeholder="Search products...">
+                <div id="productList">
+                    {% for product in products %}
+                    <div class="modal-product-item" data-product-id="{{ product.id }}"
+                         data-product-name="{{ product.product_name }}"
+                         data-product-price="{{ product.marked_price }}"
+                         data-product-stock="{{ product.quantity_in_stock }}"
+                         data-product-tax="{{ product.tax_percentage }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ product.product_name }}</strong><br>
+                                <small class="text-muted">{{ product.company.company_name }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">Rs. {{ product.marked_price }}</div>
+                                <span class="badge stock-badge {% if product.quantity_in_stock > 10 %}bg-success{% elif product.quantity_in_stock > 0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    Stock: {{ product.quantity_in_stock }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let billItems = [];
+let itemCounter = 0;
+
+// Shop selection
+document.getElementById('shop_id').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const shopInfo = document.getElementById('shopInfo');
+    const shopInfoText = document.getElementById('shopInfoText');
+    
+    if (option.value) {
+        const balance = parseFloat(option.dataset.balance) || 0;
+        shopInfoText.textContent = `Current Balance: Rs. ${balance.toFixed(2)}`;
+        shopInfo.style.display = 'block';
+    } else {
+        shopInfo.style.display = 'none';
+    }
+});
+
+// Trigger shop selection if preselected
+{% if preselected_shop_id %}
+setTimeout(() => {
+    document.getElementById('shop_id').dispatchEvent(new Event('change'));
+}, 100);
+{% endif %}
+
+// Product search
+document.getElementById('productSearch').addEventListener('input', function() {
+    const search = this.value.toLowerCase();
+    const items = document.querySelectorAll('.modal-product-item');
+    
+    items.forEach(item => {
+        const name = item.dataset.productName.toLowerCase();
+        if (name.includes(search)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Product selection
+document.querySelectorAll('.modal-product-item').forEach(item => {
+    item.addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        const productName = this.dataset.productName;
+        const productPrice = parseFloat(this.dataset.productPrice);
+        const productStock = parseFloat(this.dataset.productStock);
+        const productTax = parseFloat(this.dataset.productTax);
+        
+        // Check if product already added
+        if (billItems.some(item => item.product_id === productId)) {
+            alert('This product is already added to the bill.');
+            return;
+        }
+        
+        addProductToCart(productId, productName, productPrice, productStock, productTax);
+        
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+    });
+});
+
+function addProductToCart(productId, productName, productPrice, productStock, productTax) {
+    const itemId = itemCounter++;
+    
+    const item = {
+        id: itemId,
+        product_id: productId,
+        product_name: productName,
+        unit_price: productPrice,
+        quantity: 1,
+        foc_quantity: 0,
+        discount_percentage: 0,
+        tax_percentage: productTax,
+        available_stock: productStock
+    };
+    
+    billItems.push(item);
+    renderProducts();
+    updateSummary();
+}
+
+function renderProducts() {
+    const container = document.getElementById('productsContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (billItems.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    document.getElementById('submitBtn').disabled = false;
+    
+    container.innerHTML = billItems.map(item => `
+        <div class="product-item" data-item-id="${item.id}">
+            <div class="product-header">
+                <div class="product-name">${item.product_name}</div>
+                <button type="button" class="remove-product" onclick="removeProduct(${item.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="quantity-controls">
+                <div>
+                    <label class="form-label small mb-1">Quantity</label>
+                    <input type="number" class="form-control form-control-sm" 
+                           value="${item.quantity}" min="1" max="${item.available_stock}" step="1"
+                           onchange="updateItemQuantity(${item.id}, this.value)">
+                </div>
+                <div>
+                    <label class="form-label small mb-1">FOC</label>
+                    <input type="number" class="form-control form-control-sm" 
+                           value="${item.foc_quantity}" min="0" max="${item.available_stock}" step="1"
+                           onchange="updateItemFOC(${item.id}, this.value)">
+                </div>
+                <div>
+                    <label class="form-label small mb-1">Price</label>
+                    <input type="number" class="form-control form-control-sm" 
+                           value="${item.unit_price}" min="0" step="0.01"
+                           onchange="updateItemPrice(${item.id}, this.value)">
+                </div>
+                <div>
+                    <label class="form-label small mb-1">Disc %</label>
+                    <input type="number" class="form-control form-control-sm" 
+                           value="${item.discount_percentage}" min="0" max="100" step="0.01"
+                           onchange="updateItemDiscount(${item.id}, this.value)">
+                </div>
+            </div>
+            
+            <div class="price-display">
+                Line Total: Rs. ${calculateLineTotal(item).toFixed(2)}
+                <small class="d-block text-muted">Stock Available: ${item.available_stock}</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+function removeProduct(itemId) {
+    billItems = billItems.filter(item => item.id !== itemId);
+    renderProducts();
+    updateSummary();
+}
+
+function updateItemQuantity(itemId, quantity) {
+    const item = billItems.find(i => i.id === itemId);
+    if (item) {
+        const qty = parseFloat(quantity) || 0;
+        const totalQty = qty + item.foc_quantity;
+        
+        if (totalQty > item.available_stock) {
+            alert(`Total quantity (${totalQty}) exceeds available stock (${item.available_stock})`);
+            renderProducts();
+            return;
+        }
+        
+        item.quantity = qty;
+        renderProducts();
+        updateSummary();
+    }
+}
+
+function updateItemFOC(itemId, focQty) {
+    const item = billItems.find(i => i.id === itemId);
+    if (item) {
+        const foc = parseFloat(focQty) || 0;
+        const totalQty = item.quantity + foc;
+        
+        if (totalQty > item.available_stock) {
+            alert(`Total quantity (${totalQty}) exceeds available stock (${item.available_stock})`);
+            renderProducts();
+            return;
+        }
+        
+        item.foc_quantity = foc;
+        renderProducts();
+        updateSummary();
+    }
+}
+
+function updateItemPrice(itemId, price) {
+    const item = billItems.find(i => i.id === itemId);
+    if (item) {
+        item.unit_price = parseFloat(price) || 0;
+        renderProducts();
+        updateSummary();
+    }
+}
+
+function updateItemDiscount(itemId, discount) {
+    const item = billItems.find(i => i.id === itemId);
+    if (item) {
+        item.discount_percentage = parseFloat(discount) || 0;
+        renderProducts();
+        updateSummary();
+    }
+}
+
+function calculateLineTotal(item) {
+    const subtotal = item.quantity * item.unit_price;
+    const discount = (subtotal * item.discount_percentage) / 100;
+    const afterDiscount = subtotal - discount;
+    const tax = (afterDiscount * item.tax_percentage) / 100;
+    return afterDiscount + tax;
+}
+
+function updateSummary() {
+    let subtotal = 0;
+    let totalTax = 0;
+    
+    billItems.forEach(item => {
+        const itemSubtotal = item.quantity * item.unit_price;
+        const itemDiscount = (itemSubtotal * item.discount_percentage) / 100;
+        const afterDiscount = itemSubtotal - itemDiscount;
+        const itemTax = (afterDiscount * item.tax_percentage) / 100;
+        
+        subtotal += itemSubtotal;
+        totalTax += itemTax;
+    });
+    
+    const billDiscount = (subtotal * (parseFloat(document.getElementById('discount_percentage').value) || 0)) / 100;
+    const total = subtotal - billDiscount + totalTax;
+    
+    document.getElementById('summarySubtotal').textContent = `Rs. ${subtotal.toFixed(2)}`;
+    document.getElementById('summaryDiscount').textContent = `Rs. ${billDiscount.toFixed(2)}`;
+    document.getElementById('summaryTax').textContent = `Rs. ${totalTax.toFixed(2)}`;
+    document.getElementById('summaryTotal').textContent = `Rs. ${total.toFixed(2)}`;
+}
+
+// Discount change
+document.getElementById('discount_percentage').addEventListener('input', updateSummary);
+
+// Form submission
+document.getElementById('billForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (billItems.length === 0) {
+        alert('Please add at least one product to the bill.');
+        return;
+    }
+    
+    if (!document.getElementById('shop_id').value) {
+        alert('Please select a shop.');
+        return;
+    }
+    
+    // Prepare items data
+    const itemsData = billItems.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        foc_quantity: item.foc_quantity,
+        unit_price: item.unit_price,
+        discount_percentage: item.discount_percentage
+    }));
+    
+    document.getElementById('itemsData').value = JSON.stringify(itemsData);
+    
+    // Submit form
+    this.submit();
+});
+</script>
+{% endblock %}

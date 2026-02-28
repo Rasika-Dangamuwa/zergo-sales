@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Business Profile - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .logo-preview {
+        max-width: 300px;
+        max-height: 150px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Business Profile</h1>
+                <p class="mb-0 mt-2 opacity-75">Update your distributor business information</p>
+            </div>
+            <div>
+                <a href="{% url 'business:settings' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Settings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-info-circle me-2"></i>Basic Information</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="business_name" class="form-label required">Business Name</label>
+                    <input type="text" class="form-control" id="business_name" name="business_name" 
+                           value="{{ profile.business_name }}" required>
+                    <div class="form-text">Official registered business name</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="trade_name" class="form-label">Trade Name</label>
+                    <input type="text" class="form-control" id="trade_name" name="trade_name" 
+                           value="{{ profile.trade_name|default:'' }}">
+                    <div class="form-text">Trading name if different from business name</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="tagline" class="form-label">Tagline</label>
+                    <input type="text" class="form-control" id="tagline" name="tagline" 
+                           value="{{ profile.tagline|default:'' }}">
+                    <div class="form-text">Business slogan (e.g., "Quality Products, Trusted Service")</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="business_type" class="form-label">Business Type</label>
+                    <select class="form-select" id="business_type" name="business_type">
+                        <option value="distributor" {% if profile.business_type == 'distributor' %}selected{% endif %}>Distributor</option>
+                        <option value="wholesaler" {% if profile.business_type == 'wholesaler' %}selected{% endif %}>Wholesaler</option>
+                        <option value="retailer" {% if profile.business_type == 'retailer' %}selected{% endif %}>Retailer</option>
+                        <option value="manufacturer" {% if profile.business_type == 'manufacturer' %}selected{% endif %}>Manufacturer</option>
+                        <option value="importer" {% if profile.business_type == 'importer' %}selected{% endif %}>Importer</option>
+                        <option value="other" {% if profile.business_type == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Business Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ profile.description|default:'' }}</textarea>
+                <div class="form-text">Brief description for reports and documents</div>
+            </div>
+        </div>
+
+        <!-- Registration & Legal -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-file-contract me-2"></i>Registration & Legal Information</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="business_registration_number" class="form-label">Business Registration Number</label>
+                    <input type="text" class="form-control" id="business_registration_number" 
+                           name="business_registration_number" value="{{ profile.business_registration_number|default:'' }}">
+                    <div class="form-text">Official BR Number</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="tax_id" class="form-label">Tax ID (TIN)</label>
+                    <input type="text" class="form-control" id="tax_id" name="tax_id" 
+                           value="{{ profile.tax_id|default:'' }}">
+                    <div class="form-text">Tax Identification Number</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="vat_number" class="form-label">VAT Number</label>
+                    <input type="text" class="form-control" id="vat_number" name="vat_number" 
+                           value="{{ profile.vat_number|default:'' }}">
+                    <div class="form-text">VAT Registration Number</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="svat_number" class="form-label">SVAT Number</label>
+                    <input type="text" class="form-control" id="svat_number" name="svat_number" 
+                           value="{{ profile.svat_number|default:'' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-phone me-2"></i>Contact Information</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="primary_phone" class="form-label required">Primary Phone</label>
+                    <input type="tel" class="form-control" id="primary_phone" name="primary_phone" 
+                           value="{{ profile.primary_phone }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="secondary_phone" class="form-label">Secondary Phone</label>
+                    <input type="tel" class="form-control" id="secondary_phone" name="secondary_phone" 
+                           value="{{ profile.secondary_phone|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="mobile_phone" class="form-label">Mobile Phone</label>
+                    <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone" 
+                           value="{{ profile.mobile_phone|default:'' }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="primary_email" class="form-label required">Primary Email</label>
+                    <input type="email" class="form-control" id="primary_email" name="primary_email" 
+                           value="{{ profile.primary_email }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="secondary_email" class="form-label">Secondary Email</label>
+                    <input type="email" class="form-control" id="secondary_email" name="secondary_email" 
+                           value="{{ profile.secondary_email|default:'' }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="support_email" class="form-label">Support Email</label>
+                    <input type="email" class="form-control" id="support_email" name="support_email" 
+                           value="{{ profile.support_email|default:'' }}">
+                    <div class="form-text">Customer support email</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="accounts_email" class="form-label">Accounts Email</label>
+                    <input type="email" class="form-control" id="accounts_email" name="accounts_email" 
+                           value="{{ profile.accounts_email|default:'' }}">
+                    <div class="form-text">Finance/Accounts department email</div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="website" class="form-label">Website</label>
+                <input type="url" class="form-control" id="website" name="website" 
+                       value="{{ profile.website|default:'' }}" placeholder="https://www.example.com">
+            </div>
+        </div>
+
+        <!-- Address -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-map-marker-alt me-2"></i>Primary Address</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="address_line1" class="form-label required">Address Line 1</label>
+                    <input type="text" class="form-control" id="address_line1" name="address_line1" 
+                           value="{{ profile.address_line1 }}" required>
+                    <div class="form-text">Street address, building name, P.O. Box</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="address_line2" class="form-label">Address Line 2</label>
+                    <input type="text" class="form-control" id="address_line2" name="address_line2" 
+                           value="{{ profile.address_line2|default:'' }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="city" class="form-label required">City</label>
+                    <input type="text" class="form-control" id="city" name="city" 
+                           value="{{ profile.city }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="district" class="form-label">District</label>
+                    <input type="text" class="form-control" id="district" name="district" 
+                           value="{{ profile.district|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="postal_code" class="form-label">Postal Code</label>
+                    <input type="text" class="form-control" id="postal_code" name="postal_code" 
+                           value="{{ profile.postal_code|default:'' }}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="country" class="form-label">Country</label>
+                <input type="text" class="form-control" id="country" name="country" 
+                       value="{{ profile.country|default:'Sri Lanka' }}">
+            </div>
+        </div>
+
+        <!-- Social Media -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-share-alt me-2"></i>Social Media & Online Presence</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="facebook_url" class="form-label">Facebook URL</label>
+                    <input type="url" class="form-control" id="facebook_url" name="facebook_url" 
+                           value="{{ profile.facebook_url|default:'' }}" placeholder="https://facebook.com/yourpage">
+                </div>
+                <div class="col-md-6">
+                    <label for="instagram_url" class="form-label">Instagram URL</label>
+                    <input type="url" class="form-control" id="instagram_url" name="instagram_url" 
+                           value="{{ profile.instagram_url|default:'' }}" placeholder="https://instagram.com/yourpage">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="whatsapp_number" class="form-label">WhatsApp Number</label>
+                <input type="tel" class="form-control" id="whatsapp_number" name="whatsapp_number" 
+                       value="{{ profile.whatsapp_number|default:'' }}" placeholder="+94 77 123 4567">
+                <div class="form-text">Include country code (e.g., +94 for Sri Lanka)</div>
+            </div>
+        </div>
+
+        <!-- Logos & Branding -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-palette me-2"></i>Logos & Branding</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="logo" class="form-label">Primary Logo</label>
+                    <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                    <div class="form-text">Recommended: PNG/JPEG, 500x200px</div>
+                    {% if profile.logo %}
+                    <img src="{{ profile.logo.url }}" alt="Current Logo" class="logo-preview">
+                    <div class="form-text text-success"><i class="fas fa-check-circle me-1"></i>Current logo uploaded</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="logo_receipt" class="form-label">Receipt Logo</label>
+                    <input type="file" class="form-control" id="logo_receipt" name="logo_receipt" accept="image/*">
+                    <div class="form-text">Optimized for thermal receipts (B&W, 200x80px)</div>
+                    {% if profile.logo_receipt %}
+                    <img src="{{ profile.logo_receipt.url }}" alt="Current Receipt Logo" class="logo-preview">
+                    <div class="form-text text-success"><i class="fas fa-check-circle me-1"></i>Current receipt logo uploaded</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Operational Settings -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-cog me-2"></i>Operational Settings</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="currency_code" class="form-label">Currency Code</label>
+                    <input type="text" class="form-control" id="currency_code" name="currency_code" 
+                           value="{{ profile.currency_code|default:'LKR' }}" maxlength="3">
+                    <div class="form-text">ISO 4217 code (e.g., LKR, USD, EUR)</div>
+                </div>
+                <div class="col-md-4">
+                    <label for="currency_symbol" class="form-label">Currency Symbol</label>
+                    <input type="text" class="form-control" id="currency_symbol" name="currency_symbol" 
+                           value="{{ profile.currency_symbol|default:'Rs.' }}">
+                    <div class="form-text">e.g., Rs., $, €</div>
+                </div>
+                <div class="col-md-4">
+                    <label for="business_hours" class="form-label">Business Hours</label>
+                    <input type="text" class="form-control" id="business_hours" name="business_hours" 
+                           value="{{ profile.business_hours|default:'' }}" placeholder="Mon-Sat: 8:00 AM - 6:00 PM">
+                </div>
+            </div>
+        </div>
+
+        <!-- Receipt Settings -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-receipt me-2"></i>Receipt & Invoice Settings</h2>
+            
+            <div class="mb-3">
+                <label for="receipt_footer_line1" class="form-label">Receipt Footer Line 1</label>
+                <input type="text" class="form-control" id="receipt_footer_line1" name="receipt_footer_line1" 
+                       value="{{ profile.receipt_footer_line1|default:'Thank you for your business!' }}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="receipt_footer_line2" class="form-label">Receipt Footer Line 2</label>
+                <input type="text" class="form-control" id="receipt_footer_line2" name="receipt_footer_line2" 
+                       value="{{ profile.receipt_footer_line2|default:'' }}">
+                <div class="form-text">e.g., Warranty info, return policy</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="receipt_footer_line3" class="form-label">Receipt Footer Line 3</label>
+                <input type="text" class="form-control" id="receipt_footer_line3" name="receipt_footer_line3" 
+                       value="{{ profile.receipt_footer_line3|default:'' }}">
+                <div class="form-text">e.g., Social media, website</div>
+            </div>
+        </div>
+
+        <!-- Display Preferences -->
+        <div class="form-card">
+            <h2 class="section-title"><i class="fas fa-eye me-2"></i>Display Preferences</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="show_logo_on_receipts" 
+                               name="show_logo_on_receipts" {% if profile.show_logo_on_receipts %}checked{% endif %}>
+                        <label class="form-check-label" for="show_logo_on_receipts">
+                            Show logo on receipts
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="show_address_on_receipts" 
+                               name="show_address_on_receipts" {% if profile.show_address_on_receipts %}checked{% endif %}>
+                        <label class="form-check-label" for="show_address_on_receipts">
+                            Show address on receipts
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="show_contact_on_receipts" 
+                               name="show_contact_on_receipts" {% if profile.show_contact_on_receipts %}checked{% endif %}>
+                        <label class="form-check-label" for="show_contact_on_receipts">
+                            Show contact info on receipts
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'business:settings' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

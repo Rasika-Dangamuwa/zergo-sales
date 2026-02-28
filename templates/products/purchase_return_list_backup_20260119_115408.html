@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Purchase Returns - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #dc3545;
+    }
+    
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .card-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+    
+    .card-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card-info-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-info-value {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .card-actions {
+        padding: 1rem 1.25rem;
+        background-color: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-pending { background-color: #fef3c7; color: #92400e; }
+    .status-approved { background-color: #dbeafe; color: #1e40af; }
+    .status-sent { background-color: #e0e7ff; color: #3730a3; }
+    .status-credited { background-color: #d1fae5; color: #065f46; }
+    .status-rejected { background-color: #fee2e2; color: #991b1b; }
+    
+    .fab-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-undo"></i> Purchase Returns</h2>
+            <p class="text-muted mb-0">Returns to Suppliers</p>
+        </div>
+    </div>
+
+    <!-- Enhanced Stats Dashboard -->
+    <div class="stats-card">
+        <div class="row">
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-undo" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.total_returns }}</span>
+                <span class="stat-label">Total Returns</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-hourglass-end" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.expired_count }}</span>
+                <span class="stat-label">Expired Items</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.damaged_count }}</span>
+                <span class="stat-label">Damaged Items</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-clock" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.pending }}</span>
+                <span class="stat-label">Pending Approval</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-check-circle" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">{{ stats.settled_count }}</span>
+                <span class="stat-label">Settled</span>
+            </div>
+            <div class="col-md-2 stat-item">
+                <i class="fas fa-coins" style="font-size: 1.5rem; opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                <span class="stat-value">Rs. {{ stats.total_value|floatformat:0|intcomma }}</span>
+                <span class="stat-label">Total Value</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Search & Filters -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-search"></i> Search & Filters</h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                    <i class="fas fa-sliders-h"></i> Toggle Filters
+                </button>
+            </div>
+        </div>
+        <div class="collapse show" id="filterPanel">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <!-- Search Bar -->
+                    <div class="col-md-12">
+                        <label class="form-label"><i class="fas fa-search"></i> Search</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="PR number, Company name, Detailed reason..."
+                               value="{{ request.GET.search }}">
+                    </div>
+                    
+                    <!-- Filter Options -->
+                    <div class="col-md-2">
+                        <label class="form-label">Return Type</label>
+                        <select name="return_type" class="form-select">
+                            <option value="">All Types</option>
+                            <option value="expired" {% if request.GET.return_type == 'expired' %}selected{% endif %}>Expired</option>
+                            <option value="damaged" {% if request.GET.return_type == 'damaged' %}selected{% endif %}>Damaged</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                            <option value="sent" {% if request.GET.status == 'sent' %}selected{% endif %}>Sent</option>
+                            <option value="credited" {% if request.GET.status == 'credited' %}selected{% endif %}>Credited</option>
+                            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Settlement Type</label>
+                        <select name="settlement_type" class="form-select">
+                            <option value="">All</option>
+                            <option value="credit_note" {% if request.GET.settlement_type == 'credit_note' %}selected{% endif %}>Credit Note</option>
+                            <option value="cash_refund" {% if request.GET.settlement_type == 'cash_refund' %}selected{% endif %}>Cash Refund</option>
+                            <option value="replacement" {% if request.GET.settlement_type == 'replacement' %}selected{% endif %}>Replacement</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Company</label>
+                        <select name="company" class="form-select">
+                            <option value="">All Companies</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if request.GET.company|stringformat:"s" == company.id|stringformat:"s" %}selected{% endif %}>
+                                {{ company.company_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sort By</label>
+                        <select name="sort" class="form-select">
+                            <option value="-return_date" {% if request.GET.sort == '-return_date' or not request.GET.sort %}selected{% endif %}>Latest First</option>
+                            <option value="return_date" {% if request.GET.sort == 'return_date' %}selected{% endif %}>Oldest First</option>
+                            <option value="-total_amount" {% if request.GET.sort == '-total_amount' %}selected{% endif %}>Highest Value</option>
+                            <option value="total_amount" {% if request.GET.sort == 'total_amount' %}selected{% endif %}>Lowest Value</option>
+                            <option value="status" {% if request.GET.sort == 'status' %}selected{% endif %}>Status</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range -->
+                    <div class="col-md-2">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" class="form-control" value="{{ request.GET.from_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" class="form-control" value="{{ request.GET.to_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quick Date Filters</label>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('today')">Today</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('week')">This Week</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('month')">This Month</button>
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Per Page</label>
+                        <select name="per_page" class="form-select">
+                            <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20</option>
+                            <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+                            <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="d-flex gap-2 w-100">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="fas fa-filter"></i> Apply
+                            </button>
+                            <a href="{% url 'products:purchase_return_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Export Button -->
+                    <div class="col-12">
+                        <button type="submit" name="export" value="excel" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+function setDateRange(range) {
+    const today = new Date();
+    let fromDate = new Date();
+    let toDate = new Date();
+    
+    if (range === 'today') {
+        fromDate = today;
+        toDate = today;
+    } else if (range === 'week') {
+        fromDate.setDate(today.getDate() - today.getDay());
+    } else if (range === 'month') {
+        fromDate.setDate(1);
+    }
+    
+    document.querySelector('input[name="from_date"]').value = fromDate.toISOString().split('T')[0];
+    document.querySelector('input[name="to_date"]').value = toDate.toISOString().split('T')[0];
+}
+</script>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Returns List -->
+    {% if returns %}
+        {% for return in returns %}
+        <div class="card">
+            <div class="card-header-row">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="fas fa-undo-alt text-danger"></i>
+                            <a href="{% url 'products:purchase_return_detail' return.pk %}" class="text-decoration-none">
+                                {{ return.pr_number }}
+                            </a>
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fas fa-building"></i> {{ return.company.company_name }}
+                        </small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <span class="badge status-{{ return.status }}">{{ return.get_status_display }}</span>
+                    <span class="badge {% if return.return_type == 'expired' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                        <i class="fas {% if return.return_type == 'expired' %}fa-hourglass-end{% else %}fa-exclamation-triangle{% endif %}"></i>
+                        {{ return.get_return_type_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Workflow Progress Bar -->
+            {% if return.status != 'rejected' %}
+            <div class="px-3 pt-2">
+                <div class="d-flex justify-content-between align-items-center" style="font-size: 0.75rem;">
+                    <span class="{% if return.status == 'pending' or return.status == 'approved' or return.status == 'sent' or return.status == 'credited' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                        <i class="fas fa-check-circle"></i> Created
+                    </span>
+                    <span class="{% if return.status == 'approved' or return.status == 'sent' or return.status == 'credited' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                        <i class="fas fa-{% if return.status == 'approved' or return.status == 'sent' or return.status == 'credited' %}check{% else %}circle{% endif %}-circle"></i> Approved
+                    </span>
+                    <span class="{% if return.status == 'sent' or return.status == 'credited' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                        <i class="fas fa-{% if return.status == 'sent' or return.status == 'credited' %}check{% else %}circle{% endif %}-circle"></i> Sent
+                    </span>
+                    <span class="{% if return.status == 'credited' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                        <i class="fas fa-{% if return.status == 'credited' %}check{% else %}circle{% endif %}-circle"></i> Settled
+                    </span>
+                </div>
+                <div class="progress" style="height: 4px; margin-top: 0.5rem;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {% if return.status == 'pending' %}25{% elif return.status == 'approved' %}50{% elif return.status == 'sent' %}75{% elif return.status == 'credited' %}100{% endif %}%;"></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card-info-grid">
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-calendar"></i> Return Date</span>
+                    <span class="card-info-value">{{ return.return_date|date:"d M Y" }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-comment"></i> Reason</span>
+                    <span class="card-info-value">{{ return.get_return_reason_display }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-coins"></i> Total Amount</span>
+                    <span class="card-info-value">Rs. {{ return.total_amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-handshake"></i> Settlement Type</span>
+                    <span class="card-info-value">
+                        {% if return.settlement_type == 'credit_note' %}
+                            <span class="badge bg-info"><i class="fas fa-file-invoice"></i> Credit Note</span>
+                        {% elif return.settlement_type == 'cash_refund' %}
+                            <span class="badge bg-success"><i class="fas fa-money-bill-wave"></i> Cash Refund</span>
+                        {% elif return.settlement_type == 'replacement' %}
+                            <span class="badge bg-primary"><i class="fas fa-exchange-alt"></i> Replacement</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ return.get_settlement_type_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-user"></i> Created By</span>
+                    <span class="card-info-value">{{ return.created_by.get_full_name }}</span>
+                </div>
+                {% if return.approved_by %}
+                <div class="card-info-item">
+                    <span class="card-info-label"><i class="fas fa-user-check"></i> Approved By</span>
+                    <span class="card-info-value">{{ return.approved_by.get_full_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if return.detailed_reason %}
+            <div class="px-3 pb-2">
+                <small class="text-muted"><i class="fas fa-info-circle"></i> {{ return.detailed_reason }}</small>
+            </div>
+            {% endif %}
+            
+            <div class="card-actions">
+                <a href="{% url 'products:purchase_return_detail' return.pk %}" class="btn btn-info btn-sm">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+                {% if return.status == 'pending' %}
+                <a href="{% url 'products:approve_purchase_return' return.pk %}" 
+                   class="btn btn-success btn-sm"
+                   onclick="return confirm('Approve this return? This will reduce stock.')">
+                    <i class="fas fa-check-circle"></i> Approve
+                </a>
+                {% elif return.status == 'approved' %}
+                <a href="{% url 'products:mark_return_sent' return.pk %}" 
+                   class="btn btn-primary btn-sm"
+                   onclick="return confirm('Mark as sent to company?')">
+                    <i class="fas fa-shipping-fast"></i> Mark as Sent
+                </a>
+                {% elif return.status == 'sent' %}
+                <a href="{% url 'products:update_return_settlement' return.pk %}" 
+                   class="btn btn-warning btn-sm">
+                    <i class="fas fa-handshake"></i> Record Settlement
+                </a>
+                {% endif %}
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Print">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-undo fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No purchase returns found.</p>
+            </div>
+        </div>
+    {% endif %}    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label=\"Page navigation\" class=\"mt-4\">
+        <ul class=\"pagination justify-content-center\">
+            {% if page_obj.has_previous %}
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">&laquo; First</a>
+            </li>
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Previous</a>
+            </li>
+            {% endif %}
+            
+            <li class=\"page-item active\">
+                <span class=\"page-link\">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Next</a>
+            </li>
+            <li class=\"page-item\">
+                <a class=\"page-link\" href=\"?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}\">Last &raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+        <p class=\"text-center text-muted\">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} returns
+        </p>
+    </nav>
+    {% endif %}</div>
+
+<!-- FAB Button -->
+<a href="{% url 'products:create_purchase_return' %}" class="fab-button" title="Create Purchase Return">
+    <i class="fas fa-plus"></i>
+</a>
+{% endblock %}

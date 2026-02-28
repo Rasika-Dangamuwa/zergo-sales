@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Nearby Shops - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .location-status {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .location-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+    
+    .location-dot.active {
+        background: #10b981;
+    }
+    
+    .location-dot.inactive {
+        background: #ef4444;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .shop-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    
+    .shop-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .distance-badge {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .radius-control {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .location-status {
+            top: 60px;
+            right: 10px;
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-3 py-md-4">
+    <!-- Location Status -->
+    <div class="location-status">
+        <span class="location-dot inactive" id="locationDot"></span>
+        <span id="locationStatus">Getting location...</span>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold mb-0">Nearby Shops</h2>
+            <p class="text-muted mb-0 small">Shops near your location</p>
+        </div>
+        <a href="{% url 'shops:list' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-list me-1"></i>All Shops
+        </a>
+    </div>
+    
+    <!-- Radius Control -->
+    <div class="radius-control">
+        <label for="radiusSlider" class="form-label">
+            <i class="fas fa-circle-dot me-2"></i>Search Radius: <strong><span id="radiusValue">5</span> km</strong>
+        </label>
+        <input type="range" class="form-range" id="radiusSlider" min="1" max="20" value="5" step="1">
+    </div>
+    
+    <!-- Loading -->
+    <div id="loading" class="text-center py-5">
+        <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+        <p>Finding nearby shops...</p>
+    </div>
+    
+    <!-- No Shops -->
+    <div id="noShops" class="text-center py-5" style="display:none;">
+        <i class="fas fa-shop fa-3x text-muted mb-3"></i>
+        <h5>No shops found nearby</h5>
+        <p class="text-muted">Try increasing the search radius</p>
+    </div>
+    
+    <!-- Shops List -->
+    <div id="shopsList"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentLat = null;
+let currentLon = null;
+let trackingInterval = null;
+
+// Start location tracking when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    startLocationTracking();
+    
+    // Radius slider
+    document.getElementById('radiusSlider').addEventListener('input', function(e) {
+        document.getElementById('radiusValue').textContent = e.target.value;
+    });
+    
+    document.getElementById('radiusSlider').addEventListener('change', function() {
+        if (currentLat && currentLon) {
+            loadNearbyShops();
+        }
+    });
+});
+
+function startLocationTracking() {
+    if (!navigator.geolocation) {
+        updateLocationStatus('Geolocation not supported', false);
+        return;
+    }
+    
+    // Get initial location
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            currentLat = position.coords.latitude;
+            currentLon = position.coords.longitude;
+            
+            updateLocationStatus('Location active', true);
+            trackLocation(position);
+            loadNearbyShops();
+            
+            // Track location every 5 minutes
+            trackingInterval = setInterval(() => {
+                navigator.geolocation.getCurrentPosition(trackLocation);
+            }, 5 * 60 * 1000);
+        },
+        function(error) {
+            updateLocationStatus('Location access denied', false);
+            console.error('Location error:', error);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+    
+    // Watch position for continuous updates
+    navigator.geolocation.watchPosition(
+        function(position) {
+            currentLat = position.coords.latitude;
+            currentLon = position.coords.longitude;
+            trackLocation(position);
+        },
+        function(error) {
+            console.error('Watch position error:', error);
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 30000
+        }
+    );
+}
+
+function trackLocation(position) {
+    const data = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        battery: navigator.getBattery ? null : null  // Battery API if needed
+    };
+    
+    fetch('{% url "shops:track_location" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Location tracked:', data);
+    })
+    .catch(error => {
+        console.error('Error tracking location:', error);
+    });
+}
+
+function updateLocationStatus(message, isActive) {
+    const dot = document.getElementById('locationDot');
+    const status = document.getElementById('locationStatus');
+    
+    status.textContent = message;
+    dot.className = 'location-dot ' + (isActive ? 'active' : 'inactive');
+}
+
+function loadNearbyShops() {
+    const radius = document.getElementById('radiusSlider').value;
+    
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('noShops').style.display = 'none';
+    document.getElementById('shopsList').innerHTML = '';
+    
+    fetch(`{% url "shops:nearby_shops" %}?lat=${currentLat}&lon=${currentLon}&radius=${radius}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            
+            if (data.shops && data.shops.length > 0) {
+                displayShops(data.shops);
+            } else {
+                document.getElementById('noShops').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading shops:', error);
+            document.getElementById('loading').style.display = 'none';
+            alert('Error loading nearby shops');
+        });
+}
+
+function displayShops(shops) {
+    const container = document.getElementById('shopsList');
+    container.innerHTML = '';
+    
+    shops.forEach(shop => {
+        const card = `
+            <div class="shop-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">${shop.shop_name}</h6>
+                        <small class="text-muted">${shop.shop_code}</small>
+                    </div>
+                    <span class="distance-badge">
+                        <i class="fas fa-location-arrow me-1"></i>${shop.distance_km} km
+                    </span>
+                </div>
+                
+                <div class="mb-2">
+                    <small class="text-muted d-block">
+                        <i class="fas fa-user me-1"></i>${shop.owner_name}
+                    </small>
+                    <small class="text-muted d-block">
+                        <i class="fas fa-map-marker-alt me-1"></i>${shop.address}, ${shop.city}
+                    </small>
+                    <small class="text-muted d-block">
+                        <i class="fas fa-phone me-1"></i>
+                        <a href="tel:${shop.phone_number}">${shop.phone_number}</a>
+                    </small>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <a href="${shop.url}" class="btn btn-sm btn-outline-primary flex-grow-1">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                    <a href="/sales/create/?shop=${shop.id}" class="btn btn-sm btn-primary flex-grow-1">
+                        <i class="fas fa-file-invoice me-1"></i>Create Bill
+                    </a>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}" 
+                       target="_blank" class="btn btn-sm btn-success">
+                        <i class="fas fa-directions me-1"></i>
+                    </a>
+                </div>
+            </div>
+        `;
+        container.innerHTML += card;
+    });
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+    if (trackingInterval) {
+        clearInterval(trackingInterval);
+    }
+});
+</script>
+{% endblock %}

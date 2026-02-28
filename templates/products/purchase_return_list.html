@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Purchase Returns - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Page Background */
+    body {
+        background-color: #f8f9fa;
+    }
+    
+    /* Header Section */
+    .page-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 2rem 0;
+        margin: -1.5rem -1.5rem 2rem -1.5rem;
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.2);
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .page-subtitle {
+        opacity: 0.9;
+        margin: 0.5rem 0 0 0;
+        font-size: 0.95rem;
+    }
+    
+    /* Enhanced Stats Dashboard */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
+        border-radius: 50%;
+        transform: translate(40%, -40%);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon.red { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .stat-icon.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+    .stat-icon.yellow { background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); color: #2d3436; }
+    .stat-icon.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .stat-icon.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+    
+    .stat-value {
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0.5rem 0 0.25rem 0;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    
+    /* Filter Panel */
+    .filter-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    
+    .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Return Cards */
+    .return-card {
+        background: white;
+        border-radius: 16px;
+        padding: 0;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        overflow: hidden;
+    }
+    
+    .return-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        border-color: #f5576c;
+    }
+    
+    .return-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: linear-gradient(to right, #fff5f7 0%, #ffffff 100%);
+    }
+    
+    .return-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #f5576c;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: color 0.2s;
+    }
+    
+    .return-number:hover {
+        color: #f093fb;
+    }
+    
+    .company-name {
+        font-size: 0.95rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .badge-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: flex-start;
+    }
+    
+    @media (min-width: 992px) {
+        .text-lg-end .badge-group {
+            justify-content: flex-end;
+        }
+    }
+    
+    .badge {
+        padding: 0.4rem 0.9rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+    }
+    
+    .badge-status-pending { background: #fef3c7; color: #92400e; }
+    .badge-status-approved { background: #dbeafe; color: #1e40af; }
+    .badge-status-sent { background: #e0e7ff; color: #3730a3; }
+    .badge-status-sent_to_supplier { background: #e0e7ff; color: #3730a3; }
+    .badge-status-company_approved { background: #ddd6fe; color: #5b21b6; }
+    .badge-status-credited { background: #d1fae5; color: #065f46; }
+    .badge-status-settled { background: #d1fae5; color: #065f46; }
+    .badge-status-rejected { background: #fee2e2; color: #991b1b; }
+    
+    .badge-type-expired { background: #fef3c7; color: #92400e; }
+    .badge-type-damaged { background: #fee2e2; color: #991b1b; }
+    
+    /* Info Grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .info-value.amount {
+        font-family: 'Courier New', monospace;
+        font-size: 1.05rem;
+        color: #f5576c;
+    }
+    
+    /* Progress Bar */
+    .workflow-progress {
+        padding: 1rem 1.5rem;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .progress-step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+    }
+    
+    .progress-step.active {
+        color: #059669;
+        font-weight: 600;
+    }
+    
+    .progress-bar-container {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    /* Actions Footer */
+    .return-actions {
+        padding: 1.25rem 1.5rem;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    .btn {
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        border: none;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .btn-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+    }
+    
+    .btn-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .btn-outline-secondary {
+        border: 2px solid #e5e7eb;
+        color: #6b7280;
+        background: white;
+    }
+    
+    .btn-outline-secondary:hover {
+        border-color: #f5576c;
+        color: #f5576c;
+        background: #fff5f7;
+    }
+    
+    /* Pagination */
+    .pagination-wrapper {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-top: 2rem;
+    }
+    
+    .pagination {
+        margin: 0;
+    }
+    
+    .page-link {
+        border-radius: 8px;
+        margin: 0 0.25rem;
+        border: none;
+        color: #f5576c;
+        font-weight: 600;
+        padding: 0.5rem 0.9rem;
+    }
+    
+    .page-link:hover {
+        background: #fff5f7;
+        color: #f093fb;
+    }
+    
+    .page-item.active .page-link {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        background: white;
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state-icon {
+        font-size: 5rem;
+        color: #e5e7eb;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state-text {
+        font-size: 1.1rem;
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+    
+    /* FAB Button */
+    .fab-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+        text-decoration: none;
+    }
+    
+    .fab-button:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 8px 28px rgba(245, 87, 108, 0.5);
+        color: white;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .page-header {
+            margin: -1rem -1rem 1.5rem -1rem;
+            padding: 1.5rem 1rem;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .stat-card {
+            padding: 1.25rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .fab-button {
+            width: 55px;
+            height: 55px;
+            font-size: 1.5rem;
+            bottom: 1.5rem;
+            right: 1.5rem;
+        }
+    }
+    
+    /* Print Styles */
+    @media print {
+        .filter-panel, .fab-button, .btn, .page-header {
+            display: none !important;
+        }
+        
+        .return-card {
+            page-break-inside: avoid;
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4" style="margin-top: -1.5rem;">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="page-title">
+                        <i class="fas fa-undo"></i>
+                        Purchase Returns
+                    </h1>
+                    <p class="page-subtitle">Returns to Suppliers</p>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <a href="{% url 'products:create_purchase_return' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Return
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Enhanced Stats Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-undo"></i>
+                </div>
+                <div class="stat-value">{{ stats.total_returns|intcomma }}</div>
+                <div class="stat-label">Total Returns</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-hourglass-end"></i>
+                </div>
+                <div class="stat-value">{{ stats.expired_count }}</div>
+                <div class="stat-label">Expired Items</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon yellow">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-value">{{ stats.damaged_count }}</div>
+                <div class="stat-label">Damaged Items</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value">{{ stats.pending }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-value">{{ stats.settled_count }}</div>
+                <div class="stat-label">Settled</div>
+            </div>
+        </div>
+
+        <!-- Filter Panel -->
+        <div class="filter-panel">
+            <div class="filter-header">
+                <h5 class="filter-title">
+                    <i class="fas fa-filter"></i>
+                    Search & Filters
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div class="collapse show" id="filterPanel">
+                <form method="get">
+                    <div class="row g-3">
+                        <!-- Search -->
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-search me-1"></i>Search
+                            </label>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="PR number, Company, Reason..."
+                                   value="{{ request.GET.search }}">
+                        </div>
+                        
+                        <!-- Date Range -->
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label fw-bold">From Date</label>
+                            <input type="date" name="from_date" class="form-control" 
+                                   value="{{ request.GET.from_date }}">
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label fw-bold">To Date</label>
+                            <input type="date" name="to_date" class="form-control" 
+                                   value="{{ request.GET.to_date }}">
+                        </div>
+                        
+                        <!-- Quick Date Filters -->
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-bold">Quick Filters</label>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('today')">Today</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('week')">Week</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDateRange('month')">Month</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Filters Row 2 -->
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label fw-bold">Return Type</label>
+                            <select name="return_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="expired" {% if request.GET.return_type == 'expired' %}selected{% endif %}>Expired</option>
+                                <option value="damaged" {% if request.GET.return_type == 'damaged' %}selected{% endif %}>Damaged</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="pending" {% if request.GET.status == 'unsettled' %}selected{% endif %}>Pending</option>
+                                <option value="sent_to_supplier" {% if request.GET.status == 'sent_to_supplier' %}selected{% endif %}>Sent</option>
+                                <option value="company_approved" {% if request.GET.status == 'company_approved' %}selected{% endif %}>Approved</option>
+                                <option value="settled" {% if request.GET.status == 'settled' %}selected{% endif %}>Settled</option>
+                                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3 col-lg-3">
+                            <label class="form-label fw-bold">Company</label>
+                            <select name="company" class="form-select">
+                                <option value="">All Companies</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}" {% if request.GET.company|stringformat:"s" == company.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ company.company_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label fw-bold">Sort By</label>
+                            <select name="sort" class="form-select">
+                                <option value="-return_date" {% if request.GET.sort == '-return_date' or not request.GET.sort %}selected{% endif %}>Latest</option>
+                                <option value="return_date" {% if request.GET.sort == 'return_date' %}selected{% endif %}>Oldest</option>
+                                <option value="-total_amount" {% if request.GET.sort == '-total_amount' %}selected{% endif %}>High Value</option>
+                                <option value="status" {% if request.GET.sort == 'status' %}selected{% endif %}>Status</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 col-lg-1">
+                            <label class="form-label fw-bold">Show</label>
+                            <select name="per_page" class="form-select">
+                                <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20</option>
+                                <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+                                <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-2"></i>Apply Filters
+                                </button>
+                                <a href="{% url 'products:purchase_return_list' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo me-2"></i>Reset
+                                </a>
+                                <button type="submit" name="export" value="excel" class="btn btn-success ms-auto">
+                                    <i class="fas fa-file-excel me-2"></i>Export Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Returns List -->
+        {% if returns %}
+            {% for return in returns %}
+            <div class="return-card">
+                <!-- Header -->
+                <div class="return-header">
+                    <div class="row align-items-center">
+                        <div class="col-lg-6">
+                            <a href="{% url 'products:purchase_return_detail' return.pk %}" class="return-number">
+                                <i class="fas fa-undo-alt"></i>
+                                {{ return.pr_number }}
+                            </a>
+                            <div class="company-name">
+                                <i class="fas fa-building"></i>
+                                {{ return.company.company_name }}
+                            </div>
+                        </div>
+                        <div class="col-lg-6 text-lg-end mt-3 mt-lg-0">
+                            <div class="badge-group">
+                                <span class="badge badge-status-{{ return.status }}">
+                                    {{ return.get_status_display }}
+                                </span>
+                                <span class="badge badge-type-{{ return.return_type }}">
+                                    <i class="fas {% if return.return_type == 'expired' %}fa-hourglass-end{% else %}fa-exclamation-triangle{% endif %} me-1"></i>
+                                    {{ return.get_return_type_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Workflow Progress -->
+                {% if return.status != 'rejected' %}
+                <div class="workflow-progress">
+                    <div class="progress-steps">
+                        <span class="progress-step active">
+                            <i class="fas fa-check-circle"></i> Created
+                        </span>
+                        <span class="progress-step {% if return.status == 'sent_to_supplier' or return.status == 'company_approved' or return.status == 'settled' %}active{% endif %}">
+                            <i class="fas fa-{% if return.status == 'sent_to_supplier' or return.status == 'company_approved' or return.status == 'settled' %}check{% else %}circle{% endif %}-circle"></i> Sent
+                        </span>
+                        <span class="progress-step {% if return.status == 'company_approved' or return.status == 'settled' %}active{% endif %}">
+                            <i class="fas fa-{% if return.status == 'company_approved' or return.status == 'settled' %}check{% else %}circle{% endif %}-circle"></i> Approved
+                        </span>
+                        <span class="progress-step {% if return.status == 'settled' %}active{% endif %}">
+                            <i class="fas fa-{% if return.status == 'settled' %}check{% else %}circle{% endif %}-circle"></i> Settled
+                        </span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: {% if return.status == 'unsettled' %}25{% elif return.status == 'sent_to_supplier' %}50{% elif return.status == 'company_approved' %}75{% elif return.status == 'settled' %}100{% endif %}%;"></div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Info Grid -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">
+                            <i class="fas fa-calendar"></i>Return Date
+                        </div>
+                        <div class="info-value">{{ return.return_date|date:"d M Y" }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">
+                            <i class="fas fa-comment"></i>Reason
+                        </div>
+                        <div class="info-value">{{ return.get_return_reason_display }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">
+                            <i class="fas fa-coins"></i>Total Amount
+                        </div>
+                        <div class="info-value amount">Rs. {{ return.total_amount|floatformat:2|intcomma }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">
+                            <i class="fas fa-user"></i>Created By
+                        </div>
+                        <div class="info-value">{{ return.created_by.get_full_name|default:return.created_by.username }}</div>
+                    </div>
+                    
+                    {% if return.approved_by %}
+                    <div class="info-item">
+                        <div class="info-label">
+                            <i class="fas fa-user-check"></i>Approved By
+                        </div>
+                        <div class="info-value">{{ return.approved_by.get_full_name|default:return.approved_by.username }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if return.detailed_reason %}
+                <div class="px-3 pb-2">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>{{ return.detailed_reason }}</small>
+                </div>
+                {% endif %}
+                
+                <!-- Actions -->
+                <div class="return-actions">
+                    <a href="{% url 'products:purchase_return_detail' return.pk %}" class="btn btn-info">
+                        <i class="fas fa-eye me-2"></i>View Details
+                    </a>
+                    
+                    {% if return.status == 'unsettled' %}
+                    <a href="{% url 'products:approve_purchase_return' return.pk %}" 
+                       class="btn btn-success"
+                       onclick="return confirm('Send to supplier and reduce stock?')">
+                        <i class="fas fa-shipping-fast me-2"></i>Send to Supplier
+                    </a>
+                    {% elif return.status == 'sent_to_supplier' %}
+                    <a href="{% url 'products:record_company_approval' return.pk %}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-check-circle me-2"></i>Record Approval
+                    </a>
+                    {% elif return.status == 'company_approved' %}
+                    <a href="{% url 'products:update_return_settlement' return.pk %}" 
+                       class="btn btn-warning">
+                        <i class="fas fa-handshake me-2"></i>Record Settlement
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary ms-auto" onclick="window.print()">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="pagination-wrapper">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-3">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <p class="text-center text-muted mb-0">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} returns
+                    </p>
+                </nav>
+            </div>
+            {% endif %}
+            
+        {% else %}
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-undo"></i>
+                </div>
+                <div class="empty-state-text">
+                    {% if request.GET.search or request.GET.status or request.GET.company %}
+                        No returns match your search criteria.
+                    {% else %}
+                        No purchase returns yet. Create your first return!
+                    {% endif %}
+                </div>
+                <a href="{% url 'products:create_purchase_return' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus-circle me-2"></i>Create First Return
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- FAB Button -->
+<a href="{% url 'products:create_purchase_return' %}" class="fab-button" title="Create Purchase Return">
+    <i class="fas fa-plus"></i>
+</a>
+
+<script>
+function setDateRange(range) {
+    const today = new Date();
+    let fromDate = new Date();
+    let toDate = new Date();
+    
+    if (range === 'today') {
+        fromDate = today;
+        toDate = today;
+    } else if (range === 'week') {
+        fromDate.setDate(today.getDate() - today.getDay());
+    } else if (range === 'month') {
+        fromDate.setDate(1);
+    }
+    
+    document.querySelector('input[name="from_date"]').value = fromDate.toISOString().split('T')[0];
+    document.querySelector('input[name="to_date"]').value = toDate.toISOString().split('T')[0];
+}
+</script>
+{% endblock %}

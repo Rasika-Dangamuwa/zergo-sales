@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Cancel Payment - {{ settlement.payment_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .cancel-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .warning-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .warning-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .warning-header h2 {
+        margin: 0 0 10px 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+
+    .warning-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 1.05rem;
+    }
+
+    .card-body {
+        padding: 30px;
+    }
+
+    .payment-details {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #dc3545;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .detail-label i {
+        width: 20px;
+        text-align: center;
+    }
+
+    .detail-value {
+        color: #212529;
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .impact-section {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .impact-section h6 {
+        color: #856404;
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .impact-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(133, 100, 4, 0.1);
+    }
+
+    .impact-item:last-child {
+        border-bottom: none;
+    }
+
+    .impact-label {
+        color: #856404;
+        font-weight: 600;
+    }
+
+    .impact-value {
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .impact-value.increase {
+        color: #dc3545;
+    }
+
+    .impact-value.decrease {
+        color: #28a745;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .form-group label .required {
+        color: #dc3545;
+        margin-left: 4px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .warning-list {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px 15px 15px 35px;
+        margin-bottom: 25px;
+    }
+
+    .warning-list strong {
+        color: #721c24;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .warning-list ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .warning-list li {
+        color: #721c24;
+        padding: 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .warning-list li::before {
+        content: "•";
+        color: #dc3545;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: space-between;
+        margin-top: 30px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 14px 20px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .btn-cancel-payment {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+    }
+
+    .btn-cancel-payment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    }
+
+    .btn-go-back {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-go-back:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .container {
+            padding: 10px;
+        }
+
+        .warning-header {
+            padding: 20px;
+        }
+
+        .warning-icon {
+            font-size: 48px;
+        }
+
+        .warning-header h2 {
+            font-size: 1.4rem;
+        }
+
+        .card-body {
+            padding: 20px 15px;
+        }
+
+        .action-buttons {
+            flex-direction: column-reverse;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .detail-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .detail-value {
+            text-align: left;
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="cancel-card">
+        <div class="warning-header">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2>Cancel Payment Confirmation</h2>
+            <p>Please review the details before proceeding</p>
+        </div>
+
+        <div class="card-body">
+            <!-- Payment Details -->
+            <div class="payment-details">
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-receipt"></i> Payment Number
+                    </span>
+                    <span class="detail-value">{{ settlement.payment_number }}</span>
+                </div>
+                
+                {% if settlement.bill %}
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-file-invoice"></i> Bill Number
+                    </span>
+                    <span class="detail-value">
+                        <a href="{% url 'sales:detail' settlement.bill.pk %}" style="color: #667eea; text-decoration: none;">
+                            {{ settlement.bill.bill_number }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                
+                {% if settlement.shop %}
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-store"></i> Shop
+                    </span>
+                    <span class="detail-value">{{ settlement.shop.shop_name }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-money-bill-wave"></i> Amount
+                    </span>
+                    <span class="detail-value" style="color: #dc3545; font-size: 1.2rem;">
+                        Rs. {{ settlement.amount|floatformat:2|intcomma }}
+                    </span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-credit-card"></i> Payment Method
+                    </span>
+                    <span class="detail-value">{{ settlement.get_payment_method_display }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-info-circle"></i> Current Status
+                    </span>
+                    <span class="detail-value">
+                        <span class="badge bg-{{ settlement.status }}">{{ settlement.get_status_display }}</span>
+                    </span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-user"></i> Received By
+                    </span>
+                    <span class="detail-value">{{ settlement.received_by.get_full_name }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">
+                        <i class="fas fa-calendar"></i> Payment Date
+                    </span>
+                    <span class="detail-value">{{ settlement.payment_date|date:"M d, Y - h:i A" }}</span>
+                </div>
+            </div>
+
+            <!-- Impact Section -->
+            {% if settlement.bill %}
+            <div class="impact-section">
+                <h6>
+                    <i class="fas fa-chart-line"></i> What will happen to the bill?
+                </h6>
+                <div class="impact-item">
+                    <span class="impact-label">Current Bill Balance:</span>
+                    <span class="impact-value">Rs. {{ current_bill_balance|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item">
+                    <span class="impact-label">Payment Amount:</span>
+                    <span class="impact-value" style="color: #dc3545;">- Rs. {{ settlement.amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item" style="border-top: 2px solid #856404; margin-top: 10px; padding-top: 15px;">
+                    <span class="impact-label">New Bill Balance:</span>
+                    <span class="impact-value increase">Rs. {{ new_bill_balance|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item">
+                    <span class="impact-label">Balance Increase:</span>
+                    <span class="impact-value increase">
+                        <i class="fas fa-arrow-up"></i> Rs. {{ balance_increase|floatformat:2|intcomma }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Warning List -->
+            <div class="warning-list">
+                <strong><i class="fas fa-exclamation-circle"></i> Important Notice:</strong>
+                <ul>
+                    <li>Payment will be marked as CANCELLED</li>
+                    {% if settlement.bill %}
+                    <li>Bill balance will increase by Rs. {{ settlement.amount|floatformat:2|intcomma }}</li>
+                    <li>Bill payment status may change to Unpaid or Partial</li>
+                    {% endif %}
+                    <li>Cancellation will be recorded with date and user</li>
+                    <li>This action CANNOT be undone</li>
+                </ul>
+            </div>
+
+            <!-- Cancellation Form -->
+            <form method="post" id="cancelForm">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="cancellation_reason">
+                        Cancellation Reason <span class="required">*</span>
+                    </label>
+                    <textarea 
+                        name="cancellation_reason" 
+                        id="cancellation_reason" 
+                        class="form-control" 
+                        placeholder="Please explain why this payment is being cancelled..."
+                        required
+                    ></textarea>
+                    <small class="text-muted">This will be added to payment notes for audit trail.</small>
+                </div>
+
+                <div class="action-buttons">
+                    <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-go-back">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </a>
+                    <button type="submit" class="btn btn-cancel-payment" onclick="return confirmCancellation()">
+                        <i class="fas fa-times-circle"></i> Confirm Cancellation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmCancellation() {
+    const reason = document.getElementById('cancellation_reason').value.trim();
+    
+    if (!reason) {
+        alert('Please provide a cancellation reason.');
+        return false;
+    }
+    
+    const confirmMessage = `Are you absolutely sure you want to cancel this payment?\n\n` +
+                          `Payment: {{ settlement.payment_number }}\n` +
+                          `Amount: Rs. {{ settlement.amount|floatformat:2|intcomma }}\n\n` +
+                          `This action CANNOT be undone!`;
+    
+    return confirm(confirmMessage);
+}
+</script>
+{% endblock %}
+
+
+

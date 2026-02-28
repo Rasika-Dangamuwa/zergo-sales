@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Status Adjustment Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+        h2 {
+            font-size: 1.25rem;
+        }
+        
+        h5 {
+            font-size: 1rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        /* Content area buttons only - exclude navbar */
+        main .btn,
+        .container-fluid:not(.navbar .container-fluid) .btn,
+        .card .btn {
+            font-size: 0.875rem;
+            padding: 0.625rem 1rem;
+            min-height: 48px;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        main .btn:last-child,
+        .card .btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        main .btn-lg,
+        .card .btn-lg {
+            min-height: 50px;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .badge {
+            font-size: 0.75rem !important;
+        }
+        
+        .table {
+            font-size: 0.875rem;
+        }
+        
+        .table td, .table th {
+            padding: 0.5rem 0.25rem;
+        }
+        
+        /* Stack button groups vertically on mobile */
+        main .btn-group-vertical,
+        .card .btn-group-vertical {
+            width: 100%;
+        }
+        
+        main .btn-group-vertical .btn,
+        .card .btn-group-vertical .btn {
+            margin-bottom: 0.75rem;
+            min-height: 48px;
+        }
+        
+        /* Responsive form controls */
+        .form-select, .form-control {
+            font-size: 16px !important; /* Prevent zoom on iOS */
+            min-height: 50px;
+        }
+        
+        textarea.form-control {
+            min-height: 100px;
+        }
+        
+        /* Make cards full width on mobile */
+        .col-md-8, .col-md-6 {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        
+        /* Move approval card to top on mobile */
+        .approval-actions-card {
+            order: -1;
+            margin-bottom: 1rem;
+        }
+        
+        /* Items Table - Transform to Card View */
+        .items-table thead {
+            display: none;
+        }
+        
+        .items-table tbody tr {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            background: white;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .items-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0 !important;
+            border: none !important;
+            text-align: left !important;
+        }
+        
+        .items-table tbody td:before {
+            content: attr(data-label);
+            font-weight: 600;
+            flex-shrink: 0;
+            margin-right: 1rem;
+            color: #6c757d;
+            min-width: 45%;
+        }
+        
+        .items-table tbody td:last-child {
+            margin-top: 0.5rem;
+            padding-top: 0.75rem !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+        
+        /* Multi-column layout for stock changes */
+        .items-table tbody td.stock-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .items-table tbody td.stock-group:before {
+            margin-bottom: 0.5rem;
+        }
+        
+        .items-table tbody td .d-flex {
+            width: 100%;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+        
+        .items-table tbody td .text-muted {
+            font-size: 0.75rem;
+        }
+        
+        .items-table tfoot {
+            display: block !important;
+            background: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+        }
+        
+        .items-table tfoot tr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .items-table tfoot th {
+            border: none !important;
+            padding: 0 !important;
+        }
+        
+        /* Status badge wrapping */
+        .status-badge {
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        
+        /* Row spacing */
+        .row.g-3 {
+            row-gap: 1.25rem !important;
+        }
+        
+        /* Single column stock impact */
+        .stock-impact-cols > div {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 col-md-8 mb-2 mb-md-0">
+            <h2><i class="fas fa-info-circle"></i> Status Adjustment Details</h2>
+        </div>
+        <div class="col-12 col-md-4 text-md-end">
+            <a href="{% url 'products:product_status_history' %}" class="btn btn-secondary w-100 w-md-auto">
+                <i class="fas fa-arrow-left"></i> Back to History
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <!-- Adjustment Info -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Adjustment Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <strong>Adjustment Number:</strong>
+                            <p class="mt-1">
+                                <span class="badge bg-dark fs-6">{{ adjustment.adjustment_number }}</span>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Approval Status:</strong>
+                            <div class="mt-1">
+                                <span class="badge 
+                                    {% if adjustment.approval_status == 'pending' %}bg-warning text-dark
+                                    {% elif adjustment.approval_status == 'approved' %}bg-success
+                                    {% elif adjustment.approval_status == 'rejected' %}bg-danger
+                                    {% endif %} fs-6">
+                                    {{ adjustment.get_approval_status_display }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Status Type:</strong>
+                            <div class="mt-1">
+                                <span class="badge 
+                                    {% if adjustment.status_type == 'damaged' %}bg-danger
+                                    {% elif adjustment.status_type == 'expired' %}bg-warning text-dark
+                                    {% elif adjustment.status_type == 'used' %}bg-secondary
+                                    {% elif adjustment.status_type == 'lost' %}bg-dark
+                                    {% elif adjustment.status_type == 'sample' %}bg-info
+                                    {% else %}bg-secondary{% endif %} fs-6">
+                                    {{ adjustment.get_status_type_display }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Total Items:</strong>
+                            <div class="mt-1">
+                                <span class="badge bg-primary fs-6">{{ adjustment.total_items }} items ({{ adjustment.total_quantity }} units)</span>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <strong>Reason:</strong>
+                            <p class="mt-1">{{ adjustment.reason }}</p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Stock Action:</strong>
+                            <div class="mt-1">
+                                <span class="badge 
+                                    {% if adjustment.stock_action == 'move_to_non_resaleable' %}bg-warning text-dark
+                                    {% elif adjustment.stock_action == 'reduce_completely' %}bg-danger
+                                    {% elif adjustment.stock_action == 'record_only' %}bg-info
+                                    {% endif %} fs-6">
+                                    {{ adjustment.get_stock_action_display }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Reference Number:</strong>
+                            <p class="mt-1">
+                                {% if adjustment.reference_number %}
+                                    {{ adjustment.reference_number }}
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Adjustment Date:</strong>
+                            <p class="mt-1">
+                                {{ adjustment.adjustment_date|date:"F d, Y" }}<br>
+                                <small class="text-muted">{{ adjustment.adjustment_date|date:"h:i A" }}</small>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Adjusted By:</strong>
+                            <p class="mt-1">{{ adjustment.adjusted_by.get_full_name|default:adjustment.adjusted_by.username }}</p>
+                        </div>
+
+                        {% if adjustment.approval_status != 'pending' %}
+                        <div class="col-md-6">
+                            <strong>{% if adjustment.approval_status == 'approved' %}Approved{% else %}Rejected{% endif %} By:</strong>
+                            <p class="mt-1">
+                                {% if adjustment.approved_by %}
+                                    {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}<br>
+                                    <small class="text-muted">{{ adjustment.approved_at|date:"F d, Y h:i A" }}</small>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items List -->
+            {% if adjustment.items.exists %}
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Adjustment Items</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 items-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product Code</th>
+                                    <th>Product Name</th>
+                                    <th class="text-end">Quantity</th>
+                                    {% if adjustment.approval_status == 'approved' and adjustment.stock_updated %}
+                                    <th class="text-end">Resaleable Before</th>
+                                    <th class="text-end">Resaleable After</th>
+                                    {% if adjustment.stock_action == 'move_to_non_resaleable' %}
+                                    <th class="text-end">Non-Resaleable Before</th>
+                                    <th class="text-end">Non-Resaleable After</th>
+                                    {% endif %}
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in adjustment.items.all %}
+                                <tr>
+                                    <td data-label="Product Code">{{ item.product.product_code }}</td>
+                                    <td data-label="Product Name">{{ item.product.product_name }}</td>
+                                    <td data-label="Quantity" class="text-end"><strong>{{ item.quantity }}</strong></td>
+                                    {% if adjustment.approval_status == 'approved' and adjustment.stock_updated %}
+                                    <td data-label="Resaleable Before" class="text-end">{{ item.previous_resaleable }}</td>
+                                    <td data-label="Resaleable After" class="text-end"><strong>{{ item.new_resaleable }}</strong></td>
+                                    {% if adjustment.stock_action == 'move_to_non_resaleable' %}
+                                    <td data-label="Non-Resaleable Before" class="text-end">{{ item.previous_non_resaleable }}</td>
+                                    <td data-label="Non-Resaleable After" class="text-end"><strong class="text-warning">{{ item.new_non_resaleable }}</strong></td>
+                                    {% endif %}
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="2" class="text-end">Total:</th>
+                                    <th class="text-end">{{ adjustment.total_quantity }}</th>
+                                    {% if adjustment.approval_status == 'approved' and adjustment.stock_updated %}
+                                        {% if adjustment.stock_action == 'move_to_non_resaleable' %}
+                                        <th colspan="4"></th>
+                                        {% else %}
+                                        <th colspan="2"></th>
+                                        {% endif %}
+                                    {% endif %}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% elif adjustment.product %}
+            <!-- Legacy single item display -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Product Information</h5>
+                </div>
+                <div class="card-body">
+                    <h4>{{ adjustment.product.product_name }}</h4>
+                    <p class="text-muted">{{ adjustment.product.product_code }}</p>
+                    <p class="mt-2"><strong>Quantity:</strong> <span class="badge bg-primary fs-6">{{ adjustment.quantity }} units</span></p>
+                </div>
+            </div>
+            
+            <!-- Stock Impact for single item -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Stock Impact</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Stock Before</h6>
+                            <h3 class="text-secondary">{{ adjustment.previous_stock }}</h3>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Change</h6>
+                            <h3 class="{% if adjustment.stock_updated %}text-danger{% else %}text-muted{% endif %}">
+                                {% if adjustment.stock_updated %}-{% endif %}{{ adjustment.quantity }}
+                            </h3>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Stock After</h6>
+                            <h3 class="{% if adjustment.stock_updated %}text-success{% else %}text-muted{% endif %}">
+                                {{ adjustment.new_stock }}
+                            </h3>
+                        </div>
+                    </div>
+
+                    <div class="alert {% if adjustment.stock_updated %}alert-success{% else %}alert-warning{% endif %} mt-3 mb-0">
+                        <i class="fas {% if adjustment.stock_updated %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                        {% if adjustment.stock_updated %}
+                            Stock was deducted when this adjustment was approved.
+                        {% else %}
+                            {% if adjustment.approval_status == 'unsettled' %}
+                                Stock will be deducted after distributor approval.
+                            {% elif adjustment.approval_status == 'rejected' %}
+                                Stock was NOT updated. This adjustment was rejected.
+                            {% else %}
+                                Stock was NOT updated. This was a record-only adjustment.
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Movement -->
+            {% if stock_movement %}
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Related Stock Movement</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Reference:</strong>
+                            <p>{{ stock_movement.reference_number }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Movement Type:</strong>
+                            <p>{{ stock_movement.get_movement_type_display }}</p>
+                        </div>
+                        <div class="col-12">
+                            <strong>Notes:</strong>
+                            <p>{{ stock_movement.notes }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <!-- Approval Actions -->
+            {% if adjustment.approval_status == 'pending' and user.user_type in 'admin,office' %}
+            <div class="card mb-3 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Approval Required</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">This adjustment is pending your approval.</p>
+                    <form method="post" action="{% url 'products:approve_status_adjustment' adjustment.id %}" class="mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Approve this adjustment? Stock will be deducted.')">
+                            <i class="fas fa-check me-2"></i>Approve Adjustment
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'products:reject_status_adjustment' adjustment.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Reject this adjustment? No stock changes will occur.')">
+                            <i class="fas fa-times me-2"></i>Reject Adjustment
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if adjustment.approval_status == 'pending' %}
+                    <a href="{% url 'products:product_status_delete' adjustment.id %}" 
+                       class="btn btn-danger w-100 mb-2"
+                       onclick="return confirm('Are you sure you want to delete this pending adjustment?')">
+                        <i class="fas fa-trash me-2"></i>Delete Record
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'products:product_status_history' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-list me-2"></i>View All Records
+                    </a>
+                </div>
+            </div>
+
+            <!-- Product Info (Only for legacy single-item adjustments) -->
+            {% if adjustment.product %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Product Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong><br>{{ adjustment.product.product_name }}</p>
+                    <p><strong>Code:</strong><br>{{ adjustment.product.product_code }}</p>
+                    <p><strong>Size:</strong><br>{{ adjustment.product.size }}</p>
+                    <p><strong>Company:</strong><br>{{ adjustment.product.company.company_name }}</p>
+                    <p><strong>Current Stock:</strong><br>
+                        <span class="badge bg-info">{{ adjustment.product.quantity_in_stock }}</span>
+                    </p>
+                    <a href="{% url 'products:detail' adjustment.product.id %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-eye me-2"></i>View Product
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

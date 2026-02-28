@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Business Settings - Zergo Distributors{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .info-row {
+        display: flex;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        width: 200px;
+        flex-shrink: 0;
+    }
+    
+    .info-value {
+        color: #212529;
+        flex-grow: 1;
+    }
+    
+    .logo-preview {
+        max-width: 300px;
+        max-height: 150px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+    
+    .badge-active {
+        background-color: #28a745;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    
+    .badge-primary-account {
+        background-color: #007bff;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0"><i class="fas fa-building me-2"></i>Business Settings</h1>
+                <p class="mb-0 mt-2 opacity-75">Manage your distributor business profile and settings</p>
+            </div>
+            <div>
+                <a href="{% url 'business:edit_profile' %}" class="btn btn-light">
+                    <i class="fas fa-edit me-2"></i>Edit Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Information -->
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-info-circle me-2"></i>Business Information</h2>
+        
+        <div class="info-row">
+            <div class="info-label">Business Name:</div>
+            <div class="info-value"><strong>{{ profile.business_name }}</strong></div>
+        </div>
+        
+        {% if profile.trade_name %}
+        <div class="info-row">
+            <div class="info-label">Trade Name:</div>
+            <div class="info-value">{{ profile.trade_name }}</div>
+        </div>
+        {% endif %}
+        
+        {% if profile.tagline %}
+        <div class="info-row">
+            <div class="info-label">Tagline:</div>
+            <div class="info-value"><em>"{{ profile.tagline }}"</em></div>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <div class="info-label">Business Type:</div>
+            <div class="info-value">{{ profile.get_business_type_display }}</div>
+        </div>
+        
+        {% if profile.established_date %}
+        <div class="info-row">
+            <div class="info-label">Established:</div>
+            <div class="info-value">{{ profile.established_date|date:"F d, Y" }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <div class="info-label">Status:</div>
+            <div class="info-value">
+                {% if profile.is_active %}
+                <span class="badge-active"><i class="fas fa-check-circle me-1"></i>ACTIVE</span>
+                {% else %}
+                <span class="badge badge-secondary">Inactive</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration & Legal -->
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-file-contract me-2"></i>Registration & Legal Information</h2>
+        
+        {% if profile.business_registration_number %}
+        <div class="info-row">
+            <div class="info-label">Business Registration:</div>
+            <div class="info-value">{{ profile.business_registration_number }}</div>
+        </div>
+        {% endif %}
+        
+        {% if profile.tax_id %}
+        <div class="info-row">
+            <div class="info-label">Tax ID (TIN):</div>
+            <div class="info-value">{{ profile.tax_id }}</div>
+        </div>
+        {% endif %}
+        
+        {% if profile.vat_number %}
+        <div class="info-row">
+            <div class="info-label">VAT Number:</div>
+            <div class="info-value">{{ profile.vat_number }}</div>
+        </div>
+        {% endif %}
+        
+        {% if profile.svat_number %}
+        <div class="info-row">
+            <div class="info-label">SVAT Number:</div>
+            <div class="info-value">{{ profile.svat_number }}</div>
+        </div>
+        {% endif %}
+        
+        {% if not profile.business_registration_number and not profile.tax_id and not profile.vat_number %}
+        <p class="text-muted text-center py-3"><em>No registration details configured yet</em></p>
+        {% endif %}
+    </div>
+
+    <!-- Contact Information -->
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-phone me-2"></i>Contact Information</h2>
+        
+        <div class="info-row">
+            <div class="info-label">Primary Phone:</div>
+            <div class="info-value"><i class="fas fa-phone me-2"></i>{{ profile.primary_phone }}</div>
+        </div>
+        
+        {% if profile.secondary_phone %}
+        <div class="info-row">
+            <div class="info-label">Secondary Phone:</div>
+            <div class="info-value"><i class="fas fa-phone me-2"></i>{{ profile.secondary_phone }}</div>
+        </div>
+        {% endif %}
+        
+        {% if profile.mobile_phone %}
+        <div class="info-row">
+            <div class="info-label">Mobile:</div>
+            <div class="info-value"><i class="fas fa-mobile-alt me-2"></i>{{ profile.mobile_phone }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <div class="info-label">Primary Email:</div>
+            <div class="info-value"><i class="fas fa-envelope me-2"></i><a href="mailto:{{ profile.primary_email }}">{{ profile.primary_email }}</a></div>
+        </div>
+        
+        {% if profile.support_email %}
+        <div class="info-row">
+            <div class="info-label">Support Email:</div>
+            <div class="info-value"><i class="fas fa-envelope me-2"></i><a href="mailto:{{ profile.support_email }}">{{ profile.support_email }}</a></div>
+        </div>
+        {% endif %}
+        
+        {% if profile.website %}
+        <div class="info-row">
+            <div class="info-label">Website:</div>
+            <div class="info-value"><i class="fas fa-globe me-2"></i><a href="{{ profile.website }}" target="_blank">{{ profile.website }}</a></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Primary Address -->
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-map-marker-alt me-2"></i>Primary Address</h2>
+        
+        <div class="info-row">
+            <div class="info-label">Address:</div>
+            <div class="info-value">{{ profile.get_full_address }}</div>
+        </div>
+    </div>
+
+    <!-- Bank Accounts -->
+    <div class="info-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="section-title mb-0"><i class="fas fa-university me-2"></i>Bank Accounts</h2>
+            <a href="{% url 'business:add_bank_account' %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Account
+            </a>
+        </div>
+        
+        {% if bank_accounts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Bank Name</th>
+                        <th>Branch</th>
+                        <th>Account Number</th>
+                        <th>Account Type</th>
+                        <th>Currency</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in bank_accounts %}
+                    <tr>
+                        <td>
+                            <strong>{{ account.bank_name }}</strong>
+                            {% if account.is_primary %}
+                            <span class="badge-primary-account ms-2">PRIMARY</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ account.branch_name }}</td>
+                        <td><code>{{ account.account_number }}</code></td>
+                        <td>{{ account.get_account_type_display }}</td>
+                        <td>{{ account.currency }}</td>
+                        <td>
+                            {% if account.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3"><em>No bank accounts configured yet</em></p>
+        {% endif %}
+    </div>
+
+    <!-- Additional Addresses -->
+    <div class="info-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="section-title mb-0"><i class="fas fa-map-marked-alt me-2"></i>Additional Locations</h2>
+            <a href="{% url 'business:add_address' %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Location
+            </a>
+        </div>
+        
+        {% if addresses %}
+        <div class="row">
+            {% for address in addresses %}
+            <div class="col-md-6 mb-3">
+                <div class="border rounded p-3">
+                    <h6 class="text-primary">{{ address.location_name }}</h6>
+                    <p class="mb-2"><span class="badge bg-info">{{ address.get_address_type_display }}</span></p>
+                    <p class="mb-1 small text-muted">{{ address.get_full_address }}</p>
+                    {% if address.phone %}
+                    <p class="mb-0 small"><i class="fas fa-phone me-1"></i>{{ address.phone }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3"><em>No additional locations configured yet</em></p>
+        {% endif %}
+    </div>
+
+    <!-- Branding -->
+    {% if profile.logo or profile.logo_receipt %}
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-palette me-2"></i>Branding & Logos</h2>
+        
+        <div class="row">
+            {% if profile.logo %}
+            <div class="col-md-6 text-center">
+                <h6>Primary Logo</h6>
+                <img src="{{ profile.logo.url }}" alt="Primary Logo" class="logo-preview">
+            </div>
+            {% endif %}
+            
+            {% if profile.logo_receipt %}
+            <div class="col-md-6 text-center">
+                <h6>Receipt Logo</h6>
+                <img src="{{ profile.logo_receipt.url }}" alt="Receipt Logo" class="logo-preview">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Operational Settings -->
+    <div class="info-card">
+        <h2 class="section-title"><i class="fas fa-cog me-2"></i>Operational Settings</h2>
+        
+        <div class="info-row">
+            <div class="info-label">Currency:</div>
+            <div class="info-value">{{ profile.currency_symbol }} ({{ profile.currency_code }})</div>
+        </div>
+        
+        {% if profile.business_hours %}
+        <div class="info-row">
+            <div class="info-label">Business Hours:</div>
+            <div class="info-value">{{ profile.business_hours }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="info-row">
+            <div class="info-label">Payment Terms:</div>
+            <div class="info-value">{{ profile.default_payment_terms_days }} days</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

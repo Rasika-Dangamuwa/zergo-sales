@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Stock Count - Zergo Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-warning"></i> Warning!</h5>
+                        <p class="mb-0">You are about to delete this stock count record. This action cannot be undone.</p>
+                    </div>
+
+                    <h5 class="mb-3">Stock Count Details to be Deleted:</h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="30%" class="bg-light">Count Date:</th>
+                                <td>
+                                    <strong>{{ count.count_date|date:"F d, Y" }}</strong> at 
+                                    {{ count.count_date|date:"h:i A" }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Product:</th>
+                                <td>
+                                    <strong>{{ count.product.product_name }}</strong><br>
+                                    <small class="text-muted">Code: {{ count.product.product_code }}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">System Stock:</th>
+                                <td>{{ count.system_stock }} bottles</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Physical Count:</th>
+                                <td>{{ count.physical_count }} bottles</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Variance:</th>
+                                <td>
+                                    <span class="badge {% if count.variance > 0 %}bg-success{% elif count.variance < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {% if count.variance > 0 %}+{% endif %}{{ count.variance }} bottles
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Reason:</th>
+                                <td>{{ count.adjustment_reason|default:"No reason provided" }}</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Counted By:</th>
+                                <td>{{ count.counted_by.get_full_name|default:count.counted_by.username }}</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Stock Updated:</th>
+                                <td>
+                                    {% if count.stock_updated %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle"></i> Yes
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-times-circle"></i> No
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    {% if count.stock_updated %}
+                    <div class="alert alert-danger mt-3">
+                        <h6><i class="fas fa-exclamation-circle"></i> Important Notice:</h6>
+                        <p class="mb-0">
+                            This stock count has been used to update the product stock. 
+                            Deleting this record will also <strong>delete the related stock movement</strong> (Reference: SC-{{ count.id }}).
+                        </p>
+                        <p class="mb-0 mt-2">
+                            <strong>Note:</strong> The product's current stock quantity will NOT be reverted. 
+                            You will need to manually adjust the stock if necessary.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'products:stock_count_detail' count.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Yes, Delete This Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-3 text-center">
+                <a href="{% url 'products:stock_count_history' %}" class="text-muted">
+                    <i class="fas fa-arrow-left"></i> Back to Stock Count History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
