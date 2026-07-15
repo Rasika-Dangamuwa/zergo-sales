@@ -56,6 +56,46 @@
                             {{ form.bottles_per_pack }}
                         </div>
                         
+                        <!-- Default Pricing -->
+                        <div class="col-12 mt-3">
+                            <h6 class="text-muted border-bottom pb-2"><i class="fas fa-tags me-2"></i>Default Pricing (distributors can override)</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Shop Discount %</label>
+                            {{ form.discount_percentage }}
+                            <small class="text-muted">Discount given to shops off MRP</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Company Discount %</label>
+                            {{ form.company_discount_percentage }}
+                            <small class="text-muted">Discount from company on shop price</small>
+                        </div>
+                        
+                        <!-- Default FOC Ratios -->
+                        <div class="col-12 mt-3">
+                            <h6 class="text-muted border-bottom pb-2"><i class="fas fa-gift me-2"></i>Default FOC Ratios (distributors can override)</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Company FOC Buy</label>
+                            {{ form.company_foc_buy }}
+                            <small class="text-muted">Buy X bottles</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Company FOC Free</label>
+                            {{ form.company_foc_free }}
+                            <small class="text-muted">Get Y free</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Shop FOC Buy</label>
+                            {{ form.shop_foc_buy }}
+                            <small class="text-muted">Shop buys X</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Shop FOC Free</label>
+                            {{ form.shop_foc_free }}
+                            <small class="text-muted">Gets Y free</small>
+                        </div>
+                        
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Barcode</label>
                             {{ form.barcode }}

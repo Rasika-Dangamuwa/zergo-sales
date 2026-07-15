@@ -484,14 +484,34 @@ class PrintManager(models.Model):
         ).first()
         
         if not profile:
-            # Create default profile
-            profile = cls.objects.create(
-                user=user,
-                profile_name=f"Default {receipt_type.replace('_', ' ').title()} Profile",
-                receipt_type=receipt_type,
-                is_default=True,
-                is_active=True
-            )
+            # Inherit printer/branding settings from bill profile if available
+            defaults = {
+                'user': user,
+                'profile_name': f"Default {receipt_type.replace('_', ' ').title()} Profile",
+                'receipt_type': receipt_type,
+                'is_default': True,
+                'is_active': True,
+            }
+            if receipt_type != 'bill':
+                bill_profile = cls.objects.filter(
+                    user=user, receipt_type='bill', is_default=True, is_active=True
+                ).first()
+                if bill_profile:
+                    # Copy printer hardware and branding settings from bill profile
+                    for field in [
+                        'paper_size', 'use_distributor_profile', 'company_id',
+                        'company_name', 'company_tagline', 'show_logo',
+                        'company_logo', 'logo_width', 'logo_height',
+                        'address_line1', 'address_line2', 'city', 'postal_code',
+                        'phone', 'email', 'website', 'tax_id',
+                        'footer_line1', 'footer_line2', 'footer_line3',
+                        'show_tagline', 'show_address', 'show_contact',
+                        'show_website', 'show_tax_id',
+                        'is_bluetooth', 'print_density', 'print_speed',
+                        'cut_behavior', 'feed_lines',
+                    ]:
+                        defaults[field] = getattr(bill_profile, field)
+            profile = cls.objects.create(**defaults)
         
         return profile
     

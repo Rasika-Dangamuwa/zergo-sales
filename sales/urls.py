@@ -8,6 +8,7 @@ from . import foc_views
 from . import foc_reset_views
 from . import eod_views
 from . import monthly_plan_views
+from . import ai_views
 from payments import views as payment_views
 
 app_name = 'sales'
@@ -17,6 +18,7 @@ urlpatterns = [
     path('create/', views.create_bill, name='create'),
     path('<int:pk>/', views.bill_detail, name='detail'),
     path('<int:pk>/mobile-print/', views.mobile_print, name='mobile_print'),
+    path('<int:pk>/prep-receipt/', views.prep_receipt, name='prep_receipt'),
     path('<int:pk>/edit/', views.edit_bill, name='edit'),
     path('<int:pk>/cancel/', views.cancel_bill, name='cancel'),
     path('<int:pk>/delete/', views.delete_bill, name='delete'),
@@ -50,6 +52,7 @@ urlpatterns = [
     path('settlements/<int:pk>/mark-collected/', views.mark_payment_collected, name='mark_settlement_collected'),
     path('settlements/<int:pk>/mark-bounced/', views.mark_payment_bounced, name='mark_settlement_bounced'),
     path('settlements/<int:pk>/mark-cheque-collected/', views.mark_cheque_collected, name='mark_cheque_collected'),
+    path('settlements/<int:pk>/edit-cheque-details/', views.edit_cheque_details, name='edit_cheque_details'),
     
     # Cheque and Bank Transfer Management
     path('settlements/<int:pk>/clear-cheque/', payment_views.clear_cheque, name='clear_cheque'),
@@ -98,6 +101,14 @@ urlpatterns = [
     
     # Settings
     path('settings/printer/', views.printer_settings, name='printer_settings'),
+    path('settings/billing-preference/', views.save_billing_preference, name='save_billing_preference'),
+    path('settings/product-price/', views.save_user_product_price, name='save_user_product_price'),
+
+    # AI Features
+    path('ai/settings/', ai_views.ai_settings, name='ai_settings'),
+    path('ai/test-connection/', ai_views.ai_test_connection, name='ai_test_connection'),
+    path('ai/credit-risk/<int:shop_id>/', ai_views.ai_credit_risk, name='ai_credit_risk'),
+    path('ai/collection-intelligence/', ai_views.ai_collection_intelligence, name='ai_collection_intelligence'),
     
     # EOD (End of Day) Reports
     path('eod/', eod_views.eod_date_list, name='eod_date_list'),

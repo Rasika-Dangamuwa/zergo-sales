@@ -129,7 +129,7 @@
     {% if approved %}
     <div class="card border-success mb-4">
         <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Approved - Awaiting Disbursement ({{ approved.count }})</h5>
+            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Approved - Awaiting Disbursement ({{ approved|length }})</h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -173,16 +173,15 @@
                                             <p><strong>User:</strong> {{ req.user.get_full_name }}</p>
                                             <p><strong>Amount:</strong> <span class="text-success">Rs. {{ req.approved_amount|floatformat:2|intcomma }}</span></p>
                                             
-                                            {% if req.user.money_account %}
                                             <div class="alert alert-info mb-3">
                                                 <small>
-                                                    <strong>Current Balance Due:</strong> Rs. {{ req.user.money_account.current_balance|floatformat:2|intcomma }}
-                                                    {% if req.approved_amount > req.user.money_account.current_balance %}
-                                                    <br><span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i><strong>Shortage:</strong> Rs. {{ req.approved_amount|add:req.user.money_account.current_balance|floatformat:2|intcomma|cut:"-" }}</span>
+                                                    <strong>Current Balance Due:</strong> Rs. {{ req.balance_due|floatformat:2|intcomma }}
+                                                    {% if req.shortage_gap %}
+                                                    <br><span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i><strong>Shortage:</strong> Rs. {{ req.shortage_gap|floatformat:2|intcomma }}
+                                                    <span class="text-muted">(user must earn this much more to cover the advance)</span></span>
                                                     {% endif %}
                                                 </small>
                                             </div>
-                                            {% endif %}
                                             
                                             <hr>
                                             <div class="mb-3">
@@ -199,7 +198,7 @@
                                                 <input type="text" name="payment_reference" class="form-control" placeholder="Cheque number, transaction ID, etc.">
                                             </div>
                                             
-                                            {% if req.user.money_account and req.approved_amount > req.user.money_account.current_balance %}
+                                            {% if req.shortage_gap %}
                                             <div class="alert alert-warning">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" name="override_limit" id="override_limit_{{ req.id }}">

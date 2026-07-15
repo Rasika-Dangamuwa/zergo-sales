@@ -56,8 +56,8 @@ class UnifiedPrintEngine:
         },
         'payment': {
             'title': 'PAYMENT RECEIPT',
-            'number_field': 'payment_number',
-            'date_field': 'payment_date',
+            'number_field': 'settlement_number',
+            'date_field': 'settlement_date',
             'customer_field': 'shop',
             'items_related': None,  # Payments don't have items
             'show_payment_info': True,

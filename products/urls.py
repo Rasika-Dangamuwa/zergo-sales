@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:pk>/', views.product_detail, name='detail'),
     path('companies/', views.company_list, name='company_list'),
     path('stock-alert/', views.stock_alert, name='stock_alert'),
+    path('stock-inventory-pdf/', views.stock_inventory_pdf, name='stock_inventory_pdf'),
     path('stock-count/', views.stock_count, name='stock_count'),
     path('stock-count/history/', views.stock_count_history, name='stock_count_history'),
     path('stock-count/<int:count_id>/', views.stock_count_detail, name='stock_count_detail'),
@@ -27,6 +28,7 @@ urlpatterns = [
     # Non-Resaleable Stock Management
     path('non-resaleable/', views.non_resaleable_inventory_list, name='non_resaleable_inventory_list'),
     path('non-resaleable/dispose/', views.dispose_non_resaleable_stock, name='dispose_non_resaleable_stock'),
+    path('non-resaleable/recover/', views.recover_non_resaleable_stock, name='recover_non_resaleable_stock'),
     
     # Purchase Orders (PO)
     path('pos/', po_views.po_list, name='po_list'),

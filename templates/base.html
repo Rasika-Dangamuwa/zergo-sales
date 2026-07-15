@@ -55,11 +55,11 @@
             .navbar {
                 {{ navbar_bg|default:'background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);'|safe }}
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                padding: 0.5rem 1rem;
-                height: 56px;
+                padding: 0.25rem 1rem;
+                height: 48px;
             }
             
-            .navbar .container-fluid {
+            .navbar-inner {
                 display: flex;
                 align-items: center;
                 height: 100%;
@@ -112,10 +112,43 @@
         .navbar {
             {{ navbar_bg|default:'background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);'|safe }}
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 48px !important;
+            max-height: 48px !important;
+            overflow: visible !important;
+        }
+        
+        /* Navbar container isolation - protect from page-level .container-fluid overrides */
+        .navbar-inner {
+            padding: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            height: 48px !important;
+            max-height: 48px !important;
+            overflow: visible !important;
+        }
+        .navbar-inner > .navbar-nav {
+            flex-shrink: 0 !important;
+            flex-grow: 0 !important;
+        }
+        .navbar-inner > .navbar-nav .nav-item.dropdown {
+            position: relative !important;
+        }
+        .navbar-inner > .navbar-nav .dropdown-menu {
+            position: absolute !important;
+            top: 100% !important;
+            right: 0 !important;
+            left: auto !important;
+            z-index: 1050 !important;
         }
         
         .sidebar {
-            min-height: calc(100vh - 56px);
+            min-height: calc(100vh - 48px);
             background-color: #ffffff;
             box-shadow: 2px 0 4px rgba(0,0,0,0.05);
         }
@@ -289,16 +322,16 @@
     </style>
     
     <!-- Mobile Common Styles - MUST load after inline styles to override properly -->
-    <link rel="stylesheet" href="{% static 'css/mobile-common.css' %}?v=20260109-2042">
+    <link rel="stylesheet" href="{% static 'css/mobile-common.css' %}?v=20260302-0910">
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
+    <nav class="navbar navbar-expand navbar-dark" style="height:48px;max-height:48px;overflow:visible;">
+        <div class="container-fluid navbar-inner">
             {% if user.is_authenticated %}
-            <button class="btn btn-link text-white d-md-none me-2 p-0" id="sidebarToggle" type="button">
+            <button class="btn btn-link text-white d-md-none p-0" id="sidebarToggle" type="button">
                 <i class="fas fa-align-justify fa-lg"></i>
             </button>
             {% endif %}
@@ -310,35 +343,34 @@
                 {% endif %}
                 <span>{{ navbar_title|default:'ZERGO' }}</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>
-                            <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
-                                <i class="fas fa-user me-2"></i>Profile
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="post" action="{% url 'logout' %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
-                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
+            {% if user.is_authenticated %}
+            <ul class="navbar-nav ms-auto flex-row">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.5);vertical-align:middle;" class="me-1">
+                        {% else %}
+                        <i class="fas fa-user-circle me-1"></i>
+                        {% endif %}
+                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                            <i class="fas fa-user me-2"></i>Profile
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            {% endif %}
         </div>
     </nav>
 
@@ -429,6 +461,11 @@
                                 <i class="fas fa-calendar-alt me-2"></i>Monthly Plan
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:outstanding_report' %}">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Outstanding Report
+                            </a>
+                        </li>
 
                         {% if not user.is_sales_rep %}
 
@@ -436,6 +473,19 @@
                         <li class="nav-item mt-3">
                             <h6 class="px-3 text-muted small">INVENTORY</h6>
                         </li>
+                        {% else %}
+                        <!-- Sales rep: Products link only -->
+                        <li class="nav-item mt-3">
+                            <h6 class="px-3 text-muted small">INVENTORY</h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'products:list' %}">
+                                <i class="fas fa-box me-2"></i>Products
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% if not user.is_sales_rep %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'products:list' %}">
                                 <i class="fas fa-box me-2"></i>Products
@@ -499,6 +549,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:payment_report' %}">
                                 <i class="fas fa-chart-bar me-2"></i>Payment Report
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:outstanding_report' %}">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Outstanding Report
                             </a>
                         </li>
                         <li class="nav-item">

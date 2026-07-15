@@ -230,7 +230,7 @@ def product_edit(request, pk):
         form = GlobalProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
             form.save()
-            messages.success(request, f'Product "{product.product_name}" updated.')
+            messages.success(request, f'Product "{product.product_name}" updated and synced to all distributors.')
             return redirect('catalog:product_detail', pk=pk)
     else:
         form = GlobalProductForm(instance=product)

@@ -46,7 +46,7 @@
 }
 .kpi-card .kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
 .kpi-card .kpi-icon { font-size: .85rem; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: .4rem; }
-.kpi-card .kpi-val { font-size: 1.05rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
+.kpi-card .kpi-val { font-size: 1.05rem; font-weight: 800; color: #1e293b; line-height: 1.1; word-break: break-word; }
 .kpi-card .kpi-lbl { font-size: .62rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; margin-top: .15rem; }
 .kpi-card .kpi-sub { font-size: .58rem; color: #94a3b8; margin-top: .1rem; }
 .kpi-card .kpi-period { display: inline-block; font-size: .5rem; font-weight: 700; padding: .1rem .3rem; border-radius: 4px; background: #f1f5f9; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: .3rem; }
@@ -178,7 +178,7 @@
     }
     .kpi-card .kpi-accent { height: 4px; }
     .kpi-card .kpi-icon { width: 38px; height: 38px; font-size: 1rem; border-radius: 10px; margin-bottom: .55rem; }
-    .kpi-card .kpi-val { font-size: 1.45rem; }
+    .kpi-card .kpi-val { font-size: 1.3rem; }
     .kpi-card .kpi-lbl { font-size: .72rem; margin-top: .2rem; letter-spacing: .5px; }
     .kpi-card .kpi-sub { font-size: .68rem; margin-top: .15rem; }
     .kpi-card .kpi-period { font-size: .58rem; padding: .12rem .38rem; }
@@ -253,7 +253,7 @@
     .kpi-scroll { grid-template-columns: repeat(6, 1fr); padding: 1.4rem 2.5rem 1rem; gap: 1rem; }
     .kpi-card { padding: 1.2rem 1.3rem; border-radius: 16px; }
     .kpi-card .kpi-icon { width: 42px; height: 42px; font-size: 1.1rem; }
-    .kpi-card .kpi-val { font-size: 1.55rem; }
+    .kpi-card .kpi-val { font-size: 1.35rem; }
 
     .qa-grid { padding: .5rem 2.5rem 1rem; gap: .85rem; }
     .qa-btn .qa-ico { width: 50px; height: 50px; font-size: 1.2rem; }
@@ -345,8 +345,8 @@
             <span class="kpi-period">Today</span>
             <div class="kpi-icon" style="background:#ecfdf5;color:#059669"><i class="fas fa-hand-holding-usd"></i></div>
             <div class="kpi-val">Rs.{{ today_collections|floatformat:0|intcomma }}</div>
-            <div class="kpi-lbl">Net Collected</div>
-            <div class="kpi-sub">{{ today_collections_count }} payment{{ today_collections_count|pluralize }}{% if today_cash_refunds %} · Refunds Rs.{{ today_cash_refunds|floatformat:0|intcomma }}{% endif %}</div>
+            <div class="kpi-lbl">Net Cash</div>
+            <div class="kpi-sub">{{ today_collections_count }} cash payment{{ today_collections_count|pluralize }}{% if today_cash_refunds %} · Refunds Rs.{{ today_cash_refunds|floatformat:0|intcomma }}{% endif %}</div>
         </div>
 
         <!-- Visits -->
@@ -530,7 +530,7 @@
                     <div class="ms-ico" style="background:#ecfdf5;color:#059669"><i class="fas fa-hand-holding-usd"></i></div>
                     <div>
                         <div class="ms-val">Rs.{{ month_collections|floatformat:0|intcomma }}</div>
-                        <div class="ms-lbl">Monthly Net Collections</div>
+                        <div class="ms-lbl">Monthly Net Cash</div>
                     </div>
                 </div>
                 <div class="mstat">

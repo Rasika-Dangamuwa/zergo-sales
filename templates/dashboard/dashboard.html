@@ -147,7 +147,18 @@
         <div class="snap-card collections">
             <div class="snap-label"><i class="fas fa-hand-holding-usd me-1"></i>Today's Collections</div>
             <div class="snap-value text-success">Rs. {{ today_collections|floatformat:0|intcomma }}</div>
-            <div class="snap-sub">{{ today_returns_count }} return{{ today_returns_count|pluralize }} (Rs. {{ today_returns_total|floatformat:0|intcomma }})</div>
+            <div class="snap-sub">
+                {{ today_collections_count }} payment{{ today_collections_count|pluralize }}
+                {% if collections_by_method %}
+                <span class="d-block mt-1" style="font-size:0.72rem; line-height:1.4; opacity:0.85;">
+                    {% if collections_by_method.cash %}<i class="fas fa-money-bill-wave text-success"></i> Cash {{ collections_by_method.cash.count }} · Rs.{{ collections_by_method.cash.total|floatformat:0|intcomma }}{% endif %}
+                    {% if collections_by_method.cheque %}<br><i class="fas fa-money-check text-info"></i> Cheque {{ collections_by_method.cheque.count }} · Rs.{{ collections_by_method.cheque.total|floatformat:0|intcomma }}{% endif %}
+                    {% if collections_by_method.bank_transfer %}<br><i class="fas fa-university text-primary"></i> Transfer {{ collections_by_method.bank_transfer.count }} · Rs.{{ collections_by_method.bank_transfer.total|floatformat:0|intcomma }}{% endif %}
+                    {% if collections_by_method.return_adjustment %}<br><i class="fas fa-undo text-warning"></i> Return Adj. {{ collections_by_method.return_adjustment.count }} · Rs.{{ collections_by_method.return_adjustment.total|floatformat:0|intcomma }}{% endif %}
+                    {% if collections_by_method.credit %}<br><i class="fas fa-credit-card text-secondary"></i> Credit {{ collections_by_method.credit.count }} · Rs.{{ collections_by_method.credit.total|floatformat:0|intcomma }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -730,7 +741,41 @@
             </div>
         </div>
     </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="card feature-card">
+            <div class="card-header text-white" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);"><i class="fas fa-robot"></i><span>AI Intelligence</span></div>
+            <div class="card-body p-0">
+                <a href="{% url 'sales:ai_settings' %}" class="feature-link"><i class="fas fa-cog"></i> AI Settings</a>
+                {% if ai_settings.is_enabled %}
+                <a href="#collectionIntelCard" class="feature-link" onclick="setTimeout(runCollectionIntelligence,200)"><i class="fas fa-route"></i> Collection Intelligence</a>
+                {% else %}
+                <span class="feature-link text-muted" style="cursor:default;"><i class="fas fa-toggle-off"></i> AI Disabled</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
+
+{% if ai_settings.is_enabled and ai_settings.collection_intelligence_enabled %}
+<!-- AI Collection Intelligence Panel -->
+<div class="card mt-4" id="collectionIntelCard" style="border:none;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,0.1);overflow:hidden;">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;padding:14px 20px;">
+        <span style="font-weight:700;font-size:0.95rem;"><i class="fas fa-robot me-2"></i>AI Collection Intelligence</span>
+        <div class="d-flex gap-2 align-items-center">
+            <small id="ciStatus" class="opacity-75"></small>
+            <button class="btn btn-sm btn-outline-light" onclick="runCollectionIntelligence()" id="ciBtn" style="font-size:0.8rem;padding:4px 12px;">
+                <i class="fas fa-play me-1"></i>Analyze
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0" id="ciBody">
+        <div class="text-center py-4 text-muted" style="font-size:0.85rem;">
+            <i class="fas fa-robot fa-2x mb-2 opacity-25"></i><br>
+            Click <strong>Analyze</strong> to get AI-prioritized collection visit recommendations.
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% else %}
 <!-- Sales Rep Redirect -->
@@ -754,5 +799,64 @@ document.querySelectorAll('.section-header').forEach(function(header) {
         target.addEventListener('hide.bs.collapse', function() { header.classList.add('collapsed'); });
     }
 });
+
+{% if ai_settings.is_enabled and ai_settings.collection_intelligence_enabled %}
+const PRIORITY_COLORS = {URGENT:'#dc3545', HIGH:'#fd7e14', MEDIUM:'#0d6efd'};
+const PRIORITY_BG = {URGENT:'#fff5f5', HIGH:'#fff8f0', MEDIUM:'#f0f4ff'};
+
+function runCollectionIntelligence() {
+    const btn = document.getElementById('ciBtn');
+    const body = document.getElementById('ciBody');
+    const status = document.getElementById('ciStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Analyzing...';
+    status.textContent = '';
+    body.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>AI is analyzing shop data...</div>';
+
+    fetch('{% url "sales:ai_collection_intelligence" %}', {
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync me-1"></i>Re-analyze';
+        if (!data.enabled) {
+            body.innerHTML = '<div class="text-center py-3 text-muted" style="font-size:0.85rem;">AI features are disabled.</div>';
+            return;
+        }
+        if (data.error) {
+            body.innerHTML = `<div class="text-center py-3 text-danger" style="font-size:0.85rem;"><i class="fas fa-exclamation-circle me-1"></i>${data.error}</div>`;
+            return;
+        }
+        if (!data.shops || data.shops.length === 0) {
+            body.innerHTML = '<div class="text-center py-3 text-success" style="font-size:0.85rem;"><i class="fas fa-check-circle me-1"></i>No outstanding balances to collect.</div>';
+            return;
+        }
+        status.textContent = `${data.shops.length} shops`;
+        let html = '<div style="padding:0;">';
+        data.shops.forEach((shop, i) => {
+            const col = PRIORITY_COLORS[shop.priority] || '#6c757d';
+            const bg = PRIORITY_BG[shop.priority] || '#f8f9fa';
+            html += `<div style="padding:12px 18px;border-bottom:1px solid #f0f0f0;background:${i%2===0?'#fff':bg};">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:0.88rem;">${i+1}. ${shop.shop_name}</div>
+                        <div style="font-size:0.78rem;color:#555;margin-top:3px;">${shop.reason}</div>
+                        <div style="font-size:0.76rem;color:#888;margin-top:2px;"><i class="fas fa-tasks me-1"></i>${shop.suggested_action}</div>
+                    </div>
+                    <span style="background:${col};color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;margin-left:10px;">${shop.priority}</span>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        body.innerHTML = html;
+    })
+    .catch(e => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play me-1"></i>Analyze';
+        body.innerHTML = `<div class="text-center py-3 text-danger" style="font-size:0.85rem;"><i class="fas fa-exclamation-circle me-1"></i>Request failed: ${e.message}</div>`;
+    });
+}
+{% endif %}
 </script>
 {% endblock %}

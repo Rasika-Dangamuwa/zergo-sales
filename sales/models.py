@@ -805,9 +805,16 @@ class CommissionTransaction(models.Model):
             # Transaction already exists, return it instead of creating duplicate
             return existing
         
+        # For cheque/bank_transfer: use verified_at (clearance time) so it appears
+        # at the top of the commission list when cleared, not buried at recording date
+        if payment.settlement_method in ('cheque', 'bank_transfer') and payment.verified_at:
+            txn_date = payment.verified_at
+        else:
+            txn_date = payment.settlement_date
+        
         return cls.objects.create(
             transaction_type='payment_received',
-            transaction_date=payment.settlement_date,
+            transaction_date=txn_date,
             sales_rep=bill.sales_rep,
             bill=bill,
             settlement=payment,
@@ -1131,6 +1138,74 @@ class ExchangeItem(models.Model):
         else:
             self.non_resellable_quantity = Decimal('0')
         super().save(*args, **kwargs)
+
+
+class BillingPreference(models.Model):
+    """Per-user billing experience preferences for the Create Bill page"""
+
+    PRICE_CHOICES = (
+        ('shop_price', 'Shop Price (System Default)'),
+        ('my_prices', 'My Custom Prices'),
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='billing_preference')
+    default_price = models.CharField(max_length=20, choices=PRICE_CHOICES, default='shop_price')
+    show_foc_summary = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'billing_preferences'
+        verbose_name = 'Billing Preference'
+        verbose_name_plural = 'Billing Preferences'
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} billing preference"
+
+
+class UserProductPrice(models.Model):
+    """Per-user custom price for each product, used on the Create Bill page"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='custom_product_prices')
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='user_custom_prices')
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'user_product_prices'
+        unique_together = ('user', 'product')
+        verbose_name = 'User Product Price'
+        verbose_name_plural = 'User Product Prices'
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.product.product_name}: Rs. {self.price}"
+
+
+class AISettings(models.Model):
+    """Singleton AI configuration per tenant (always pk=1)"""
+
+    is_enabled = models.BooleanField(default=False)
+    credit_risk_enabled = models.BooleanField(default=True)
+    collection_intelligence_enabled = models.BooleanField(default=True)
+    api_key = models.CharField(max_length=500, blank=True, default='')
+    api_base_url = models.CharField(
+        max_length=200, default='https://openrouter.ai/api/v1'
+    )
+    model_name = models.CharField(
+        max_length=100, default='google/gemini-2.0-flash-exp:free'
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ai_settings'
+        verbose_name = 'AI Settings'
+        verbose_name_plural = 'AI Settings'
+
+    def __str__(self):
+        return f"AI Settings (enabled={self.is_enabled})"
+
+    @classmethod
+    def get_settings(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
 
 # Import commission schedule models

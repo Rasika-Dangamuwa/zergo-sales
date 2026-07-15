@@ -19,10 +19,12 @@ def home(request):
         return redirect('dashboard:sales_rep')
     
     # Initialize context for admin/office
+    from sales.models import AISettings
     context = {
         'user': request.user,
+        'ai_settings': AISettings.get_settings(),
     }
-    
+
     # Add statistics for office and admin users
     if request.user.user_type in ['admin', 'office']:
         from decimal import Decimal
@@ -42,6 +44,16 @@ def home(request):
             settlement_date__date=today
         ).exclude(settlement_status='cancelled')
         today_collections = today_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        # Collections breakdown by method
+        today_collections_breakdown = today_payments.values('settlement_method').annotate(
+            count=Count('id'), total=Sum('amount')
+        ).order_by('-total')
+        today_collections_count = today_payments.count()
+        collections_by_method = {
+            item['settlement_method']: {'count': item['count'], 'total': item['total']}
+            for item in today_collections_breakdown
+        }
         
         # ===== RECEIVABLES SUMMARY =====
         unsettled_bills = Bill.objects.filter(
@@ -159,6 +171,8 @@ def home(request):
             'today_returns_count': today_returns.count(),
             'today_returns_total': today_returns_total,
             'today_collections': today_collections,
+            'today_collections_count': today_collections_count,
+            'collections_by_method': collections_by_method,
             'today': today,
             # Key metrics
             'total_receivable': total_receivable,
@@ -271,11 +285,12 @@ def sales_rep_dashboard(request):
     ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
     month_net_sales = month_total - month_returns_total
     
-    # ===== TODAY'S COLLECTIONS (payments received) =====
+    # ===== TODAY'S COLLECTIONS (cash only) =====
     today_settlements = Payment.objects.filter(
         received_by=user,
         settlement_status='completed',
-        settlement_date__date=today
+        settlement_date__date=today,
+        settlement_method='cash'
     )
     today_collections_gross = today_settlements.aggregate(total=Sum('amount'))['total'] or Decimal('0')
     today_collections_count = today_settlements.count()
@@ -291,7 +306,8 @@ def sales_rep_dashboard(request):
     month_settlements = Payment.objects.filter(
         received_by=user,
         settlement_status='completed',
-        settlement_date__date__gte=month_start
+        settlement_date__date__gte=month_start,
+        settlement_method='cash'
     )
     month_collections_gross = month_settlements.aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
@@ -671,6 +687,362 @@ def payment_report(request):
 
 
 @login_required
+def outstanding_report(request):
+    """Outstanding receivables report: pending cheques, pending bank transfers, credit bills"""
+    from decimal import Decimal
+    from datetime import date
+    from accounts.tenant_utils import get_tenant_users
+    from collections import OrderedDict
+
+    today = date.today()
+    view_mode = request.GET.get('view', 'bill')
+    sales_rep_id = request.GET.get('sales_rep')
+
+    # --- Base querysets ---
+    pending_cheques = Payment.objects.filter(
+        settlement_method='cheque',
+        settlement_status='pending',
+    ).select_related('bill', 'bill__shop', 'bill__sales_rep', 'received_by')
+
+    pending_transfers = Payment.objects.filter(
+        settlement_method='bank_transfer',
+        settlement_status='pending',
+    ).select_related('bill', 'bill__shop', 'bill__sales_rep', 'received_by')
+
+    credit_bills = Bill.objects.filter(
+        bill_status='confirmed',
+        settlement_status__in=['unsettled', 'partial_settled'],
+    ).select_related('shop', 'sales_rep')
+
+    # --- Role-based filtering ---
+    if request.user.is_sales_rep:
+        pending_cheques = pending_cheques.filter(bill__sales_rep=request.user)
+        pending_transfers = pending_transfers.filter(bill__sales_rep=request.user)
+        credit_bills = credit_bills.filter(sales_rep=request.user)
+    elif sales_rep_id:
+        pending_cheques = pending_cheques.filter(bill__sales_rep_id=sales_rep_id)
+        pending_transfers = pending_transfers.filter(bill__sales_rep_id=sales_rep_id)
+        credit_bills = credit_bills.filter(sales_rep_id=sales_rep_id)
+
+    # --- Compute pending settlement amounts per bill to avoid double-counting ---
+    pending_by_bill = {}
+    for ps in Payment.objects.filter(
+        settlement_method__in=['cheque', 'bank_transfer'],
+        settlement_status='pending',
+        bill__isnull=False,
+    ).values('bill_id').annotate(pending_sum=Sum('amount')):
+        pending_by_bill[ps['bill_id']] = ps['pending_sum']
+
+    # --- Summary stats ---
+    cheque_total = pending_cheques.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    transfer_total = pending_transfers.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+    # --- Add days_pending annotation for display ---
+    cheque_list = list(pending_cheques.order_by('cheque_date'))
+    for s in cheque_list:
+        ref_date = s.cheque_date or (s.settlement_date.date() if s.settlement_date else today)
+        s.days_pending = (today - ref_date).days
+
+    transfer_list = list(pending_transfers.order_by('settlement_date'))
+    for s in transfer_list:
+        ref_date = s.settlement_date.date() if s.settlement_date else today
+        s.days_pending = (today - ref_date).days
+
+    # Credit list: adjust balance for bills that have partial cheque/transfer coverage
+    credit_total = Decimal('0')
+    credit_list = []
+    for b in credit_bills.order_by('bill_date'):
+        pending_amt = pending_by_bill.get(b.id, Decimal('0'))
+        remaining = b.balance_amount - pending_amt
+        if remaining > 0:
+            b.credit_balance = remaining  # adjusted balance for display
+            ref_date = b.bill_date.date() if b.bill_date else today
+            b.days_outstanding = (today - ref_date).days
+            credit_list.append(b)
+            credit_total += remaining
+
+    grand_total = cheque_total + transfer_total + credit_total
+
+    # --- Shop-wise grouping ---
+    shop_data = None
+    if view_mode == 'shop':
+        shops_map = OrderedDict()
+
+        def _shop_key(shop, bill=None):
+            if shop:
+                return (shop.id, shop.shop_name)
+            name = getattr(bill, 'customer_name', None) or 'Unknown'
+            return (f'unreg_{name}', name)
+
+        for s in cheque_list:
+            key = _shop_key(s.bill.shop if s.bill else None, s.bill)
+            entry = shops_map.setdefault(key, {'name': key[1], 'cheques': [], 'transfers': [], 'credits': [],
+                                                 'cheque_total': Decimal('0'), 'transfer_total': Decimal('0'),
+                                                 'credit_total': Decimal('0'), 'grand_total': Decimal('0')})
+            entry['cheques'].append(s)
+            entry['cheque_total'] += s.amount
+
+        for s in transfer_list:
+            key = _shop_key(s.bill.shop if s.bill else None, s.bill)
+            entry = shops_map.setdefault(key, {'name': key[1], 'cheques': [], 'transfers': [], 'credits': [],
+                                                 'cheque_total': Decimal('0'), 'transfer_total': Decimal('0'),
+                                                 'credit_total': Decimal('0'), 'grand_total': Decimal('0')})
+            entry['transfers'].append(s)
+            entry['transfer_total'] += s.amount
+
+        for b in credit_list:
+            key = _shop_key(b.shop, b)
+            entry = shops_map.setdefault(key, {'name': key[1], 'cheques': [], 'transfers': [], 'credits': [],
+                                                 'cheque_total': Decimal('0'), 'transfer_total': Decimal('0'),
+                                                 'credit_total': Decimal('0'), 'grand_total': Decimal('0')})
+            entry['credits'].append(b)
+            entry['credit_total'] += b.credit_balance
+
+        for entry in shops_map.values():
+            entry['grand_total'] = entry['cheque_total'] + entry['transfer_total'] + entry['credit_total']
+
+        shop_data = sorted(shops_map.values(), key=lambda x: x['grand_total'], reverse=True)
+
+    # --- Users for filter dropdown (all active employees who can bill) ---
+    sales_reps = get_tenant_users().filter(is_active_employee=True)
+
+    context = {
+        'view_mode': view_mode,
+        'cheque_list': cheque_list,
+        'transfer_list': transfer_list,
+        'credit_list': credit_list,
+        'cheque_count': len(cheque_list),
+        'transfer_count': len(transfer_list),
+        'credit_count': len(credit_list),
+        'cheque_total': cheque_total,
+        'transfer_total': transfer_total,
+        'credit_total': credit_total,
+        'grand_total': grand_total,
+        'shop_data': shop_data,
+        'sales_reps': sales_reps,
+        'today': today,
+    }
+    return render(request, 'dashboard/outstanding_report.html', context)
+
+
+@login_required
+def outstanding_report_pdf(request):
+    """Export outstanding report as PDF"""
+    from decimal import Decimal
+    from datetime import date
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from django.http import HttpResponse
+
+    today = date.today()
+    sales_rep_id = request.GET.get('sales_rep')
+
+    # --- Same queries as HTML view ---
+    pending_cheques = Payment.objects.filter(
+        settlement_method='cheque', settlement_status='pending',
+    ).select_related('bill', 'bill__shop', 'bill__sales_rep')
+
+    pending_transfers = Payment.objects.filter(
+        settlement_method='bank_transfer', settlement_status='pending',
+    ).select_related('bill', 'bill__shop', 'bill__sales_rep')
+
+    credit_bills = Bill.objects.filter(
+        bill_status='confirmed', settlement_status__in=['unsettled', 'partial_settled'],
+    ).select_related('shop', 'sales_rep')
+
+    if request.user.is_sales_rep:
+        pending_cheques = pending_cheques.filter(bill__sales_rep=request.user)
+        pending_transfers = pending_transfers.filter(bill__sales_rep=request.user)
+        credit_bills = credit_bills.filter(sales_rep=request.user)
+    elif sales_rep_id:
+        pending_cheques = pending_cheques.filter(bill__sales_rep_id=sales_rep_id)
+        pending_transfers = pending_transfers.filter(bill__sales_rep_id=sales_rep_id)
+        credit_bills = credit_bills.filter(sales_rep_id=sales_rep_id)
+
+    # Compute pending settlement amounts per bill to avoid double-counting
+    pending_by_bill = {}
+    for ps in Payment.objects.filter(
+        settlement_method__in=['cheque', 'bank_transfer'],
+        settlement_status='pending',
+        bill__isnull=False,
+    ).values('bill_id').annotate(pending_sum=Sum('amount')):
+        pending_by_bill[ps['bill_id']] = ps['pending_sum']
+
+    cheque_total = pending_cheques.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    transfer_total = pending_transfers.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+    # Adjust credit bills: subtract pending cheque/transfer amounts
+    credit_total = Decimal('0')
+    adjusted_credit_bills = []
+    for b in credit_bills.order_by('bill_date'):
+        pending_amt = pending_by_bill.get(b.id, Decimal('0'))
+        remaining = b.balance_amount - pending_amt
+        if remaining > 0:
+            b.credit_balance = remaining
+            adjusted_credit_bills.append(b)
+            credit_total += remaining
+    credit_bills_list = adjusted_credit_bills
+
+    grand_total = cheque_total + transfer_total + credit_total
+
+    # --- Build PDF ---
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"outstanding_report_{today.strftime('%Y%m%d')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), leftMargin=0.5*inch, rightMargin=0.5*inch)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    blue = colors.HexColor('#1a56db')
+    light_bg = colors.HexColor('#f3f4f6')
+
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, textColor=blue, spaceAfter=6, alignment=TA_CENTER)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER)
+    section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=13, textColor=blue, spaceBefore=18, spaceAfter=8)
+    right_style = ParagraphStyle('Right', parent=styles['Normal'], fontSize=9, alignment=TA_RIGHT)
+    cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=8)
+
+    elements.append(Paragraph('Outstanding Report', title_style))
+    elements.append(Paragraph(f'Generated: {today.strftime("%d %B %Y")}', subtitle_style))
+    elements.append(Spacer(1, 16))
+
+    # Summary table
+    summary_data = [
+        ['Category', 'Count', 'Amount (Rs.)'],
+        ['Pending Cheques', str(pending_cheques.count()), f'{cheque_total:,.2f}'],
+        ['Pending Bank Transfers', str(pending_transfers.count()), f'{transfer_total:,.2f}'],
+        ['Credit Outstanding', str(len(credit_bills_list)), f'{credit_total:,.2f}'],
+        ['Grand Total', str(pending_cheques.count() + pending_transfers.count() + len(credit_bills_list)), f'{grand_total:,.2f}'],
+    ]
+    summary_table = Table(summary_data, colWidths=[3.5*inch, 1.2*inch, 2*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), blue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, light_bg]),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#dbeafe')),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(summary_table)
+
+    def _shop_name(obj, is_bill=False):
+        if is_bill:
+            return obj.shop.shop_name if obj.shop else (obj.customer_name or 'N/A')
+        if obj.bill and obj.bill.shop:
+            return obj.bill.shop.shop_name
+        return (obj.bill.customer_name if obj.bill else 'N/A') or 'N/A'
+
+    def _rep_name(obj, is_bill=False):
+        if is_bill:
+            return obj.sales_rep.get_full_name() if obj.sales_rep else 'N/A'
+        return obj.bill.sales_rep.get_full_name() if obj.bill and obj.bill.sales_rep else 'N/A'
+
+    # Section 1: Pending Cheques
+    if pending_cheques.exists():
+        elements.append(Paragraph(f'1. Pending Cheques ({pending_cheques.count()})', section_style))
+        cheque_data = [['Cheque Date', 'Ref #', 'Bank', 'Bill #', 'Shop', 'Rep', 'Amount', 'Days']]
+        for s in pending_cheques.order_by('cheque_date'):
+            ref_date = s.cheque_date or (s.settlement_date.date() if s.settlement_date else today)
+            days = (today - ref_date).days
+            cheque_data.append([
+                s.cheque_date.strftime('%d/%m/%Y') if s.cheque_date else '-',
+                str(s.reference_number or '-')[:15],
+                str(s.bank_name or '-')[:12],
+                s.bill.bill_number if s.bill else '-',
+                Paragraph(_shop_name(s)[:20], cell_style),
+                Paragraph(_rep_name(s)[:15], cell_style),
+                f'{s.amount:,.2f}',
+                str(days),
+            ])
+        cheque_data.append(['', '', '', '', '', 'Total:', f'{cheque_total:,.2f}', ''])
+        col_w = [0.85*inch, 1*inch, 0.9*inch, 1.3*inch, 1.5*inch, 1.2*inch, 1*inch, 0.5*inch]
+        t = Table(cheque_data, colWidths=col_w, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), blue), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (6, 0), (7, -1), 'RIGHT'), ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d1d5db')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, light_bg]),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4), ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t)
+
+    # Section 2: Pending Bank Transfers
+    if pending_transfers.exists():
+        elements.append(Paragraph(f'2. Pending Bank Transfers ({pending_transfers.count()})', section_style))
+        transfer_data = [['Date', 'Ref #', 'Bank', 'Bill #', 'Shop', 'Rep', 'Amount', 'Days']]
+        for s in pending_transfers.order_by('settlement_date'):
+            ref_date = s.settlement_date.date() if s.settlement_date else today
+            days = (today - ref_date).days
+            transfer_data.append([
+                s.settlement_date.strftime('%d/%m/%Y') if s.settlement_date else '-',
+                str(s.reference_number or '-')[:15],
+                str(s.bank_name or '-')[:12],
+                s.bill.bill_number if s.bill else '-',
+                Paragraph(_shop_name(s)[:20], cell_style),
+                Paragraph(_rep_name(s)[:15], cell_style),
+                f'{s.amount:,.2f}',
+                str(days),
+            ])
+        transfer_data.append(['', '', '', '', '', 'Total:', f'{transfer_total:,.2f}', ''])
+        t = Table(transfer_data, colWidths=col_w, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), blue), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (6, 0), (7, -1), 'RIGHT'), ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d1d5db')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, light_bg]),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4), ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t)
+
+    # Section 3: Credit Bills
+    if credit_bills_list:
+        elements.append(Paragraph(f'3. Credit Outstanding ({len(credit_bills_list)})', section_style))
+        credit_data = [['Bill Date', 'Bill #', 'Shop', 'Rep', 'Total', 'Paid', 'Balance', 'Days']]
+        for b in credit_bills_list:
+            ref_date = b.bill_date.date() if b.bill_date else today
+            days = (today - ref_date).days
+            shop_name = b.shop.shop_name if b.shop else (b.customer_name or 'N/A')
+            credit_data.append([
+                b.bill_date.strftime('%d/%m/%Y') if b.bill_date else '-',
+                b.bill_number,
+                Paragraph(shop_name[:20], cell_style),
+                Paragraph(_rep_name(b, True)[:15], cell_style),
+                f'{b.total_amount:,.2f}',
+                f'{b.paid_amount:,.2f}',
+                f'{b.credit_balance:,.2f}',
+                str(days),
+            ])
+        credit_data.append(['', '', '', 'Total:', '', '',
+                            f'{credit_total:,.2f}', ''])
+        credit_col_w = [0.85*inch, 1.3*inch, 1.5*inch, 1.2*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.5*inch]
+        t = Table(credit_data, colWidths=credit_col_w, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), blue), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (4, 0), (7, -1), 'RIGHT'), ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d1d5db')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, light_bg]),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4), ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(t)
+
+    doc.build(elements)
+    return response
+
+
+@login_required
 def profit_loss_report(request):
     """Profit & Loss report with FIFO-based COGS"""
     from decimal import Decimal
@@ -922,8 +1294,13 @@ def profit_loss_report(request):
     # Note: These are stock outflows (negative qty) with positive cost — they represent
     # the value of goods returned to the supplier (not an expense but an inventory adjustment)
     
-    # 7. Stock Adjustments (manual corrections)
-    adjustment_qs = StockMovement.objects.filter(movement_type='adjustment')
+    # 7. Stock Adjustments (real stock count discrepancies only)
+    # Note: Bill cancellations also use movement_type='adjustment' (with ref like BILL-*-CANCEL)
+    # so we filter to only include actual stock count adjustments (ref starts with STKCNT-)
+    adjustment_qs = StockMovement.objects.filter(
+        movement_type='adjustment',
+        reference_number__startswith='STKCNT-'
+    )
     if start_date:
         adjustment_qs = adjustment_qs.filter(created_at__date__gte=start_date)
     if end_date:
@@ -953,7 +1330,9 @@ def profit_loss_report(request):
     
     # === SUB-TOTALS for proper P&L structure ===
     # Operating Expenses = Sales & Distribution + General & Administrative
-    total_opex = total_commission + net_foc_cost + total_operating_expenses
+    # Note: FOC cost is NOT included here — it's already captured in COGS
+    # (BillItem.total_cost = (qty + foc_qty) × FIFO unit_cost)
+    total_opex = total_commission + total_operating_expenses
     
     # Losses & Write-offs
     total_losses = total_bad_debt + total_damage + total_writeoffs
@@ -1234,7 +1613,7 @@ def distributor_eod_report(request):
     from decimal import Decimal
     from datetime import datetime as dt
     from django.contrib.auth import get_user_model
-    from sales.eod_views import get_rep_eod_data, get_product_breakdown
+    from sales.eod_views import get_rep_eod_data, get_product_breakdown, get_price_variation_breakdown
     from tenants.models import GlobalCaseValueSetting
     from payments.models import SalesAccountSettlement
     from sales.models import Bill, BillItem, Return
@@ -1285,7 +1664,7 @@ def distributor_eod_report(request):
 
     return_rep_ids = Return.objects.filter(
         return_date__date=report_date
-    ).values_list('created_by', flat=True).distinct()
+    ).exclude(settlement_status='cancelled').values_list('created_by', flat=True).distinct()
 
     # Union of all active user IDs
     all_rep_ids = set(active_rep_ids) | set(payment_rep_ids) | set(return_rep_ids)
@@ -1346,6 +1725,61 @@ def distributor_eod_report(request):
     # Combined product breakdown (all reps)
     product_breakdown = get_product_breakdown(report_date)
 
+    # Price variation breakdown (products billed at different prices)
+    price_variations = get_price_variation_breakdown(report_date)
+
+    # Previous bill collections today (payments for bills from earlier dates)
+    prev_bill_collections = SalesAccountSettlement.objects.filter(
+        settlement_date__date=report_date,
+    ).exclude(
+        settlement_status='cancelled'
+    ).exclude(
+        bill__bill_date__date=report_date
+    ).filter(
+        bill__isnull=False
+    ).select_related('bill__shop', 'received_by').order_by('settlement_date')
+
+    prev_collections_total = prev_bill_collections.aggregate(
+        total=Sum('amount'))['total'] or Decimal('0')
+
+    # New credit bills today (bills with unpaid balance, excluding those paid by cheque/bank pending verification)
+    # A bill is truly "credit" if its unpaid balance is NOT covered by pending cheque/bank settlements
+    from django.db.models import Subquery, OuterRef
+    bills_with_pending_payment = SalesAccountSettlement.objects.filter(
+        bill=OuterRef('pk'),
+        settlement_method__in=['cheque', 'bank_transfer'],
+    ).exclude(settlement_status='cancelled').values('bill')
+
+    credit_bills_today = Bill.objects.filter(
+        bill_date__date=report_date,
+        bill_status='confirmed',
+        balance_amount__gt=0
+    ).exclude(
+        pk__in=Subquery(bills_with_pending_payment)
+    ).select_related('shop', 'sales_rep').order_by('bill_date')
+
+    credit_bills_total = credit_bills_today.aggregate(
+        total_balance=Sum('balance_amount'),
+        total_value=Sum('total_amount'))['total_balance'] or Decimal('0')
+
+    # Cheque & bank transfer payments received today
+    cheque_bank_payments = SalesAccountSettlement.objects.filter(
+        settlement_date__date=report_date,
+        settlement_method__in=['cheque', 'bank_transfer'],
+    ).exclude(
+        settlement_status='cancelled'
+    ).select_related('bill__shop', 'received_by').order_by('settlement_method', 'settlement_date')
+
+    cheque_payments_total = cheque_bank_payments.filter(
+        settlement_method='cheque'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+    bank_payments_total = cheque_bank_payments.filter(
+        settlement_method='bank_transfer'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+    cheque_bank_total = cheque_payments_total + bank_payments_total
+
     context = {
         'report_date': report_date,
         'prev_date': prev_date,
@@ -1361,6 +1795,15 @@ def distributor_eod_report(request):
         'uncollected_cheques': uncollected_cheques,
         'all_uncollected_count': all_uncollected_count,
         'product_breakdown': product_breakdown,
+        'price_variations': price_variations,
+        'prev_bill_collections': prev_bill_collections,
+        'prev_collections_total': prev_collections_total,
+        'credit_bills_today': credit_bills_today,
+        'credit_bills_total': credit_bills_total,
+        'cheque_bank_payments': cheque_bank_payments,
+        'cheque_payments_total': cheque_payments_total,
+        'bank_payments_total': bank_payments_total,
+        'cheque_bank_total': cheque_bank_total,
         'page_title': f'Distributor EOD Report - {report_date}',
     }
     return render(request, 'dashboard/distributor_eod_report.html', context)

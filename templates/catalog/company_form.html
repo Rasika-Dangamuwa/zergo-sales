@@ -15,6 +15,14 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Company Name *</label>
@@ -30,51 +38,68 @@
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tagline</label>
                             {{ form.tagline }}
+                            {% if form.tagline.errors %}<div class="text-danger small mt-1">{{ form.tagline.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Website</label>
                             {{ form.website }}
+                            {% if form.website.errors %}<div class="text-danger small mt-1">{{ form.website.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description</label>
                             {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Contact Person</label>
                             {{ form.contact_person }}
+                            {% if form.contact_person.errors %}<div class="text-danger small mt-1">{{ form.contact_person.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Phone</label>
                             {{ form.phone_number }}
+                            {% if form.phone_number.errors %}<div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Email</label>
                             {{ form.email }}
+                            {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">City</label>
                             {{ form.city }}
+                            {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>{% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Country</label>
+                            {{ form.country }}
+                            {% if form.country.errors %}<div class="text-danger small mt-1">{{ form.country.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-12">
                             <label class="form-label fw-semibold">Address</label>
                             {{ form.address }}
+                            {% if form.address.errors %}<div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Logo</label>
                             {{ form.logo }}
+                            {% if form.logo.errors %}<div class="text-danger small mt-1">{{ form.logo.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Receipt Logo (B&W)</label>
                             {{ form.logo_receipt }}
+                            {% if form.logo_receipt.errors %}<div class="text-danger small mt-1">{{ form.logo_receipt.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-12">
                             <label class="form-label fw-semibold">Notes</label>
                             {{ form.notes }}
+                            {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>{% endif %}
                         </div>
                         
                         <div class="col-md-6">

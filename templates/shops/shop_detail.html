@@ -1235,7 +1235,9 @@ html { scroll-behavior: smooth; }
                                 <td data-label="Reason">{{ return.get_return_reason_display }}</td>
                                 <td data-label="Amount">Rs. {{ return.total_amount|floatformat:2|intcomma }}</td>
                                 <td data-label="Status">
-                                    {% if return.is_verified %}
+                                    {% if return.settlement_status == 'cancelled' %}
+                                        <span class="badge-pill bp-danger">Cancelled</span>
+                                    {% elif return.is_verified %}
                                         <span class="badge-pill bp-success">Verified</span>
                                     {% else %}
                                         <span class="badge-pill bp-warning">Pending</span>
@@ -1580,9 +1582,10 @@ function showTab(name, btn) {
 {% if shop.latitude and shop.longitude %}
 function initMap() {
     const map = L.map('shopMap').setView([{{ shop.latitude }}, {{ shop.longitude }}], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 19
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
     }).addTo(map);
     L.marker([{{ shop.latitude }}, {{ shop.longitude }}]).addTo(map)
      .bindPopup('<strong>{{ shop.shop_name|escapejs }}</strong><br>{{ shop.address_line1|escapejs }}').openPopup();

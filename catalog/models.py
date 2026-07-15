@@ -123,6 +123,10 @@ class GlobalProduct(models.Model):
         max_length=200,
         help_text="Full product name (e.g., Max Orange 500ml)"
     )
+    sinhala_name = models.CharField(
+        max_length=200, blank=True, null=True,
+        help_text="Product name in Sinhala (සිංහල නම)"
+    )
     description = models.TextField(blank=True, default='')
     
     # Brand & Category
@@ -152,6 +156,34 @@ class GlobalProduct(models.Model):
     )
     barcode = models.CharField(max_length=50, blank=True, default='')
     product_image = models.ImageField(upload_to='global_products/', blank=True, null=True)
+    
+    # Default Pricing (distributors can override when activating)
+    discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=10.00,
+        help_text="Default shop discount % off MRP (distributors can override)"
+    )
+    company_discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=23.00,
+        help_text="Default company discount % on shop price (distributors can override)"
+    )
+    
+    # Default FOC Ratios (distributors can override when activating)
+    company_foc_buy = models.IntegerField(
+        default=12,
+        help_text="Default: buy X bottles to get FOC from company"
+    )
+    company_foc_free = models.IntegerField(
+        default=1,
+        help_text="Default: Y free bottles from company for every X bought"
+    )
+    shop_foc_buy = models.IntegerField(
+        default=12,
+        help_text="Default: shop buys X bottles to get FOC"
+    )
+    shop_foc_free = models.IntegerField(
+        default=1,
+        help_text="Default: Y free bottles given to shop for every X bought"
+    )
     
     # Display
     display_order = models.IntegerField(

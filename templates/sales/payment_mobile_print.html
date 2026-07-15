@@ -319,7 +319,7 @@ function formatForThermalPrint() {
     t += center('PAYMENT RECEIPT') + '\n';
     t += center('{{ settlement.settlement_number }}') + '\n\n';
 
-    t += lr('Date:', '{{ settlement.payment_date|date:"d/m/Y H:i" }}') + '\n';
+    t += lr('Date:', '{{ settlement.settlement_date|date:"d/m/Y H:i" }}') + '\n';
     t += lr('Method:', '{{ settlement.get_settlement_method_display|upper|escapejs }}') + '\n';
     t += lr('Status:', '{{ settlement.get_settlement_status_display|upper|escapejs }}') + '\n';
 
@@ -390,7 +390,7 @@ function formatForThermalPrint() {
     {% endif %}
     {% endif %}
 
-    t += '\n' + center('{{ settlement.payment_date|date:"d/m/Y H:i" }}') + '\n\n';
+    t += '\n' + center('{{ settlement.settlement_date|date:"d/m/Y H:i" }}') + '\n\n';
     return t;
 }
 
@@ -691,7 +691,7 @@ async function generateESCPOS() {
     // Left align for details
     cmd.push(ESC, 0x61, 0x00);
 
-    cmd.push(...enc.encode('Date:    {{ settlement.payment_date|date:"d/m/Y H:i" }}\n'));
+    cmd.push(...enc.encode('Date:    {{ settlement.settlement_date|date:"d/m/Y H:i" }}\n'));
     cmd.push(...enc.encode('Method:  {{ settlement.get_settlement_method_display|upper|escapejs }}\n'));
     cmd.push(...enc.encode('Status:  {{ settlement.get_settlement_status_display|upper|escapejs }}\n'));
 
@@ -775,7 +775,7 @@ async function generateESCPOS() {
     {% endif %}
     {% endif %}
 
-    cmd.push(...enc.encode('{{ settlement.payment_date|date:"d/m/Y H:i" }}\n'));
+    cmd.push(...enc.encode('{{ settlement.settlement_date|date:"d/m/Y H:i" }}\n'));
     cmd.push(...enc.encode('\n\n\n'));
     cmd.push(GS, 0x56, 0x00); // Cut paper
 

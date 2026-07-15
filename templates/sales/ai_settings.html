@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+.ai-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.ai-header h2 { margin: 0; font-size: 1.4rem; }
+.ai-header p { margin: 4px 0 0; opacity: 0.75; font-size: 0.85rem; }
+.settings-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 1.25rem;
+}
+.settings-card .card-header {
+    border-radius: 12px 12px 0 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 0.88rem; color: #333; }
+.toggle-label small { display: block; color: #888; font-size: 0.78rem; margin-top: 2px; }
+.form-switch .form-check-input { width: 2.5em; height: 1.3em; cursor: pointer; }
+.form-group-ai { padding: 16px 20px; }
+.form-group-ai label { font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+.form-group-ai .form-control { font-size: 0.88rem; border-radius: 8px; border: 1px solid #ddd; }
+.form-group-ai .form-control:focus { border-color: #0f3460; box-shadow: 0 0 0 3px rgba(15,52,96,0.1); }
+#testResult { font-size: 0.85rem; margin-top: 8px; }
+.badge-ai { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 700px;">
+
+    <div class="ai-header">
+        <h2><i class="fas fa-robot me-2"></i>AI Intelligence Settings</h2>
+        <p>Configure AI-powered credit risk and collection intelligence features</p>
+    </div>
+
+    {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Master toggle -->
+        <div class="card settings-card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-power-off"></i> AI Features
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    Enable AI Features
+                    <small>Master switch — disabling hides all AI features site-wide</small>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="is_enabled" id="is_enabled"
+                           {% if ai_settings.is_enabled %}checked{% endif %}>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature toggles -->
+        <div class="card settings-card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-toggle-on"></i> Feature Toggles
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    Credit Risk on Bill Creation
+                    <small>Shows risk badge when selecting a shop on the create bill page</small>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="credit_risk_enabled" id="credit_risk_enabled"
+                           {% if ai_settings.credit_risk_enabled %}checked{% endif %}>
+                </div>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    Collection Intelligence
+                    <small>Dashboard panel that prioritizes which shops to visit for collection</small>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="collection_intelligence_enabled" id="collection_intelligence_enabled"
+                           {% if ai_settings.collection_intelligence_enabled %}checked{% endif %}>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="card settings-card">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-cog"></i> API Configuration
+            </div>
+            <div class="form-group-ai">
+                <label for="api_key">API Key</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="api_key" name="api_key"
+                           placeholder="Paste new key here (leave blank to keep current)"
+                           autocomplete="off" spellcheck="false">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearKey()" title="Clear field">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                {% if ai_settings.api_key %}
+                <small class="text-success mt-1 d-block"><i class="fas fa-check-circle"></i> API key is configured (enter new key above to replace)</small>
+                {% else %}
+                <small class="text-danger mt-1 d-block"><i class="fas fa-exclamation-circle"></i> No API key set — paste your key above</small>
+                {% endif %}
+            </div>
+            <div class="form-group-ai" style="border-top: 1px solid #f0f0f0;">
+                <label for="api_base_url">API Base URL</label>
+                <input type="url" class="form-control" id="api_base_url" name="api_base_url"
+                       value="{{ ai_settings.api_base_url }}">
+                <small class="text-muted">Default: https://openrouter.ai/api/v1</small>
+            </div>
+            <div class="form-group-ai" style="border-top: 1px solid #f0f0f0;">
+                <label for="model_name">Model Name</label>
+                <input type="text" class="form-control" id="model_name" name="model_name"
+                       value="{{ ai_settings.model_name }}">
+                <small class="text-muted">Default: google/gemini-2.0-flash-exp:free</small>
+            </div>
+        </div>
+
+        <!-- Test connection -->
+        <div class="card settings-card">
+            <div class="card-header bg-light text-dark">
+                <i class="fas fa-wifi"></i> Connection Test
+            </div>
+            <div class="form-group-ai">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="testConnection()">
+                    <i class="fas fa-plug me-1"></i>Test Connection
+                </button>
+                <div id="testResult"></div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-dark px-4">
+                <i class="fas fa-save me-1"></i>Save Settings
+            </button>
+            <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function clearKey() {
+    document.getElementById('api_key').value = '';
+    document.getElementById('api_key').focus();
+}
+
+function testConnection() {
+    const resultDiv = document.getElementById('testResult');
+    resultDiv.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Testing...</span>';
+
+    fetch('{% url "sales:ai_test_connection" %}', {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            resultDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Connected! Reply: "${data.reply}"</span>`;
+        } else {
+            resultDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Failed: ${data.error}</span>`;
+        }
+    })
+    .catch(e => {
+        resultDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Error: ${e.message}</span>`;
+    });
+}
+</script>
+{% endblock %}

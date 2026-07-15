@@ -219,18 +219,18 @@ CSRF_COOKIE_HTTPONLY = True
 
 # Production HSTS settings (only when not DEBUG)
 if not DEBUG:
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)  # Set to 31536000 after SSL is confirmed
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
+    SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=False, cast=bool)
+    # SSL/cookie settings are read from .env (defined above) — NOT overridden here
     # Production CSRF trusted origins — set PRODUCTION_DOMAIN in .env (e.g., zergosales.com)
     _prod_domain = config('PRODUCTION_DOMAIN', default='')
     if _prod_domain:
         CSRF_TRUSTED_ORIGINS = [
             f'https://{_prod_domain}',
             f'https://*.{_prod_domain}',
+            f'http://{_prod_domain}',
+            f'http://*.{_prod_domain}',
         ]
 
 # For development with self-signed certificates

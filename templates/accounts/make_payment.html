@@ -153,17 +153,21 @@
 
 <script>
 // Update available balance when user is selected
-document.getElementById('user_id').addEventListener('change', function() {
-    const selected = this.options[this.selectedIndex];
+function updateBalanceDisplay() {
+    const sel = document.getElementById('user_id');
+    const selected = sel.options[sel.selectedIndex];
     const balance = parseFloat(selected.dataset.balance || 0);
     
-    if (this.value) {
+    if (sel.value) {
         document.getElementById('balanceAlert').style.display = 'block';
         document.getElementById('availableBalance').textContent = balance.toFixed(2);
     } else {
         document.getElementById('balanceAlert').style.display = 'none';
     }
-});
+}
+document.getElementById('user_id').addEventListener('change', updateBalanceDisplay);
+// Initialize on page load if user is pre-selected
+updateBalanceDisplay();
 
 // Pay full balance button
 document.getElementById('payFullBtn').addEventListener('click', function() {
@@ -202,9 +206,10 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
     }
     
     if (amount > balance) {
-        e.preventDefault();
-        alert(`Cannot pay Rs. ${amount.toFixed(2)}. Available balance is only Rs. ${balance.toFixed(2)}`);
-        return false;
+        if (!confirm(`Amount Rs. ${amount.toLocaleString(undefined, {minimumFractionDigits:2})} exceeds balance due Rs. ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}.\n\nThis will create a negative balance (advance/overpayment).\nContinue?`)) {
+            e.preventDefault();
+            return false;
+        }
     }
 });
 </script>

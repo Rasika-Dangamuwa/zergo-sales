@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db import models, transaction
 from django.contrib import messages
+from django.http import HttpResponse
 from django.utils import timezone
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -90,6 +91,204 @@ def stock_alert(request):
         'low_stock_products': low_stock_products
     }
     return render(request, 'products/stock_alert.html', context)
+
+
+@login_required
+def stock_inventory_pdf(request):
+    """Generate a professional PDF of current stock inventory"""
+
+    import io
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.pdfgen import canvas
+    from business.models import DistributorProfile
+    from products.utils import get_size_ordering
+
+    business = DistributorProfile.get_active()
+    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+        size_num=get_size_ordering('size')
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
+
+    # Page number canvas
+    class NumberedCanvas(canvas.Canvas):
+        def __init__(self, *args, **kwargs):
+            canvas.Canvas.__init__(self, *args, **kwargs)
+            self._saved_page_states = []
+
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            num_pages = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.setFont("Helvetica", 8)
+                self.setFillColor(colors.HexColor('#7f8c8d'))
+                self.drawCentredString(A4[0] / 2, 8*mm, f"Page {self._pageNumber} of {num_pages}")
+                biz_name = business.business_name if business else ''
+                self.drawRightString(A4[0] - 15*mm, 8*mm, biz_name)
+                canvas.Canvas.showPage(self)
+            canvas.Canvas.save(self)
+
+    buffer = io.BytesIO()
+    now = timezone.localtime(timezone.now())
+    pdf_title = f"Stock Inventory - {now.strftime('%Y-%m-%d')}"
+
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        rightMargin=12*mm, leftMargin=12*mm,
+        topMargin=12*mm, bottomMargin=15*mm,
+        title=pdf_title
+    )
+
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Header
+    header_style = ParagraphStyle('Header', parent=styles['Heading1'], fontSize=18,
+        textColor=colors.HexColor('#2c3e50'), alignment=TA_CENTER, spaceAfter=2, fontName='Helvetica-Bold')
+    sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10,
+        textColor=colors.HexColor('#7f8c8d'), alignment=TA_CENTER, spaceAfter=4)
+
+    if business:
+        elements.append(Paragraph(business.business_name, header_style))
+        full_address = business.get_full_address()
+        if full_address:
+            elements.append(Paragraph(full_address, sub_style))
+        if business.primary_phone:
+            elements.append(Paragraph(f"Tel: {business.primary_phone}", sub_style))
+
+    elements.append(Spacer(1, 3*mm))
+    title_style = ParagraphStyle('Title', parent=styles['Heading2'], fontSize=14,
+        textColor=colors.HexColor('#8e44ad'), alignment=TA_CENTER, fontName='Helvetica-Bold')
+    elements.append(Paragraph("STOCK INVENTORY REPORT", title_style))
+    elements.append(Paragraph(f"Generated: {now.strftime('%B %d, %Y at %I:%M %p')}", sub_style))
+    elements.append(Spacer(1, 5*mm))
+
+    # Build table
+    col_widths = [8*mm, 60*mm, 18*mm, 22*mm, 22*mm, 22*mm, 25*mm]
+    right_style = ParagraphStyle('R', parent=styles['Normal'], fontSize=8, alignment=TA_RIGHT)
+    cell_style = ParagraphStyle('C', parent=styles['Normal'], fontSize=8)
+    hdr_style = ParagraphStyle('H', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', textColor=colors.white)
+    hdr_right = ParagraphStyle('HR', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', textColor=colors.white, alignment=TA_RIGHT)
+
+    header_row = [
+        Paragraph('#', hdr_style),
+        Paragraph('Product', hdr_style),
+        Paragraph('Size', hdr_style),
+        Paragraph('MRP', hdr_right),
+        Paragraph('Shop Price', hdr_right),
+        Paragraph('Stock (Btl)', hdr_right),
+        Paragraph('Stock Value', hdr_right),
+    ]
+    data = [header_row]
+
+    total_bottles = 0
+    total_value = Decimal('0.00')
+    current_size = None
+    row_num = 0
+
+    for product in products:
+        # Size group separator
+        if product.size != current_size:
+            if current_size is not None:
+                # Add subtotal separator row
+                pass
+            current_size = product.size
+
+        row_num += 1
+        stock = product.quantity_in_stock
+        mrp = product.marked_price
+        sp = product.shop_price
+        value = stock * sp
+        total_bottles += stock
+        total_value += value
+
+        data.append([
+            Paragraph(str(row_num), cell_style),
+            Paragraph(product.product_name, cell_style),
+            Paragraph(product.size, cell_style),
+            Paragraph(f"Rs.{mrp:,.2f}", right_style),
+            Paragraph(f"Rs.{sp:,.2f}", right_style),
+            Paragraph(str(stock), right_style),
+            Paragraph(f"Rs.{value:,.2f}", right_style),
+        ])
+
+    # Total row
+    total_label = ParagraphStyle('TL', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold')
+    total_val = ParagraphStyle('TV', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', alignment=TA_RIGHT)
+    data.append([
+        '', Paragraph('TOTAL', total_label), '', '', '',
+        Paragraph(str(total_bottles), total_val),
+        Paragraph(f"Rs.{total_value:,.2f}", total_val),
+    ])
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+
+    # Styling
+    style_cmds = [
+        # Header
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8e44ad')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        # Grid
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        # Total row
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f0e6f6')),
+        ('LINEABOVE', (0, -1), (-1, -1), 1.5, colors.HexColor('#8e44ad')),
+    ]
+
+    # Alternate row colors
+    for i in range(1, len(data) - 1):
+        if i % 2 == 0:
+            style_cmds.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#f8f9fa')))
+
+    # Highlight low stock rows
+    for i, product in enumerate(products, start=1):
+        if product.quantity_in_stock <= product.minimum_stock_level:
+            style_cmds.append(('BACKGROUND', (4, i), (4, i), colors.HexColor('#ffe0e0')))
+
+    table.setStyle(TableStyle(style_cmds))
+    elements.append(table)
+
+    # Summary box
+    elements.append(Spacer(1, 8*mm))
+    summary_data = [
+        [Paragraph('<b>Summary</b>', ParagraphStyle('SH', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold')), '', ''],
+        [Paragraph('Total Products:', cell_style), Paragraph(str(row_num), right_style), ''],
+        [Paragraph('Total Stock (Bottles):', cell_style), Paragraph(f"{total_bottles:,}", right_style), ''],
+        [Paragraph('Total Stock Value (Shop Price):', cell_style), Paragraph(f"Rs.{total_value:,.2f}", right_style), ''],
+    ]
+    summary_table = Table(summary_data, colWidths=[50*mm, 40*mm, 90*mm])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#8e44ad')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+        ('BOX', (0, 0), (1, -1), 1, colors.HexColor('#8e44ad')),
+        ('INNERGRID', (0, 0), (1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(summary_table)
+
+    doc.build(elements, canvasmaker=NumberedCanvas)
+    buffer.seek(0)
+
+    filename = f"Stock_Inventory_{now.strftime('%Y%m%d_%H%M')}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
 
 
 @login_required
@@ -1098,6 +1297,89 @@ def dispose_non_resaleable_stock(request):
 
 
 @login_required
+def recover_non_resaleable_stock(request):
+    """Move non-resaleable stock back to resaleable (e.g. items incorrectly classified or repaired)."""
+    if request.user.user_type not in ['admin', 'office']:
+        messages.error(request, 'Access denied.')
+        return redirect('products:non_resaleable_inventory_list')
+
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        quantity = int(request.POST.get('quantity', 0))
+        reason = request.POST.get('reason', '').strip()
+
+        if not product_id or quantity <= 0:
+            messages.error(request, 'Invalid product or quantity.')
+            return redirect('products:non_resaleable_inventory_list')
+
+        product = get_object_or_404(Product, id=product_id)
+
+        if product.non_resaleable_stock < quantity:
+            messages.error(
+                request,
+                f'Cannot recover {quantity} units. Only {product.non_resaleable_stock} non-resaleable units available.'
+            )
+            return redirect('products:non_resaleable_inventory_list')
+
+        try:
+            with transaction.atomic():
+                prev_non_res = product.non_resaleable_stock
+                prev_res = product.quantity_in_stock
+
+                product.non_resaleable_stock -= quantity
+                product.quantity_in_stock += quantity
+                product.save()
+
+                from django.utils import timezone
+                current_year = timezone.now().year
+                prefix = f"RCV-{current_year}-"
+                last = StockMovement.objects.filter(
+                    movement_type='non_resaleable_recovered',
+                    reference_number__startswith=prefix
+                ).order_by('-reference_number').first()
+                new_num = (int(last.reference_number.split('-')[-1]) + 1) if last else 1
+                ref = f"{prefix}{new_num:04d}"
+
+                cost_per_unit = product.cost_after_foc if product.cost_after_foc else Decimal('0')
+
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type='non_resaleable_recovered',
+                    stock_type='non_resaleable',
+                    quantity=-quantity,
+                    previous_quantity=prev_non_res,
+                    new_quantity=product.non_resaleable_stock,
+                    reference_number=ref,
+                    notes=f'Recovered to resaleable: {reason}',
+                    created_by=request.user,
+                    unit_cost=cost_per_unit,
+                    total_cost=cost_per_unit * quantity,
+                )
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type='non_resaleable_recovered',
+                    stock_type='resaleable',
+                    quantity=quantity,
+                    previous_quantity=prev_res,
+                    new_quantity=product.quantity_in_stock,
+                    reference_number=ref,
+                    notes=f'Recovered from non-resaleable: {reason}',
+                    created_by=request.user,
+                    unit_cost=cost_per_unit,
+                    total_cost=cost_per_unit * quantity,
+                )
+
+                messages.success(
+                    request,
+                    f'Recovered {quantity} units of {product.product_name} to resaleable stock. Ref: {ref}'
+                )
+        except Exception as e:
+            messages.error(request, f'Error recovering stock: {str(e)}')
+
+    return redirect('products:non_resaleable_inventory_list')
+
+
+@login_required
 def product_usage_history(request):
     """Show comprehensive transaction history for a product - all stock movements"""
     from sales.models import ReturnItem
@@ -1126,9 +1408,16 @@ def product_usage_history(request):
     transactions = []
     
     # 1. Stock Movements (Opening Balance, Adjustments, Damages, etc.)
-    # Exclude 'sale', 'return', and 'status_adjustment' types since they're shown via their specific models
+    # Exclude 'sale', 'return', and 'status_adjustment' types since they're shown via their specific models.
+    # Also exclude cancellation reversal adjustments to avoid double-counting cancelled bill/return transactions.
     stock_movements = StockMovement.objects.filter(product=product).exclude(
         movement_type__in=['sale', 'return', 'status_adjustment']
+    ).exclude(
+        movement_type='adjustment',
+        reference_number__endswith='-CANCEL'
+    ).exclude(
+        movement_type='adjustment',
+        notes__contains='cancelled - Stock reversal'
     ).select_related('created_by', 'stock_count')
     if date_from:
         stock_movements = stock_movements.filter(created_at__gte=datetime.strptime(date_from, '%Y-%m-%d'))
@@ -1173,8 +1462,10 @@ def product_usage_history(request):
                 'user': movement.created_by.username if movement.created_by else 'System',
             })
     
-    # 2. Sales (from BillItems)
-    bill_items = BillItem.objects.filter(product=product).select_related('bill', 'bill__shop', 'bill__sales_rep')
+    # 2. Sales (from BillItems) — exclude cancelled bills (their stock was already reversed)
+    bill_items = BillItem.objects.filter(product=product).exclude(
+        bill__bill_status='cancelled'
+    ).select_related('bill', 'bill__shop', 'bill__sales_rep')
     if date_from:
         bill_items = bill_items.filter(bill__bill_date__gte=datetime.strptime(date_from, '%Y-%m-%d'))
     if date_to:
@@ -1200,8 +1491,10 @@ def product_usage_history(request):
                 'value': float(item.line_total),
             })
     
-    # 3. Returns (from ReturnItems)
-    return_items = ReturnItem.objects.filter(product=product).select_related('return_ref__bill__shop')
+    # 3. Returns (from ReturnItems) — exclude cancelled returns (their stock was already reversed)
+    return_items = ReturnItem.objects.filter(product=product).exclude(
+        return_ref__settlement_status='cancelled'
+    ).select_related('return_ref__bill__shop')
     if date_from:
         return_items = return_items.filter(return_ref__return_date__gte=datetime.strptime(date_from, '%Y-%m-%d'))
     if date_to:
@@ -1444,20 +1737,21 @@ def activate_product(request, global_pk):
                 }
             )
 
-        # Read distributor-specific fields from the form
-        discount_pct = Decimal(request.POST.get('discount_percentage', '10.00'))
-        company_discount_pct = Decimal(request.POST.get('company_discount_percentage', '23.00'))
+        # Read distributor-specific fields from the form (defaults come from global catalog)
+        discount_pct = Decimal(request.POST.get('discount_percentage', str(global_product.discount_percentage)))
+        company_discount_pct = Decimal(request.POST.get('company_discount_percentage', str(global_product.company_discount_percentage)))
         minimum_stock = int(request.POST.get('minimum_stock_level', '50'))
-        company_foc_buy = int(request.POST.get('company_foc_buy', '12'))
-        company_foc_free = int(request.POST.get('company_foc_free', '1'))
-        shop_foc_buy = int(request.POST.get('shop_foc_buy', '12'))
-        shop_foc_free = int(request.POST.get('shop_foc_free', '1'))
+        company_foc_buy = int(request.POST.get('company_foc_buy', str(global_product.company_foc_buy)))
+        company_foc_free = int(request.POST.get('company_foc_free', str(global_product.company_foc_free)))
+        shop_foc_buy = int(request.POST.get('shop_foc_buy', str(global_product.shop_foc_buy)))
+        shop_foc_free = int(request.POST.get('shop_foc_free', str(global_product.shop_foc_free)))
 
         # Create the local Product
         product = Product.objects.create(
             global_product=global_product,
             product_code=global_product.product_code,
             product_name=global_product.product_name,
+            sinhala_name=global_product.sinhala_name or '',
             description=global_product.description or '',
             company=local_company,
             category=local_category,
@@ -1550,6 +1844,7 @@ def bulk_activate_products(request):
                 global_product=global_product,
                 product_code=global_product.product_code,
                 product_name=global_product.product_name,
+                sinhala_name=global_product.sinhala_name or '',
                 description=global_product.description or '',
                 company=local_company,
                 category=local_category,

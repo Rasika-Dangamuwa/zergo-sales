@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction, models
 from django.utils import timezone
-from django.db.models import Sum, Q, Count
+from django.db.models import Sum, Q, Count, F
 from django.urls import reverse
 from decimal import Decimal
 from .models import SalesAccountSettlement, SettlementAttachment
@@ -21,9 +21,9 @@ def payment_list(request):
     
     # Base queryset with permissions
     if request.user.is_sales_rep:
-        settlements = SalesAccountSettlement.objects.filter(received_by=request.user).select_related('shop', 'bill', 'received_by', 'verified_by')
+        settlements = SalesAccountSettlement.objects.filter(received_by=request.user).select_related('shop', 'bill', 'received_by', 'verified_by').annotate(bill_customer_name=F('bill__customer_name'))
     else:
-        settlements = SalesAccountSettlement.objects.all().select_related('shop', 'bill', 'received_by', 'verified_by')
+        settlements = SalesAccountSettlement.objects.all().select_related('shop', 'bill', 'received_by', 'verified_by').annotate(bill_customer_name=F('bill__customer_name'))
     
     # Search functionality
     search_query = request.GET.get('search', '').strip()
@@ -77,14 +77,23 @@ def payment_list(request):
         settlements = settlements.filter(settlement_date__year=last_month.year, settlement_date__month=last_month.month)
     
     # Sorting
+    ALLOWED_SORT_FIELDS = {
+        'settlement_date', '-settlement_date',
+        'amount', '-amount',
+        'settlement_method', '-settlement_method',
+        'settlement_status', '-settlement_status',
+        'created_at', '-created_at',
+        'settlement_number', '-settlement_number',
+    }
     sort_by = request.GET.get('sort', '-settlement_date')
-    if sort_by:
-        settlements = settlements.order_by(sort_by)
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = '-settlement_date'
+    settlements = settlements.order_by(sort_by)
     
     # Calculate comprehensive statistics (before pagination)
     all_stats = settlements.aggregate(
-        total_amount=Sum('amount'),
-        total_count=Count('id'),
+        total_amount=Sum('amount', filter=Q(settlement_status__in=['completed', 'pending'])),
+        total_count=Count('id', filter=Q(settlement_status__in=['completed', 'pending'])),
         pending_count=Count('id', filter=Q(settlement_status='pending')),
         completed_count=Count('id', filter=Q(settlement_status='completed')),
         bounced_count=Count('id', filter=Q(settlement_status='bounced')),
@@ -93,13 +102,15 @@ def payment_list(request):
         completed_amount=Sum('amount', filter=Q(settlement_status='completed')),
         bounced_amount=Sum('amount', filter=Q(settlement_status='bounced')),
         cancelled_amount=Sum('amount', filter=Q(settlement_status='cancelled')),
-        cash_amount=Sum('amount', filter=Q(settlement_method='cash')),
-        cheque_amount=Sum('amount', filter=Q(settlement_method='cheque')),
-        transfer_amount=Sum('amount', filter=Q(settlement_method='bank_transfer')),
+        cash_amount=Sum('amount', filter=Q(settlement_method='cash', settlement_status__in=['completed', 'pending'])),
+        cheque_amount=Sum('amount', filter=Q(settlement_method='cheque', settlement_status__in=['completed', 'pending'])),
+        transfer_amount=Sum('amount', filter=Q(settlement_method='bank_transfer', settlement_status__in=['completed', 'pending'])),
     )
     
-    # Method breakdown
-    method_stats = list(settlements.values('settlement_method').annotate(
+    # Method breakdown (exclude cancelled/bounced)
+    method_stats = list(settlements.filter(
+        settlement_status__in=['completed', 'pending']
+    ).values('settlement_method').annotate(
         count=Count('id'),
         total=Sum('amount')
     ).order_by('-total'))
@@ -159,6 +170,11 @@ def payment_list(request):
     else:
         shops = Shop.objects.filter(settlements__isnull=False).distinct().order_by('shop_name')
     
+    # Build query string without 'page' for pagination links
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    query_string = query_params.urlencode()
+
     context = {
         'settlements': settlements_page,
         'stats': all_stats,
@@ -168,6 +184,7 @@ def payment_list(request):
         'paginator': paginator,
         'is_paginated': paginator.num_pages > 1,
         'page_obj': settlements_page,
+        'query_string': query_string,
     }
     
     return render(request, 'payments/payment_list.html', context)
@@ -288,12 +305,13 @@ def cancel_payment(request, pk):
     if settlement.settlement_status == 'cancelled':
         messages.warning(request, 'This settlement is already cancelled.')
         return redirect('sales:settlement_detail', pk=settlement.pk)
-    
-    # Check if settlement is linked to a return adjustment (cannot cancel)
+
+    # Return adjustment settlements: only admin/office can cancel (not sales reps)
     if settlement.settlement_method == 'return_adjustment' and settlement.return_ref:
-        messages.error(request, 'Cannot cancel return adjustment settlements. Please cancel the return instead.')
-        return redirect('sales:settlement_detail', pk=settlement.pk)
-    
+        if request.user.is_sales_rep:
+            messages.error(request, 'Only office staff can cancel return adjustment settlements.')
+            return redirect('sales:settlement_detail', pk=settlement.pk)
+
     if request.method == 'POST':
         # Get cancellation reason
         cancellation_reason = request.POST.get('cancellation_reason', '').strip()
@@ -318,7 +336,18 @@ def cancel_payment(request, pk):
                 settlement.notes = f"[CANCELLED] {timezone.now().strftime('%Y-%m-%d %H:%M')} by {request.user.get_full_name()}"
         
         settlement.save()
-        
+
+        # Reverse return application if this was a return adjustment
+        if settlement.settlement_method == 'return_adjustment' and settlement.return_ref:
+            ret = settlement.return_ref
+            ret.applied_amount = max(Decimal('0'), ret.applied_amount - settlement.amount)
+            if ret.applied_amount <= 0:
+                ret.is_applied = False
+                ret.settlement_status = 'available'
+            elif ret.applied_amount < ret.total_amount:
+                ret.settlement_status = 'partially_applied'
+            ret.save()
+
         # Recalculate bill totals if settlement was linked to a bill
         if settlement.bill:
             # Use new method if available (after server restart), fallback to manual update
@@ -358,18 +387,31 @@ def cancel_payment(request, pk):
     context = {
         'settlement': settlement,
     }
-    
+
     # Calculate bill impact if applicable
     if settlement.bill:
-        # Only include non-cancelled settlements in calculation
         other_settlements = settlement.bill.settlements.exclude(pk=settlement.pk).exclude(settlement_status='cancelled')
         new_paid_amount = sum(s.amount for s in other_settlements)
         new_balance = settlement.bill.total_amount - new_paid_amount
-        
+
         context['current_bill_balance'] = settlement.bill.balance_amount
         context['new_bill_balance'] = new_balance
         context['balance_increase'] = new_balance - settlement.bill.balance_amount
-    
+
+    # Calculate return impact if this is a return adjustment
+    if settlement.settlement_method == 'return_adjustment' and settlement.return_ref:
+        ret = settlement.return_ref
+        new_applied = max(Decimal('0'), ret.applied_amount - settlement.amount)
+        if new_applied <= 0:
+            new_return_status = 'Credit Available'
+        elif new_applied < ret.total_amount:
+            new_return_status = 'Partially Applied'
+        else:
+            new_return_status = ret.get_settlement_status_display()
+        context['return_ref'] = ret
+        context['return_new_applied'] = new_applied
+        context['return_new_status'] = new_return_status
+
     return render(request, 'payments/cancel_payment.html', context)
 
 

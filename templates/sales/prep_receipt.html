@@ -1,0 +1,656 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Prep Receipt - {{ bill.bill_number }}</title>
+    <style>
+        /* ==================== RESET ==================== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ==================== PAGE ==================== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            min-height: 100vh;
+            padding: 20px 16px 40px;
+        }
+
+        .page-wrap { max-width: 520px; margin: 0 auto; }
+
+        /* ==================== STATUS BAR ==================== */
+        #statusBar {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            animation: fadeIn .3s ease;
+        }
+        #statusBar.info    { display: block; background: #e3f2fd; color: #1565c0; }
+        #statusBar.success { display: block; background: #e8f5e9; color: #2e7d32; }
+        #statusBar.error   { display: block; background: #ffebee; color: #c62828; }
+        #statusBar.warning { display: block; background: #fff8e1; color: #f57f17; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ==================== CARD ==================== */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+        .card-title {
+            background: linear-gradient(135deg, #43a047, #2e7d32);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        /* ==================== BUTTONS ==================== */
+        .btn-stack { display: flex; flex-direction: column; gap: 10px; }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform .12s ease, box-shadow .12s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-green  { background: linear-gradient(135deg, #43a047, #2e7d32); color: #fff; box-shadow: 0 4px 14px rgba(67,160,71,.35); }
+        .btn-red    { background: linear-gradient(135deg, #e53935, #c62828); color: #fff; box-shadow: 0 4px 14px rgba(229,57,53,.25); }
+        .btn-ghost  { background: #fff; color: #555; border: 2px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        .btn-ghost:active { background: #f5f5f5; }
+        .btn:disabled { opacity: .5; pointer-events: none; }
+        .icon { font-size: 20px; flex-shrink: 0; }
+
+        /* ==================== RECEIPT PREVIEW ==================== */
+        .preview-label {
+            color: rgba(255,255,255,.9);
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 28px 0 14px;
+            letter-spacing: .3px;
+        }
+        .receipt-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 20px 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        /* ==================== PREP RECEIPT PREVIEW ==================== */
+        .prep-header {
+            text-align: center;
+            border-bottom: 3px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .prep-header h2 {
+            font-size: 20px;
+            margin-bottom: 2px;
+            font-family: 'Noto Sans Sinhala', 'Iskoola Pota', sans-serif;
+        }
+        .prep-header h3 {
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .prep-info { margin-bottom: 12px; font-size: 14px; }
+        .prep-info div { margin-bottom: 3px; font-weight: 600; }
+
+        .prep-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .prep-table th {
+            background: #333;
+            color: #fff;
+            padding: 8px 6px;
+            text-align: left;
+            font-size: 12px;
+        }
+        .prep-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eee;
+        }
+        .prep-table tr:nth-child(even) { background: #f9f9f9; }
+        .prep-table .sinhala {
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Noto Sans Sinhala', 'Iskoola Pota', sans-serif;
+        }
+        .prep-table .english { font-size: 11px; color: #888; }
+        .prep-table .center { text-align: center; }
+        .prep-table .total-row {
+            background: #333 !important;
+            color: #fff;
+            font-weight: bold;
+        }
+        .prep-table .total-row td { border-bottom: none; }
+
+        .prep-amount {
+            text-align: right;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        .prep-footer {
+            text-align: center;
+            padding-top: 8px;
+            border-top: 2px dashed #999;
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* ==================== MOBILE ==================== */
+        @media (max-width: 480px) {
+            body { padding: 12px 10px 32px; }
+            .card { padding: 18px 14px; }
+            .receipt-card { padding: 16px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+    <!-- Status Bar -->
+    <div id="statusBar"></div>
+
+    <!-- Controls Card -->
+    <div class="card">
+        <div class="card-title">📋 සූදානම් පත්‍රය / Prep Sheet</div>
+        <div class="btn-stack">
+            <button class="btn btn-green" id="bluetoothPrintBtn" ontouchstart="" onclick="connectBluetoothPrinter()">
+                <span class="icon">🔵</span>
+                <span id="bluetoothBtnText">Print via Bluetooth</span>
+            </button>
+
+            <button class="btn btn-red" id="forgetPrinterBtn" style="display:none" ontouchstart="" onclick="forgetSavedPrinter()">
+                <span class="icon">🗑️</span>
+                <span>Forget Saved Printer</span>
+            </button>
+
+            <button class="btn btn-ghost" ontouchstart="" onclick="window.history.back()">
+                <span class="icon">←</span>
+                <span>ආපසු / Back</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Preview -->
+    <div class="preview-label">රිසිට්පත පෙරදැකුම / Receipt Preview</div>
+    <div class="receipt-card">
+        <div class="prep-header">
+            <h2>බෙදාහැරීමේ සූදානම් පත්‍රය</h2>
+            <h3>Stock Preparation Sheet</h3>
+        </div>
+
+        <div class="prep-info">
+            <div>📄 Bill: {{ bill.bill_number }}</div>
+            {% if bill.shop %}<div>🏪 Shop: {{ bill.shop.shop_name }}</div>
+            <div>👤 Owner: {{ bill.shop.owner_name }}</div>
+            {% elif bill.customer_name %}<div>👤 Customer: {{ bill.customer_name }}</div>{% endif %}
+            <div>📅 Date: {{ bill.bill_date|date:"Y-m-d" }}</div>
+        </div>
+
+        <table class="prep-table">
+            <thead>
+                <tr>
+                    <th>නිෂ්පාදනය / Product</th>
+                    <th class="center">Qty</th>
+                    <th class="center">FOC</th>
+                    <th class="center">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in prep_items %}
+                <tr>
+                    <td>
+                        <span class="sinhala">{{ item.sinhala_name }}</span>
+                        {% if not item.has_sinhala %}
+                            <br><span class="english">{{ item.product_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="center"><strong>{{ item.quantity }}</strong></td>
+                    <td class="center">{% if item.foc_quantity %}{{ item.foc_quantity }}{% else %}-{% endif %}</td>
+                    <td class="center"><strong>{{ item.total_qty }}</strong></td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td style="text-align: right;">මුළු එකතුව / Total:</td>
+                    <td class="center">{{ total_bottles }}</td>
+                    <td class="center">{% if total_foc %}{{ total_foc }}{% else %}-{% endif %}</td>
+                    <td class="center">{{ total_all }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        {% if bill.total_amount %}
+        <div class="prep-amount">බිල් මුදල / Bill: Rs. {{ bill.total_amount|floatformat:2 }}</div>
+        {% endif %}
+
+        <div class="prep-footer">
+            සූදානම් කළේ / Prepared: _____________ &nbsp; අත්සන / Sign: _____________
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ============================================================
+//  STATUS BAR
+// ============================================================
+function showStatus(msg, type) {
+    var el = document.getElementById('statusBar');
+    el.textContent = msg;
+    el.className = type;
+}
+
+// ============================================================
+//  SAVED PRINTER MANAGEMENT
+// ============================================================
+function updateForgetButton() {
+    var name = localStorage.getItem('savedBluetoothPrinter');
+    var btn = document.getElementById('forgetPrinterBtn');
+    var txt = document.getElementById('bluetoothBtnText');
+    if (name) {
+        btn.style.display = 'flex';
+        txt.textContent = 'Print via Bluetooth (' + name + ')';
+    } else {
+        btn.style.display = 'none';
+        txt.textContent = 'Print via Bluetooth';
+    }
+}
+
+function forgetSavedPrinter() {
+    localStorage.removeItem('savedBluetoothPrinter');
+    updateForgetButton();
+    showStatus('Saved printer forgotten.', 'success');
+}
+
+// ============================================================
+//  RECEIPT DATA FROM DJANGO
+// ============================================================
+var receiptData = {
+    billNumber: '{{ bill.bill_number|escapejs }}',
+    shopName: '{% if bill.shop %}{{ bill.shop.shop_name|escapejs }}{% endif %}',
+    customerName: '{% if bill.shop %}{{ bill.shop.owner_name|escapejs }}{% elif bill.customer_name %}{{ bill.customer_name|escapejs }}{% endif %}',
+    billDate: '{{ bill.bill_date|date:"Y-m-d" }}',
+    totalAmount: '{{ bill.total_amount|floatformat:2 }}',
+    items: [
+        {% for item in prep_items %}
+        {
+            sinhalaName: '{{ item.sinhala_name|escapejs }}',
+            productName: '{{ item.product_name|escapejs }}',
+            qty: {{ item.quantity }},
+            foc: {{ item.foc_quantity }},
+            total: {{ item.total_qty }},
+            packs: 0,
+            loose: 0
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ],
+    totalBottles: {{ total_bottles }},
+    totalFoc: {{ total_foc }},
+    totalAll: {{ total_all }}
+};
+
+// ============================================================
+//  TEXT TO BITMAP (renders Sinhala text as raster image
+//  since thermal printers don't support Sinhala natively)
+// ============================================================
+function textToBitmap(text, fontSize, bold, printerWidth, align) {
+    var canvas = document.createElement('canvas');
+    canvas.width = printerWidth;
+    var ctx = canvas.getContext('2d');
+
+    var fontStr = (bold ? 'bold ' : '') + fontSize + 'px "Noto Sans Sinhala", "Iskoola Pota", sans-serif';
+    ctx.font = fontStr;
+
+    var pad = 4;
+    var maxWidth = printerWidth - 2 * pad;
+
+    // Word wrap
+    var words = text.split(' ');
+    var lines = [];
+    var currentLine = '';
+    for (var i = 0; i < words.length; i++) {
+        var testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    if (lines.length === 0) lines.push('');
+
+    var lineHeight = fontSize + 8;
+    var totalHeight = lines.length * lineHeight + 6;
+    canvas.height = totalHeight;
+
+    // Re-set context after height change (clears canvas state)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000000';
+    ctx.font = fontStr;
+
+    for (var j = 0; j < lines.length; j++) {
+        var xPos = pad;
+        if (align === 'center') {
+            xPos = (printerWidth - ctx.measureText(lines[j]).width) / 2;
+        } else if (align === 'right') {
+            xPos = printerWidth - ctx.measureText(lines[j]).width - pad;
+        }
+        ctx.fillText(lines[j], xPos, (j + 1) * lineHeight - 4);
+    }
+
+    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    return bitmapFromImageData(imgData, canvas.width, canvas.height);
+}
+
+function bitmapFromImageData(imgData, w, h) {
+    var bpl = Math.ceil(w / 8);
+    var bitmap = new Uint8Array(bpl * h);
+    for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+            var i = (y * w + x) * 4;
+            var gray = 0.299 * imgData.data[i] + 0.587 * imgData.data[i + 1] + 0.114 * imgData.data[i + 2];
+            if (gray < 128) {
+                bitmap[y * bpl + Math.floor(x / 8)] |= (1 << (7 - (x % 8)));
+            }
+        }
+    }
+    // Trim blank rows from top and bottom to reduce data size
+    var firstRow = -1, lastRow = -1;
+    for (var y2 = 0; y2 < h; y2++) {
+        var hasData = false;
+        for (var b = 0; b < bpl; b++) {
+            if (bitmap[y2 * bpl + b] !== 0) { hasData = true; break; }
+        }
+        if (hasData) {
+            if (firstRow === -1) firstRow = y2;
+            lastRow = y2;
+        }
+    }
+    if (firstRow === -1) return { bitmap: new Uint8Array(0), width: w, height: 0, bytesPerLine: bpl };
+    // Keep 1px padding top/bottom
+    firstRow = Math.max(0, firstRow - 1);
+    lastRow = Math.min(h - 1, lastRow + 1);
+    var trimH = lastRow - firstRow + 1;
+    var trimBitmap = new Uint8Array(bpl * trimH);
+    trimBitmap.set(bitmap.subarray(firstRow * bpl, (lastRow + 1) * bpl));
+    return { bitmap: trimBitmap, width: w, height: trimH, bytesPerLine: bpl };
+}
+
+function appendRasterImage(cmd, bmp) {
+    var GS = 0x1D;
+    // GS v 0 - Print raster bit image
+    cmd.push(GS, 0x76, 0x30, 0x00);
+    cmd.push(bmp.bytesPerLine & 0xFF, (bmp.bytesPerLine >> 8) & 0xFF);
+    cmd.push(bmp.height & 0xFF, (bmp.height >> 8) & 0xFF);
+    for (var i = 0; i < bmp.bitmap.length; i++) {
+        cmd.push(bmp.bitmap[i]);
+    }
+}
+
+// ============================================================
+//  GENERATE ESC/POS COMMANDS
+// ============================================================
+function generatePrepESCPOS() {
+    var enc = new TextEncoder();
+    var ESC = 0x1B, GS = 0x1D;
+    var cmd = [];
+    var PW = 384;  // printer width in dots (58mm)
+    var W = 32;    // char width for text separators
+    var SEP = '='.repeat(W) + '\n';
+    var DASH = '-'.repeat(W) + '\n';
+
+    // Initialize printer
+    cmd.push(ESC, 0x40);
+
+    // === HEADER (Sinhala title as bitmap) ===
+    var headerBmp = textToBitmap(
+        '\u0DB6\u0DD9\u0DAF\u0DCF\u0DC4\u0DD0\u0DBB\u0DD3\u0DB8\u0DDA \u0DC3\u0DD6\u0DAF\u0DCF\u0DB1\u0DB8\u0DCA \u0DB4\u0DAD\u0DCA\u200D\u0DBB\u0DBA',
+        24, true, PW, 'center'
+    );
+    appendRasterImage(cmd, headerBmp);
+
+    // English subtitle (text)
+    cmd.push(ESC, 0x61, 0x01); // center
+    cmd.push(...enc.encode('Stock Preparation Sheet\n'));
+    cmd.push(...enc.encode(SEP));
+
+    // === BILL INFO ===
+    cmd.push(ESC, 0x61, 0x00); // left align
+    cmd.push(ESC, 0x45, 0x01); // bold on
+    cmd.push(...enc.encode('Bill: ' + receiptData.billNumber + '\n'));
+    cmd.push(ESC, 0x45, 0x00); // bold off
+
+    if (receiptData.shopName) {
+        cmd.push(...enc.encode('Shop: ' + receiptData.shopName + '\n'));
+    }
+    if (receiptData.customerName) {
+        cmd.push(...enc.encode((receiptData.shopName ? 'Owner: ' : 'Customer: ') + receiptData.customerName + '\n'));
+    }
+    cmd.push(...enc.encode('Date: ' + receiptData.billDate + '\n'));
+    cmd.push(...enc.encode(DASH));
+
+    // === ITEMS ===
+    for (var i = 0; i < receiptData.items.length; i++) {
+        var item = receiptData.items[i];
+
+        // Sinhala name as bitmap (large, readable)
+        var nameBmp = textToBitmap(
+            item.sinhalaName,
+            30, true, PW, 'left'
+        );
+        appendRasterImage(cmd, nameBmp);
+
+        // Quantity details on one line
+        var qLine = '  Qty:' + padNum(item.qty, 3);
+        if (item.foc > 0) qLine += '  FOC:' + padNum(item.foc, 2);
+        qLine += '  Tot:' + padNum(item.total, 3);
+        cmd.push(ESC, 0x61, 0x00);
+        cmd.push(...enc.encode(qLine + '\n'));
+
+        // Separator between items
+        if (i < receiptData.items.length - 1) {
+            cmd.push(...enc.encode(DASH));
+        }
+    }
+
+    cmd.push(...enc.encode(SEP));
+
+    // === TOTALS ===
+    cmd.push(ESC, 0x61, 0x01); // center
+    cmd.push(ESC, 0x45, 0x01); // bold
+    var totalLine = 'Total: ' + receiptData.totalBottles;
+    if (receiptData.totalFoc > 0) totalLine += ' + FOC:' + receiptData.totalFoc;
+    totalLine += ' = ' + receiptData.totalAll;
+    cmd.push(...enc.encode(totalLine + '\n'));
+    cmd.push(ESC, 0x45, 0x00);
+
+    // Bill amount
+    if (receiptData.totalAmount && receiptData.totalAmount !== '0.00') {
+        cmd.push(...enc.encode(DASH));
+        cmd.push(ESC, 0x45, 0x01);
+        cmd.push(...enc.encode('Bill: Rs.' + receiptData.totalAmount + '\n'));
+        cmd.push(ESC, 0x45, 0x00);
+    }
+
+    cmd.push(...enc.encode(SEP));
+
+    // === FOOTER ===
+    cmd.push(ESC, 0x61, 0x00); // left
+    cmd.push(...enc.encode('\n'));
+    cmd.push(...enc.encode('Prepared: _______________\n'));
+    cmd.push(...enc.encode('\n'));
+    cmd.push(...enc.encode('Sign: ___________________\n'));
+
+    // Feed and cut
+    cmd.push(...enc.encode('\n\n\n'));
+    cmd.push(GS, 0x56, 0x00);
+
+    return new Uint8Array(cmd);
+}
+
+function padNum(n, width) {
+    var s = String(n);
+    while (s.length < width) s = ' ' + s;
+    return s;
+}
+
+// ============================================================
+//  BLUETOOTH PRINTER CONNECTION
+// ============================================================
+async function connectBluetoothPrinter() {
+    try {
+        var savedName = localStorage.getItem('savedBluetoothPrinter');
+        var device = null;
+
+        // Try saved printer first
+        if (savedName) {
+            try {
+                showStatus('Auto-connecting to ' + savedName + '...', 'info');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: savedName }],
+                    optionalServices: [
+                        '000018f0-0000-1000-8000-00805f9b34fb',
+                        '0000180a-0000-1000-8000-00805f9b34fb',
+                        '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                    ]
+                });
+            } catch (e) {
+                localStorage.removeItem('savedBluetoothPrinter');
+                updateForgetButton();
+                showStatus('Saved printer not found. Select manually...', 'warning');
+                device = null;
+            }
+        }
+
+        // Manual selection
+        if (!device) {
+            showStatus('Scanning for printers...', 'info');
+            device = await navigator.bluetooth.requestDevice({
+                filters: [
+                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+                    { namePrefix: 'BlueTooth Printer' },
+                    { namePrefix: 'Printer' },
+                    { namePrefix: 'BT-' },
+                    { namePrefix: 'MTP-' },
+                    { namePrefix: 'RPP' },
+                    { namePrefix: 'POS-' }
+                ],
+                optionalServices: [
+                    '000018f0-0000-1000-8000-00805f9b34fb',
+                    '0000180a-0000-1000-8000-00805f9b34fb',
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                ]
+            });
+        }
+
+        showStatus('Connecting to ' + device.name + '...', 'info');
+        var server = await device.gatt.connect();
+        showStatus('Getting printer service...', 'info');
+
+        var service;
+        try {
+            service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        } catch (e) {
+            service = await server.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
+        }
+
+        var char;
+        try {
+            char = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        } catch (e) {
+            char = await service.getCharacteristic('49535343-8841-43f4-a8d4-ecbe34729bb3');
+        }
+
+        showStatus('Generating prep receipt...', 'info');
+        var data = generatePrepESCPOS();
+
+        showStatus('Printing... 0%', 'info');
+        var total = data.length;
+        var CHUNK = 20;   // BLE default MTU safe size
+        var DELAY = 15;   // ms between chunks
+
+        for (var i = 0; i < total; i += CHUNK) {
+            await char.writeValue(data.slice(i, Math.min(i + CHUNK, total)));
+            await new Promise(function(r) { setTimeout(r, DELAY); });
+
+            // Progress update every ~5%
+            if (i % 400 === 0 || i + CHUNK >= total) {
+                var pct = Math.min(Math.round((i / total) * 100), 100);
+                showStatus('Printing... ' + pct + '%', 'info');
+            }
+        }
+
+        showStatus('\u2705 Prep receipt printed!', 'success');
+
+        if (device.name) {
+            localStorage.setItem('savedBluetoothPrinter', device.name);
+            updateForgetButton();
+        }
+
+        setTimeout(function() { device.gatt.disconnect(); }, 2000);
+
+    } catch (e) {
+        console.error('BT error:', e);
+        if (e.name === 'NotFoundError')
+            showStatus('No printer found. Check Bluetooth is on.', 'error');
+        else if (e.name === 'SecurityError')
+            showStatus('Bluetooth access denied.', 'error');
+        else
+            showStatus('Error: ' + e.message, 'error');
+    }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    if (!('bluetooth' in navigator)) {
+        document.getElementById('bluetoothPrintBtn').disabled = true;
+        showStatus('Bluetooth not available. Use Chrome on Android for Bluetooth printing.', 'warning');
+    } else {
+        updateForgetButton();
+        showStatus('Ready to print prep receipt', 'info');
+    }
+});
+</script>
+
+</body>
+</html>

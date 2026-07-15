@@ -48,6 +48,9 @@ class GlobalProductForm(forms.ModelForm):
             'product_code', 'product_name', 'description',
             'company', 'category',
             'size', 'marked_price', 'bottles_per_pack',
+            'discount_percentage', 'company_discount_percentage',
+            'company_foc_buy', 'company_foc_free',
+            'shop_foc_buy', 'shop_foc_free',
             'barcode', 'product_image',
             'display_order', 'is_active',
         ]
@@ -60,6 +63,12 @@ class GlobalProductForm(forms.ModelForm):
             'size': forms.Select(attrs={'class': 'form-select'}),
             'marked_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'bottles_per_pack': forms.NumberInput(attrs={'class': 'form-control'}),
+            'discount_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '10.00'}),
+            'company_discount_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '23.00'}),
+            'company_foc_buy': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'company_foc_free': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'shop_foc_buy': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'shop_foc_free': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'barcode': forms.TextInput(attrs={'class': 'form-control'}),
             'display_order': forms.NumberInput(attrs={'class': 'form-control'}),
         }

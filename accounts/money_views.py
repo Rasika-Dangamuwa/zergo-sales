@@ -231,10 +231,6 @@ def make_payment(request):
                 defaults={'created_by': request.user}
             )
             
-            # Check if user has sufficient balance
-            if account.current_balance < amount:
-                raise ValueError(f"Insufficient balance. Available: Rs. {account.current_balance:,.2f}")
-            
             # Create transaction
             MoneyTransaction.objects.create(
                 account=account,
@@ -387,16 +383,28 @@ def advance_requests_list(request):
         status='pending', **tenant_filter
     ).select_related('user').order_by('-request_date')
     
-    # Get approved but not paid
-    approved = AdvanceRequest.objects.filter(
+    # Get approved but not paid — annotate each with balance info for the modal
+    approved_qs = AdvanceRequest.objects.filter(
         status='approved', **tenant_filter
     ).select_related('user').order_by('-approved_at')
-    
+
+    approved = []
+    for req in approved_qs:
+        try:
+            balance = req.user.money_account.current_balance
+        except Exception:
+            balance = Decimal('0.00')
+        # shortage = how much more user must earn to cover this advance
+        shortage = req.approved_amount - balance if req.approved_amount > balance else Decimal('0.00')
+        req.balance_due = balance
+        req.shortage_gap = shortage
+        approved.append(req)
+
     # Get recent completed (paid/rejected)
     completed = AdvanceRequest.objects.filter(
         status__in=['paid', 'rejected', 'cancelled'], **tenant_filter
     ).select_related('user', 'approved_by').order_by('-updated_at')[:30]
-    
+
     context = {
         'pending': pending,
         'approved': approved,
@@ -523,21 +531,23 @@ def pay_advance(request, pk):
                 advance_request=advance_req,
                 created_by=request.user
             )
-            
+
             # Update advance request
             advance_req.status = 'paid'
             advance_req.paid_at = timezone.now()
             advance_req.payment_method = payment_method
             advance_req.payment_reference = payment_reference
             advance_req.save()
-            
+
             messages.success(request, f'Advance of Rs. {advance_req.approved_amount:,.2f} disbursed to {advance_req.user.get_full_name()}')
-            return redirect('accounts:advance_requests_list')
-        
+            next_url = request.POST.get('next', '')
+            return redirect(next_url if next_url else 'accounts:advance_requests_list')
+
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
-    
-    return redirect('accounts:advance_requests_list')
+
+    next_url = request.POST.get('next', '')
+    return redirect(next_url if next_url else 'accounts:advance_requests_list')
 
 
 @login_required
@@ -642,7 +652,7 @@ def transaction_history(request):
     
     # Get all transactions
     transactions = account.transactions.all()
-    
+
     # Filter by type if specified
     txn_type = request.GET.get('type')
     if txn_type:

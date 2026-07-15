@@ -339,7 +339,7 @@
                         </tr>
 
                         <!-- Sub-group: Sales & Distribution -->
-                        {% if total_commission > 0 or net_foc_cost > 0 %}
+                        {% if total_commission > 0 %}
                         <tr class="pnl-subgroup-header">
                             <td colspan="2">
                                 <small class="text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px; color: #6366f1;">
@@ -347,18 +347,10 @@
                                 </small>
                             </td>
                         </tr>
-                        {% if total_commission > 0 %}
                         <tr>
                             <td class="pnl-indent">Sales Commission</td>
                             <td class="text-end text-danger">({{ total_commission|floatformat:2|intcomma }})</td>
                         </tr>
-                        {% endif %}
-                        {% if net_foc_cost > 0 %}
-                        <tr>
-                            <td class="pnl-indent">Net FOC Cost</td>
-                            <td class="text-end text-danger">({{ net_foc_cost|floatformat:2|intcomma }})</td>
-                        </tr>
-                        {% endif %}
                         {% endif %}
 
                         <!-- Sub-group: General & Administrative (from Expense model) -->

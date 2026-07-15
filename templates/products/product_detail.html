@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ product.product_name }} - Zergo Sales{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .section-title {
+        color: #f5576c;
+        font-weight: 600;
+        margin-bottom: 18px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f5576c;
+        font-size: 1rem;
+    }
+    .info-table td:first-child {
+        color: #6c757d;
+        width: 45%;
+        font-size: 0.875rem;
+    }
+    .info-table td:last-child {
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    .info-table tr {
+        border-bottom: 1px solid #f1f3f5;
+    }
+    .stock-box {
+        border-radius: 10px;
+        padding: 18px 20px;
+        text-align: center;
+    }
+    .stock-box .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+    .stock-box .value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .stock-resaleable { background: #e8f5e9; color: #2e7d32; }
+    .stock-nonresaleable { background: #fff3e0; color: #e65100; }
+    .stock-total { background: #e3f2fd; color: #1565c0; }
+    .movement-badge {
+        font-size: 0.72rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f3f5;
+        font-size: 0.9rem;
+    }
+    .price-row:last-child { border-bottom: none; }
+    .price-row .price-label { color: #6c757d; }
+    .price-row .price-value { font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a href="{% url 'products:list' %}" class="text-muted text-decoration-none small">
+                <i class="fas fa-arrow-left me-1"></i> Back to Products
+            </a>
+            <h2 class="mb-0 mt-1">{{ product.product_name }}</h2>
+            <span class="badge bg-secondary mt-1">{{ product.product_code }}</span>
+            {% if product.is_active %}
+                <span class="badge bg-success mt-1">Active</span>
+            {% else %}
+                <span class="badge bg-danger mt-1">Inactive</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Left column -->
+        <div class="col-lg-8">
+
+            <!-- Stock Levels -->
+            <div class="detail-card">
+                <div class="section-title"><i class="fas fa-boxes me-2"></i>Stock Levels</div>
+                <div class="row g-3">
+                    <div class="col-4">
+                        <div class="stock-box stock-resaleable">
+                            <div class="label">Resaleable</div>
+                            <div class="value">{{ product.quantity_in_stock }}</div>
+                            <div class="mt-1" style="font-size:0.75rem;">bottles</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stock-box stock-nonresaleable">
+                            <div class="label">Non-Resaleable</div>
+                            <div class="value">{{ product.non_resaleable_stock }}</div>
+                            <div class="mt-1" style="font-size:0.75rem;">bottles</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stock-box stock-total">
+                            <div class="label">Total</div>
+                            <div class="value">{{ product.total_stock }}</div>
+                            <div class="mt-1" style="font-size:0.75rem;">bottles</div>
+                        </div>
+                    </div>
+                </div>
+                {% if product.minimum_stock_level %}
+                <div class="mt-3 small text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Minimum stock level: <strong>{{ product.minimum_stock_level }}</strong>
+                    {% if product.is_low_stock %}
+                        <span class="badge bg-warning text-dark ms-2">Low Stock</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Stock Movements -->
+            <div class="detail-card">
+                <div class="section-title"><i class="fas fa-history me-2"></i>Recent Stock Movements</div>
+                {% if stock_movements %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Before</th>
+                                <th class="text-end">After</th>
+                                <th>Reference</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mv in stock_movements %}
+                            <tr>
+                                <td class="text-nowrap small">{{ mv.created_at|date:"d M Y" }}</td>
+                                <td>
+                                    {% if mv.quantity > 0 %}
+                                        <span class="movement-badge" style="background:#e8f5e9;color:#2e7d32;">
+                                            {{ mv.movement_type|title|cut:"_" }}
+                                        </span>
+                                    {% elif mv.quantity < 0 %}
+                                        <span class="movement-badge" style="background:#fdecea;color:#c62828;">
+                                            {{ mv.movement_type|title|cut:"_" }}
+                                        </span>
+                                    {% else %}
+                                        <span class="movement-badge" style="background:#f5f5f5;color:#616161;">
+                                            {{ mv.movement_type|title|cut:"_" }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-bold {% if mv.quantity > 0 %}text-success{% elif mv.quantity < 0 %}text-danger{% endif %}">
+                                    {% if mv.quantity > 0 %}+{% endif %}{{ mv.quantity }}
+                                </td>
+                                <td class="text-end small">{{ mv.previous_quantity }}</td>
+                                <td class="text-end small">{{ mv.new_quantity }}</td>
+                                <td class="small text-muted">{{ mv.reference_number|default:"-" }}</td>
+                                <td class="small text-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ mv.notes }}">
+                                    {{ mv.notes|default:"-"|truncatechars:40 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No stock movements recorded yet.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Right column -->
+        <div class="col-lg-4">
+
+            <!-- Product Info -->
+            <div class="detail-card">
+                <div class="section-title"><i class="fas fa-info-circle me-2"></i>Product Info</div>
+                <table class="table table-borderless info-table mb-0">
+                    <tr>
+                        <td>Company</td>
+                        <td>{{ product.company.company_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td>Size</td>
+                        <td>{{ product.size }}</td>
+                    </tr>
+                    <tr>
+                        <td>Bottles / Case</td>
+                        <td>{{ product.bottles_per_pack }}</td>
+                    </tr>
+                    <tr>
+                        <td>Cases in Stock</td>
+                        <td>{{ product.cases_in_stock }}</td>
+                    </tr>
+                    <tr>
+                        <td>Loose Bottles</td>
+                        <td>{{ product.loose_bottles }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Pricing -->
+            <div class="detail-card">
+                <div class="section-title"><i class="fas fa-tag me-2"></i>Pricing</div>
+                <div class="price-row">
+                    <span class="price-label">Marked Price (MRP)</span>
+                    <span class="price-value">Rs. {{ product.marked_price|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Invoice Disc%</span>
+                    <span class="price-value">{{ product.discount_percentage|floatformat:2 }}%</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Invoice Price</span>
+                    <span class="price-value">Rs. {{ product.shop_price|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Dist Disc%</span>
+                    <span class="price-value">{{ product.company_discount_percentage|floatformat:2 }}%</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Dist Price (Cost)</span>
+                    <span class="price-value text-success">Rs. {{ product.company_price|floatformat:2|intcomma }}</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

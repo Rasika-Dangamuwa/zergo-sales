@@ -1,10 +1,19 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout as auth_logout
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 from decimal import Decimal
 from .models import User
+
+
+@require_http_methods(["GET", "POST"])
+def custom_logout(request):
+    """Logout that accepts both GET and POST to avoid CSRF errors on stale tabs"""
+    auth_logout(request)
+    return redirect('login')
 
 
 @login_required

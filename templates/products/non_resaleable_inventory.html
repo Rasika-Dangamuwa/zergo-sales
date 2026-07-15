@@ -206,8 +206,13 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 {% if user.user_type in 'admin,office' %}
-                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        onclick="showDisposeModal({{ product.id }}, '{{ product.product_name }}', {{ product.non_resaleable_stock }})"
+                                <button type="button" class="btn btn-sm btn-outline-success"
+                                        onclick="showRecoverModal({{ product.id }}, '{{ product.product_name|escapejs }}', {{ product.non_resaleable_stock }})"
+                                        title="Recover to Resaleable">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="showDisposeModal({{ product.id }}, '{{ product.product_name|escapejs }}', {{ product.non_resaleable_stock }})"
                                         title="Dispose">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -270,8 +275,12 @@
                             <i class="fas fa-eye"></i> View
                         </a>
                         {% if user.user_type in 'admin,office' %}
+                        <button type="button" class="btn btn-sm btn-outline-success"
+                                onclick="showRecoverModal({{ product.id }}, '{{ product.product_name|escapejs }}', {{ product.non_resaleable_stock }})">
+                            <i class="fas fa-undo"></i> Recover
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-danger"
-                                onclick="showDisposeModal({{ product.id }}, '{{ product.product_name }}', {{ product.non_resaleable_stock }})">
+                                onclick="showDisposeModal({{ product.id }}, '{{ product.product_name|escapejs }}', {{ product.non_resaleable_stock }})">
                             <i class="fas fa-trash"></i> Dispose
                         </button>
                         {% endif %}
@@ -290,7 +299,52 @@
     </div>
 </div>
 
-<!-- Quick Dispose Modal -->
+<!-- Recover Modal -->
+<div class="modal fade" id="recoverModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'products:recover_non_resaleable_stock' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Recover to Resaleable Stock</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="product_id" id="recover_product_id">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Product</label>
+                        <p id="recover_product_name" class="form-control-plaintext fw-semibold"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Available Non-Resaleable</label>
+                        <p id="recover_available" class="form-control-plaintext text-danger fw-bold"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="recover_quantity" class="form-label fw-bold">Quantity to Recover <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="quantity" id="recover_quantity" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="recover_reason" class="form-label fw-bold">Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="reason" id="recover_reason" rows="3" required
+                                  placeholder="e.g., Items inspected and found to be in sellable condition"></textarea>
+                    </div>
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        These units will be moved back to resaleable stock and become available for sale.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-undo me-1"></i> Recover Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Dispose Modal -->
 <div class="modal fade" id="disposeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -341,6 +395,16 @@
 </div>
 
 <script>
+function showRecoverModal(productId, productName, available) {
+    document.getElementById('recover_product_id').value = productId;
+    document.getElementById('recover_product_name').textContent = productName;
+    document.getElementById('recover_available').textContent = available + ' units';
+    document.getElementById('recover_quantity').max = available;
+    document.getElementById('recover_quantity').value = '';
+    document.getElementById('recover_reason').value = '';
+    new bootstrap.Modal(document.getElementById('recoverModal')).show();
+}
+
 function showDisposeModal(productId, productName, available) {
     document.getElementById('dispose_product_id').value = productId;
     document.getElementById('dispose_product_name').textContent = productName;
@@ -348,9 +412,7 @@ function showDisposeModal(productId, productName, available) {
     document.getElementById('dispose_quantity').max = available;
     document.getElementById('dispose_quantity').value = '';
     document.getElementById('disposal_reason').value = '';
-    
-    var modal = new bootstrap.Modal(document.getElementById('disposeModal'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('disposeModal')).show();
 }
 </script>
 {% endblock %}

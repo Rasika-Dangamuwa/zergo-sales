@@ -664,9 +664,14 @@ body {
 
 {% block content %}
 <div class="container-fluid" style="padding: 10px 15px;">
-    <h2 style="color: var(--gray-800); font-weight: 700; font-size: 1.25rem; margin-bottom: 10px;">
-        <i class="fas fa-file-invoice-dollar me-2"></i>Create Bill
-    </h2>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <h2 style="color: var(--gray-800); font-weight: 700; font-size: 1.25rem; margin: 0;">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Create Bill
+        </h2>
+        <button type="button" onclick="openBillingSettings()" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 6px 12px; cursor: pointer; color: #6c757d; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px;" title="Billing Settings">
+            <i class="fas fa-cog"></i> Settings
+        </button>
+    </div>
     
     <form method="post" id="billForm">
         {% csrf_token %}
@@ -736,6 +741,18 @@ body {
                         <span style="font-weight: 600;">Available Credit:</span>
                         <span id="availableCredit" style="font-weight: 700; color: var(--success-green);">Rs. 0.00</span>
                     </div>
+
+                    {% if ai_settings.is_enabled and ai_settings.credit_risk_enabled %}
+                    <!-- AI Credit Risk Badge -->
+                    <div id="aiRiskRow" style="border-top: 1px solid var(--gray-300); padding-top: 8px; margin-top: 8px; display: none;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span style="font-weight: 600; font-size: 0.82rem; color: #555;"><i class="fas fa-robot me-1"></i>AI Credit Risk:</span>
+                            <span id="aiRiskBadge" style="font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:20px;"></span>
+                        </div>
+                        <div id="aiRiskReason" style="font-size:0.76rem;color:#666;margin-top:4px;"></div>
+                        <div id="aiRiskAction" style="font-size:0.74rem;color:#888;margin-top:2px;font-style:italic;"></div>
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <!-- Products by Size-Price Category -->
@@ -769,11 +786,11 @@ body {
                                 </button>
                                 <div class="qty-input-group">
                                     <label class="input-label">Price</label>
-                                    <input type="number" 
-                                           class="input-field locked" 
+                                    <input type="number"
+                                           class="input-field locked"
                                            id="price_{{ product.id }}"
-                                           value="{{ product.final_price|floatformat:2 }}" 
-                                           step="0.01" 
+                                           value="{{ product.display_price|floatformat:2 }}"
+                                           step="0.01"
                                            readonly>
                                 </div>
                             </div>
@@ -886,7 +903,7 @@ body {
                     
                     <input type="hidden" name="save_as_draft" id="saveAsDraftField" value="false">
                     
-                    <button type="button" id="submitBtn" onclick="submitBill(false)" disabled>
+                    <button type="button" id="submitBtn" onclick="showFOCConfirmPopup()" disabled>
                         <i class="fas fa-check-circle me-2"></i>Create Bill
                     </button>
                     
@@ -899,6 +916,97 @@ body {
     </form>
 </div>
 
+<!-- FOC Confirmation Modal -->
+<style>
+@media(max-width:576px){
+  #focConfirmModal .modal-dialog{margin:auto;max-width:94%;height:auto;}
+  #focConfirmModal .modal-content{border-radius:16px!important;height:auto;}
+  #focConfirmModal .modal-body{max-height:60vh!important;padding:12px!important;}
+  #focConfirmModal .modal-footer{flex-direction:column-reverse;gap:8px;padding:10px 12px!important;}
+  #focConfirmModal .modal-footer button{width:100%;}
+}
+</style>
+<!-- Billing Settings Modal -->
+<!-- Billing Settings Modal -->
+<div class="modal fade" id="billingSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 380px; margin: auto;">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 12px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 16px 16px 0 0; padding: 14px 16px;">
+                <h5 class="modal-title" style="font-weight: 700; font-size: 1rem;"><i class="fas fa-cog me-2"></i>Billing Settings</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 18px; max-height: 80vh; overflow-y: auto;">
+
+                <!-- Default Price -->
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 600; font-size: 0.88rem; color: #495057; margin-bottom: 8px;">
+                        <i class="fas fa-tag me-1" style="color: #667eea;"></i> Default Price When Billing
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="prefShopPriceBtn" onclick="selectPricePref('shop_price')"
+                            style="flex: 1; padding: 10px 6px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; border: 2px solid #dee2e6; background: #f8f9fa; color: #495057;">
+                            Shop Price
+                        </button>
+                        <button type="button" id="prefMyPricesBtn" onclick="selectPricePref('my_prices')"
+                            style="flex: 1; padding: 10px 6px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; border: 2px solid #dee2e6; background: #f8f9fa; color: #495057;">
+                            My Prices
+                        </button>
+                    </div>
+                    <small style="color: #6c757d; display: block; margin-top: 5px; font-size: 0.77rem;">Pre-filled price for each product when you add it to a bill</small>
+                </div>
+
+                <!-- My Custom Prices Editor -->
+                <div id="myPricesSection" style="display: none; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="font-weight: 600; font-size: 0.88rem; color: #495057;">
+                            <i class="fas fa-pen me-1" style="color: #667eea;"></i> My Custom Prices
+                        </div>
+                        <small style="color: #6c757d; font-size: 0.75rem;">Auto-saved on change</small>
+                    </div>
+                    <div id="myPricesEditorBody" style="border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden;">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <hr style="margin: 12px 0; border-color: #e9ecef;">
+
+                <!-- FOC Summary -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f8f9fa; border-radius: 10px; border: 1px solid #e9ecef;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.88rem; color: #495057;">FOC Summary Popup</div>
+                        <div style="font-size: 0.77rem; color: #6c757d; margin-top: 2px;">Review FOC before submitting bill</div>
+                    </div>
+                    <label style="position: relative; display: inline-block; width: 44px; height: 22px; cursor: pointer; flex-shrink: 0; margin: 0;">
+                        <input type="checkbox" id="prefFOCToggle" onchange="saveFOCSummaryPref(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                        <span id="focToggleSlider" style="position: absolute; inset: 0; border-radius: 22px; transition: background 0.3s;"></span>
+                        <span id="focToggleKnob" style="position: absolute; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: left 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></span>
+                    </label>
+                </div>
+
+                <p style="color: #28a745; font-size: 0.8rem; margin: 10px 0 0; display: none;" id="prefSavedMsg">
+                    <i class="fas fa-check-circle me-1"></i>Saved
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="focConfirmModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; border:none; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1e88e5,#1565c0); color:#fff; padding:14px 16px; border:none;">
+                <h5 class="modal-title" style="font-weight:700; font-size:1rem;"><i class="fas fa-gift me-2"></i>FOC Summary</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="focConfirmBody" style="padding:16px; max-height:60vh; overflow-y:auto;"></div>
+            <div class="modal-footer" style="border-top:1px solid #eee; padding:10px 16px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:10px; padding:10px 20px; font-weight:600;"><i class="fas fa-arrow-left me-1"></i>Back to Edit</button>
+                <button type="button" id="focConfirmBtn" onclick="proceedSubmitBill()" style="background:linear-gradient(135deg,#43a047,#2e7d32); color:#fff; border:none; border-radius:10px; padding:12px 28px; font-weight:700; font-size:1rem;"><i class="fas fa-check-circle me-1"></i>Confirm & Create Bill</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Store FOC items by category
 const focItemsByCategory = {};
@@ -907,6 +1015,184 @@ const focItemsByCategory = {};
 {% for category in products_by_category.keys %}
 focItemsByCategory['{{ category|slugify }}'] = [];
 {% endfor %}
+
+// Product FOC ratios for confirmation popup
+const PRODUCT_FOC_RATIOS = {
+{% for category, products in products_by_category.items %}
+{% for product in products %}
+    '{{ product.id }}': { buy: {{ product.shop_foc_buy }}, free: {{ product.shop_foc_free }}, name: '{{ product.product_name|escapejs }}', size: '{{ product.size }}', markedPrice: {{ product.marked_price|floatformat:2 }}, shopPrice: {{ product.final_price|floatformat:2 }}, category: '{{ category|escapejs }}', catOrder: {{ forloop.parentloop.counter }}, order: {{ forloop.counter }} },
+{% endfor %}
+{% endfor %}
+};
+
+// ================================================================
+//  Billing Preferences
+// ================================================================
+let BILLING_PREF_DEFAULT_PRICE = '{{ billing_pref.default_price }}';
+let BILLING_PREF_SHOW_FOC = {{ billing_pref.show_foc_summary|yesno:"true,false" }};
+
+// User's saved custom prices: { productId: price }
+const USER_CUSTOM_PRICES = {
+{% for pid, price in user_custom_prices.items %}
+    '{{ pid }}': {{ price }},
+{% endfor %}
+};
+
+function openBillingSettings() {
+    updatePricePrefUI(BILLING_PREF_DEFAULT_PRICE);
+    updateFOCToggleUI(BILLING_PREF_SHOW_FOC);
+    if (BILLING_PREF_DEFAULT_PRICE === 'my_prices') {
+        document.getElementById('myPricesSection').style.display = 'block';
+        buildMyPricesEditor();
+    }
+    new bootstrap.Modal(document.getElementById('billingSettingsModal')).show();
+}
+
+function updatePricePrefUI(pref) {
+    const shopBtn = document.getElementById('prefShopPriceBtn');
+    const myBtn = document.getElementById('prefMyPricesBtn');
+    const active = 'border: 2px solid #667eea; background: #eef0ff; color: #667eea;';
+    const inactive = 'border: 2px solid #dee2e6; background: #f8f9fa; color: #495057;';
+    shopBtn.setAttribute('style', shopBtn.getAttribute('style').replace(/border:[^;]+;background:[^;]+;color:[^;]+;/, '') + (pref === 'shop_price' ? active : inactive));
+    myBtn.setAttribute('style', myBtn.getAttribute('style').replace(/border:[^;]+;background:[^;]+;color:[^;]+;/, '') + (pref === 'my_prices' ? active : inactive));
+}
+
+function updateFOCToggleUI(enabled) {
+    const slider = document.getElementById('focToggleSlider');
+    const knob = document.getElementById('focToggleKnob');
+    const cb = document.getElementById('prefFOCToggle');
+    if (enabled) {
+        slider.style.background = '#667eea';
+        knob.style.left = '25px';
+        cb.checked = true;
+    } else {
+        slider.style.background = '#ccc';
+        knob.style.left = '3px';
+        cb.checked = false;
+    }
+}
+
+function applyDefaultPrices(priceType) {
+    for (const pid in PRODUCT_FOC_RATIOS) {
+        const priceInput = document.getElementById('price_' + pid);
+        if (!priceInput || !priceInput.readOnly) continue;
+        const info = PRODUCT_FOC_RATIOS[pid];
+        if (priceType === 'my_prices') {
+            priceInput.value = (USER_CUSTOM_PRICES[pid] !== undefined ? USER_CUSTOM_PRICES[pid] : info.shopPrice).toFixed(2);
+        } else {
+            priceInput.value = info.shopPrice.toFixed(2);
+        }
+    }
+    calculateTotal();
+}
+
+function selectPricePref(priceType) {
+    BILLING_PREF_DEFAULT_PRICE = priceType;
+    updatePricePrefUI(priceType);
+    applyDefaultPrices(priceType);
+    const section = document.getElementById('myPricesSection');
+    if (priceType === 'my_prices') {
+        section.style.display = 'block';
+        buildMyPricesEditor();
+    } else {
+        section.style.display = 'none';
+    }
+    savePrefAJAX({ default_price: priceType });
+}
+
+function saveFOCSummaryPref(enabled) {
+    BILLING_PREF_SHOW_FOC = enabled;
+    updateFOCToggleUI(enabled);
+    savePrefAJAX({ show_foc_summary: enabled });
+}
+
+async function savePrefAJAX(data) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    try {
+        await fetch('{% url "sales:save_billing_preference" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(data)
+        });
+        flashSavedMsg();
+    } catch(e) { console.error('Failed to save billing preference', e); }
+}
+
+function flashSavedMsg() {
+    const msg = document.getElementById('prefSavedMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 1800);
+}
+
+// Build the "My Prices" editor once (lazily)
+let myPricesBuilt = false;
+function buildMyPricesEditor() {
+    if (myPricesBuilt) return;
+    myPricesBuilt = true;
+
+    // Group products by category using PRODUCT_FOC_RATIOS
+    const byCategory = {};
+    const catOrderMap = {};
+    for (const pid in PRODUCT_FOC_RATIOS) {
+        const info = PRODUCT_FOC_RATIOS[pid];
+        if (!byCategory[info.category]) {
+            byCategory[info.category] = [];
+            catOrderMap[info.category] = info.catOrder;
+        }
+        byCategory[info.category].push({ pid, info });
+    }
+    const sortedCats = Object.keys(byCategory).sort((a, b) => catOrderMap[a] - catOrderMap[b]);
+
+    let html = '';
+    for (const cat of sortedCats) {
+        const prods = byCategory[cat].sort((a, b) => a.info.order - b.info.order);
+        html += `<div style="padding:8px 10px 2px; border-bottom:1px solid #e9ecef;">
+            <div style="font-size:0.7rem;font-weight:700;color:#667eea;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${cat}</div>`;
+        for (const { pid, info } of prods) {
+            const cur = USER_CUSTOM_PRICES[pid] !== undefined ? USER_CUSTOM_PRICES[pid].toFixed(2) : info.shopPrice.toFixed(2);
+            html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f5f5;">
+                <span style="font-size:0.82rem;color:#495057;flex:1;padding-right:8px;">${info.name}</span>
+                <input type="number" step="0.01" min="0" value="${cur}"
+                    data-pid="${pid}"
+                    onchange="onCustomPriceChange(${pid}, this)"
+                    style="width:86px;padding:4px 8px;border:1px solid #dee2e6;border-radius:6px;font-size:0.85rem;text-align:right;background:#fff;">
+            </div>`;
+        }
+        html += '</div>';
+    }
+    document.getElementById('myPricesEditorBody').innerHTML = html;
+}
+
+async function onCustomPriceChange(pid, input) {
+    const price = parseFloat(input.value);
+    if (isNaN(price) || price < 0) { input.style.borderColor = '#dc3545'; return; }
+    input.style.borderColor = '#dee2e6';
+    USER_CUSTOM_PRICES[String(pid)] = price;
+
+    // Also update the live price input on the billing page if it's locked
+    const liveInput = document.getElementById('price_' + pid);
+    if (liveInput && liveInput.readOnly && BILLING_PREF_DEFAULT_PRICE === 'my_prices') {
+        liveInput.value = price.toFixed(2);
+        calculateTotal();
+    }
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    try {
+        await fetch('{% url "sales:save_user_product_price" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ product_id: pid, price: price })
+        });
+        flashSavedMsg();
+    } catch(e) { console.error('Failed to save product price', e); }
+}
+
+// Apply default prices on page load.
+// Called directly here (not via DOMContentLoaded) because the product HTML is already
+// in the DOM above this inline script — price inputs exist by the time this line runs.
+if (BILLING_PREF_DEFAULT_PRICE === 'my_prices') {
+    applyDefaultPrices('my_prices');
+}
 
 // Toggle FOC Manager
 function toggleFOCManager(category) {
@@ -1133,6 +1419,10 @@ document.getElementById('shopSelect').addEventListener('change', async function(
         } else {
             availableCreditRow.style.display = 'none';
         }
+
+        {% if ai_settings.is_enabled and ai_settings.credit_risk_enabled %}
+        fetchAICreditRisk(shopId);
+        {% endif %}
     } else {
         // No selection
         document.getElementById('customerNameGroup').style.display = 'none';
@@ -1147,6 +1437,48 @@ document.getElementById('shopSelect').addEventListener('change', async function(
 setTimeout(() => {
     document.getElementById('shopSelect').dispatchEvent(new Event('change'));
 }, 100);
+{% endif %}
+
+{% if ai_settings.is_enabled and ai_settings.credit_risk_enabled %}
+const AI_RISK_COLORS = {LOW:'#198754', MEDIUM:'#fd7e14', HIGH:'#dc3545', CRITICAL:'#6f0000'};
+const AI_RISK_BG = {LOW:'#d1e7dd', MEDIUM:'#ffe5b4', HIGH:'#f8d7da', CRITICAL:'#f5c2c7'};
+
+function fetchAICreditRisk(shopId) {
+    const riskRow = document.getElementById('aiRiskRow');
+    const badge = document.getElementById('aiRiskBadge');
+    const reason = document.getElementById('aiRiskReason');
+    const action = document.getElementById('aiRiskAction');
+    riskRow.style.display = '';
+    badge.textContent = '⏳ analyzing...';
+    badge.style.background = '#e9ecef';
+    badge.style.color = '#495057';
+    reason.textContent = '';
+    action.textContent = '';
+
+    fetch(`/sales/ai/credit-risk/${shopId}/`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.enabled) { riskRow.style.display = 'none'; return; }
+        if (data.error) {
+            badge.textContent = 'AI Error';
+            badge.style.background = '#f8d7da';
+            badge.style.color = '#842029';
+            reason.textContent = data.error;
+            return;
+        }
+        const level = data.risk_level || 'UNKNOWN';
+        badge.textContent = level;
+        badge.style.background = AI_RISK_BG[level] || '#e9ecef';
+        badge.style.color = AI_RISK_COLORS[level] || '#333';
+        reason.textContent = data.reason || '';
+        action.textContent = data.recommended_action ? '→ ' + data.recommended_action : '';
+    })
+    .catch(() => {
+        riskRow.style.display = 'none';
+    });
+}
 {% endif %}
 
 function calculateTotal() {
@@ -1349,6 +1681,153 @@ function calculateTotal() {
     // Enable/disable both buttons based on item count
     document.getElementById('submitBtn').disabled = itemCount === 0;
     document.getElementById('draftBtn').disabled = itemCount === 0;
+}
+
+// ================================================================
+//  FOC Confirmation Popup
+// ================================================================
+function showFOCConfirmPopup() {
+    // If user disabled FOC summary, submit directly
+    if (!BILLING_PREF_SHOW_FOC) {
+        submitBill(false);
+        return;
+    }
+
+    // Ensure items data is up to date
+    calculateTotal();
+
+    // Run basic validation first (same as submitBill)
+    const shopId = document.getElementById('shopSelect').value;
+    const customerName = document.getElementById('customerNameInput').value.trim();
+    if (!shopId) { alert('Please select a shop or choose "Unregistered Customer"'); return; }
+    if (shopId === 'unregistered' && !customerName) { alert('Please enter customer name'); document.getElementById('customerNameInput').focus(); return; }
+    const items = JSON.parse(document.getElementById('itemsData').value || '[]');
+    if (items.length === 0) { alert('Please select at least one item'); return; }
+
+    // Gather paid qty per product
+    const paidQtyByProduct = {};
+    items.forEach(item => {
+        if (item.quantity > 0) {
+            paidQtyByProduct[item.product_id] = (paidQtyByProduct[item.product_id] || 0) + parseFloat(item.quantity);
+        }
+    });
+
+    // Gather FOC qty per product
+    const focQtyByProduct = {};
+    for (const cat in focItemsByCategory) {
+        focItemsByCategory[cat].forEach(item => {
+            focQtyByProduct[item.productId] = (focQtyByProduct[item.productId] || 0) + item.qty;
+        });
+    }
+
+    // Build summary rows - aggregate at category level (FOC is earned per category, not per product)
+    // Step 1: Aggregate paid qty and FOC given per category, and get the FOC ratio from any product in the category
+    const categoryData = {};
+    const allProductIds = new Set([...Object.keys(paidQtyByProduct), ...Object.keys(focQtyByProduct)]);
+
+    allProductIds.forEach(pid => {
+        const info = PRODUCT_FOC_RATIOS[pid];
+        if (!info) return;
+        const cat = info.category;
+        if (!categoryData[cat]) {
+            categoryData[cat] = { buy: info.buy, free: info.free, totalPaid: 0, totalFocGiven: 0, catOrder: info.catOrder || 999, markedPrice: info.markedPrice };
+        }
+        categoryData[cat].totalPaid += (paidQtyByProduct[pid] || 0);
+        categoryData[cat].totalFocGiven += (focQtyByProduct[pid] || 0);
+    });
+
+    // Step 2: Also include categories from products with FOC ratios that have paid quantities, even if no FOC given
+    for (const pid in PRODUCT_FOC_RATIOS) {
+        const info = PRODUCT_FOC_RATIOS[pid];
+        if (info.buy > 0 && paidQtyByProduct[pid] > 0 && !categoryData[info.category]) {
+            categoryData[info.category] = { buy: info.buy, free: info.free, totalPaid: paidQtyByProduct[pid], totalFocGiven: 0, catOrder: info.catOrder || 999, markedPrice: info.markedPrice };
+        } else if (info.buy > 0 && paidQtyByProduct[pid] > 0 && categoryData[info.category]) {
+            // Already counted above
+        }
+    }
+
+    let totalFOCBottles = 0;
+    let totalFOCValue = 0;
+    let hasWarning = false;
+    let rows = [];
+
+    for (const cat in categoryData) {
+        const cd = categoryData[cat];
+        const expected = cd.buy > 0 ? Math.floor(cd.totalPaid / cd.buy) * cd.free : 0;
+        const focGiven = cd.totalFocGiven;
+
+        // Only include categories that have FOC given or FOC expected
+        if (focGiven === 0 && expected === 0) continue;
+
+        totalFOCBottles += focGiven;
+        totalFOCValue += focGiven * cd.markedPrice;
+
+        let hasOver = false, hasShort = false;
+        if (focGiven > expected && cd.totalPaid > 0) { hasOver = true; hasWarning = true; }
+        if (focGiven < expected) { hasShort = true; hasWarning = true; }
+
+        rows.push({
+            category: cat,
+            catOrder: cd.catOrder,
+            sold: cd.totalPaid,
+            earned: expected,
+            giving: focGiven,
+            hasOver: hasOver,
+            hasShort: hasShort,
+        });
+    }
+
+    // Build HTML
+    let html = '';
+    if (rows.length === 0) {
+        html = '<div style="text-align:center;padding:24px;">'
+             + '<i class="fas fa-info-circle" style="font-size:2rem;color:#90a4ae;"></i>'
+             + '<p style="margin:12px 0 0;color:#546e7a;font-size:0.95rem;">No FOC items on this bill.</p></div>';
+    } else {
+        // Sort categories by display order
+        rows.sort((a, b) => a.catOrder - b.catOrder);
+
+        html = '<div class="foc-confirm-list">';
+        for (const r of rows) {
+            const g = r;
+            let catBadge = '', catBadgeStyle = '';
+            if (g.giving === 0 && g.earned === 0) continue;
+            if (g.hasShort && g.hasOver) {
+                catBadge = '⚠ Check'; catBadgeStyle = 'background:#fff3e0;color:#e65100;';
+            } else if (g.hasShort) {
+                catBadge = '✗ Short ' + (g.earned - g.giving); catBadgeStyle = 'background:#ffebee;color:#c62828;';
+            } else if (g.hasOver) {
+                catBadge = '⚠ Over +' + (g.giving - g.earned); catBadgeStyle = 'background:#fff3e0;color:#e65100;';
+            } else if (g.giving === g.earned) {
+                catBadge = '✓ OK'; catBadgeStyle = 'background:#e8f5e9;color:#2e7d32;';
+            } else {
+                catBadge = 'BONUS'; catBadgeStyle = 'background:#e3f2fd;color:#1565c0;';
+            }
+
+            html += '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:8px 10px;margin-bottom:6px;">'
+                 + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+                 + '<div style="font-weight:700;font-size:0.82rem;"><i class="fas fa-bottle-water me-1" style="color:#546e7a;"></i>' + r.category + '</div>'
+                 + '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;white-space:nowrap;' + catBadgeStyle + '">' + catBadge + '</span>'
+                 + '</div>'
+                 + '<div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid #e8e8e8;">'
+                 + '<div style="flex:1;text-align:center;padding:5px 4px;background:#f9f9f9;"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Sold</div><div style="font-weight:700;font-size:0.95rem;">' + g.sold + '</div></div>'
+                 + '<div style="flex:1;text-align:center;padding:5px 4px;border-left:1px solid #e8e8e8;"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Earned</div><div style="font-weight:700;font-size:0.95rem;color:#1976d2;">' + g.earned + '</div></div>'
+                 + '<div style="flex:1;text-align:center;padding:5px 4px;border-left:1px solid #e8e8e8;background:#f1f8e9;"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Giving</div><div style="font-weight:800;font-size:1rem;color:#2e7d32;">' + g.giving + '</div></div>'
+                 + '</div>'
+                 + '</div>';
+        }
+        html += '</div>';
+    }
+
+    document.getElementById('focConfirmBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('focConfirmModal')).show();
+}
+
+function proceedSubmitBill() {
+    // Close modal and call actual submit
+    const modal = bootstrap.Modal.getInstance(document.getElementById('focConfirmModal'));
+    if (modal) modal.hide();
+    submitBill(false);
 }
 
 // Prevent duplicate submissions

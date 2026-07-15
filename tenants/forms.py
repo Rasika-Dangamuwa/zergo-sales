@@ -14,6 +14,17 @@ class DistributorForm(forms.ModelForm):
         required=False,
         help_text="Subdomain for this distributor (e.g., 'abc' → abc.yourdomain.com)"
     )
+    admin_username = forms.CharField(
+        max_length=150,
+        required=False,
+        help_text='Username for the distributor admin account'
+    )
+    admin_password = forms.CharField(
+        max_length=128,
+        required=False,
+        widget=forms.PasswordInput,
+        help_text='Password for the distributor admin account'
+    )
     
     class Meta:
         model = Distributor

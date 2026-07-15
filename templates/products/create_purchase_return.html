@@ -62,12 +62,14 @@
         text-align: right;
     }
     
-    .product-table tbody td:nth-child(3),
+    .product-table tbody td:nth-child(3) {
+        padding-right: 18px !important;
+    }
+
     .product-table tbody td:nth-child(4) {
         padding: 0 !important;
     }
-    
-    .product-table tbody td:nth-child(3) span,
+
     .product-table tbody td:nth-child(4) span {
         display: block;
         padding: 10px 8px;
@@ -81,12 +83,20 @@
         border-radius: 4px;
         text-align: center;
         font-size: 0.9rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
     }
-    
     .qty-input:focus {
         border-color: #f5576c;
         outline: none;
         box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
+    }
+    .qty-input.transfer-warn {
+        border-color: #e65100;
+        box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.15);
+    }
+    .qty-input.transfer-error {
+        border-color: #c62828;
+        box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.15);
     }
     
     .category-header {
@@ -218,14 +228,14 @@
                         <table class="table product-table" style="table-layout: fixed;">
                             <thead>
                                 <tr>
-                                    <th style="width: 30%">Description</th>
-                                    <th style="width: 8%">Qty</th>
-                                    <th style="width: 10%">Marked Price</th>
+                                    <th style="width: 26%">Description</th>
+                                    <th style="width: 7%">Qty</th>
+                                    <th style="width: 13%">Marked Price</th>
                                     <th style="width: 10%">Invoice Disc%</th>
                                     <th style="width: 11%">Invoice Price</th>
                                     <th style="width: 10%">Dist Disc%</th>
                                     <th style="width: 11%">Dist Price</th>
-                                    <th style="width: 10%">Total</th>
+                                    <th style="width: 12%">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -248,22 +258,34 @@
                                             </td>
                                             <!-- Qty -->
                                             <td>
-                                                <input type="number" 
-                                                       name="quantity_{{ product.id }}" 
-                                                       class="qty-input" 
-                                                       min="0" 
-                                                       max="{{ product.non_resaleable_stock }}"
+                                                <input type="number"
+                                                       name="quantity_{{ product.id }}"
+                                                       class="qty-input"
+                                                       min="0"
                                                        value="0"
                                                        data-product-id="{{ product.id }}"
                                                        data-marked-price="{{ product.marked_price }}"
                                                        data-shop-discount="{{ product.discount_percentage }}"
                                                        data-company-discount="{{ product.company_discount_percentage }}"
-                                                       onchange="updateSummary()">
+                                                       data-non-resaleable="{{ product.non_resaleable_stock }}"
+                                                       data-resaleable="{{ product.quantity_in_stock }}"
+                                                       data-bs-toggle="tooltip"
+                                                       data-bs-placement="right"
+                                                       title=""
+                                                       oninput="updateSummary(); checkAutoTransfer(this)">
                                             </td>
                                             <!-- Marked Price -->
                                             <td>
-                                                <div style="text-align: right; width: 100%; float: left;">
-                                                    <span>Rs. {{ product.marked_price|floatformat:2|intcomma }}</span>
+                                                <div class="input-group input-group-sm" style="width: 130px; margin-left: auto;">
+                                                    <span class="input-group-text" style="padding: 0.25rem 0.4rem; font-size: 0.875rem;">Rs.</span>
+                                                    <input type="number"
+                                                           name="marked_price_{{ product.id }}"
+                                                           class="form-control marked-price-{{ product.id }}"
+                                                           step="0.01"
+                                                           min="0"
+                                                           value="{{ product.marked_price }}"
+                                                           style="text-align: right; padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                                                           onchange="updateSummary()">
                                                 </div>
                                             </td>
                                             <!-- Invoice Discount % -->
@@ -352,8 +374,9 @@ function updateSummary() {
     
     qtyInputs.forEach(input => {
         const qty = parseInt(input.value) || 0;
-        const markedPrice = parseFloat(input.dataset.markedPrice) || 0;
         const productId = input.dataset.productId;
+        const markedPriceInput = document.querySelector(`.marked-price-${productId}`);
+        const markedPrice = markedPriceInput ? parseFloat(markedPriceInput.value) || 0 : (parseFloat(input.dataset.markedPrice) || 0);
         
         // Get shop discount from input field (editable)
         const shopDiscountInput = document.querySelector(`.shop-discount-${productId}`);
@@ -401,6 +424,31 @@ function updateSummary() {
     document.getElementById('totalItems').textContent = totalItems;
     document.getElementById('totalQty').textContent = totalQty;
     document.getElementById('grandTotal').textContent = grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function checkAutoTransfer(input) {
+    const qty = parseInt(input.value) || 0;
+    const nonResaleable = parseInt(input.dataset.nonResaleable) || 0;
+    const resaleable = parseInt(input.dataset.resaleable) || 0;
+    const excess = qty - nonResaleable;
+    const tooltip = bootstrap.Tooltip.getOrCreateInstance(input, {trigger: 'hover focus'});
+
+    input.classList.remove('transfer-warn', 'transfer-error');
+
+    if (excess > 0) {
+        if (excess > resaleable) {
+            input.classList.add('transfer-error');
+            input.setAttribute('title', '⚠ Only ' + (nonResaleable + resaleable) + ' total available');
+        } else {
+            input.classList.add('transfer-warn');
+            input.setAttribute('title', '↔ ' + excess + ' unit' + (excess > 1 ? 's' : '') + ' will be auto-transferred from resaleable stock');
+        }
+        tooltip.setContent({'.tooltip-inner': input.getAttribute('title')});
+    } else {
+        input.setAttribute('title', '');
+        tooltip.setContent({'.tooltip-inner': ''});
+        tooltip.hide();
+    }
 }
 
 // Initialize on load

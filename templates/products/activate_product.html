@@ -160,7 +160,7 @@
                             <label for="discount_percentage">Shop Discount %</label>
                             <div class="input-group input-group-sm">
                                 <input type="number" step="0.01" class="form-control" id="discount_percentage"
-                                       name="discount_percentage" value="10.00" min="0" max="100">
+                                       name="discount_percentage" value="{{ global_product.discount_percentage }}" min="0" max="100">
                                 <span class="input-group-text">%</span>
                             </div>
                             <small class="text-muted">Discount given to shops off MRP</small>
@@ -171,7 +171,7 @@
                             <label for="company_discount_percentage">Company Discount %</label>
                             <div class="input-group input-group-sm">
                                 <input type="number" step="0.01" class="form-control" id="company_discount_percentage"
-                                       name="company_discount_percentage" value="23.00" min="0" max="100">
+                                       name="company_discount_percentage" value="{{ global_product.company_discount_percentage }}" min="0" max="100">
                                 <span class="input-group-text">%</span>
                             </div>
                             <small class="text-muted">Discount you get from the company</small>
@@ -195,9 +195,9 @@
                             <label>Company FOC (Buy X Get Y Free)</label>
                             <div class="foc-row">
                                 <span>Buy</span>
-                                <input type="number" class="form-control form-control-sm" name="company_foc_buy" value="12" min="1">
+                                <input type="number" class="form-control form-control-sm" name="company_foc_buy" value="{{ global_product.company_foc_buy }}" min="1">
                                 <span>get</span>
-                                <input type="number" class="form-control form-control-sm" name="company_foc_free" value="1" min="0">
+                                <input type="number" class="form-control form-control-sm" name="company_foc_free" value="{{ global_product.company_foc_free }}" min="0">
                                 <span>free</span>
                             </div>
                             <small class="text-muted">FOC ratio when buying from company</small>
@@ -208,9 +208,9 @@
                             <label>Shop FOC (Buy X Get Y Free)</label>
                             <div class="foc-row">
                                 <span>Buy</span>
-                                <input type="number" class="form-control form-control-sm" name="shop_foc_buy" value="12" min="1">
+                                <input type="number" class="form-control form-control-sm" name="shop_foc_buy" value="{{ global_product.shop_foc_buy }}" min="1">
                                 <span>get</span>
-                                <input type="number" class="form-control form-control-sm" name="shop_foc_free" value="1" min="0">
+                                <input type="number" class="form-control form-control-sm" name="shop_foc_free" value="{{ global_product.shop_foc_free }}" min="0">
                                 <span>free</span>
                             </div>
                             <small class="text-muted">FOC ratio when selling to shops</small>

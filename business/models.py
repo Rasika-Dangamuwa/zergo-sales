@@ -472,6 +472,47 @@ class DistributorProfile(models.Model):
     )
     
     # ========================================================================
+    # SECTION 8B: PURCHASE ORDER / DOCUMENT SETTINGS
+    # ========================================================================
+    
+    po_terms_and_conditions = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Terms & conditions printed on Purchase Orders (leave blank for default)"
+    )
+    
+    po_show_signatures = models.BooleanField(
+        default=True,
+        help_text="Show signature section on Purchase Order PDFs"
+    )
+    
+    po_show_terms = models.BooleanField(
+        default=True,
+        help_text="Show terms & conditions section on Purchase Order PDFs"
+    )
+    
+    authorized_signature = models.ImageField(
+        upload_to='signatures/',
+        blank=True,
+        null=True,
+        help_text="Digital signature image for 'Authorized By' on documents"
+    )
+    
+    authorized_signatory_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Name of the authorized signatory (leave blank to use document creator's name)"
+    )
+    
+    authorized_signatory_designation = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Designation/title of the authorized signatory"
+    )
+    
+    # ========================================================================
     # SECTION 9: DISPLAY PREFERENCES
     # ========================================================================
     

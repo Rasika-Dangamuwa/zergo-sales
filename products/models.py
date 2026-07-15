@@ -107,6 +107,7 @@ class Product(models.Model):
     # Basic Info
     product_code = models.CharField(max_length=50, unique=True)
     product_name = models.CharField(max_length=200, help_text="e.g., Max Orange 500ml")
+    sinhala_name = models.CharField(max_length=200, blank=True, null=True, help_text="Product name in Sinhala (සිංහල නම)")
     description = models.TextField(blank=True, null=True)
     
     # Company/Brand

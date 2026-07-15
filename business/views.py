@@ -64,14 +64,19 @@ SECTION_FIELDS = {
         'login_subtitle', 'login_brand_type', 'login_bg_style', 'login_bg_image',
         'sidebar_active_style',
     ],
+    'documents': [
+        'po_terms_and_conditions', 'po_show_signatures', 'po_show_terms',
+        'authorized_signature', 'authorized_signatory_name', 'authorized_signatory_designation',
+    ],
 }
 
 BOOLEAN_FIELDS = {
     'show_logo_on_receipts', 'show_tagline', 'show_address_on_receipts',
     'show_contact_on_receipts', 'show_social_media', 'show_tax_info',
+    'po_show_signatures', 'po_show_terms',
 }
 
-FILE_FIELDS = {'logo', 'logo_receipt', 'logo_document', 'favicon', 'login_bg_image'}
+FILE_FIELDS = {'logo', 'logo_receipt', 'logo_document', 'favicon', 'login_bg_image', 'authorized_signature'}
 
 INTEGER_FIELDS = {'fiscal_year_start_month', 'default_payment_terms_days'}
 

@@ -33,7 +33,7 @@
                     <label class="form-label fw-semibold">Subdomain</label>
                     <div class="input-group">
                         <input type="text" name="subdomain" value="{{ form.subdomain.value|default:'' }}" class="form-control" placeholder="e.g., abc">
-                        <span class="input-group-text">.localhost</span>
+                        <span class="input-group-text">.{{ base_domain|default:"localhost" }}</span>
                     </div>
                     <small class="text-muted">Leave empty to use the code as subdomain</small>
                 </div>
@@ -101,6 +101,22 @@
                 {% for field, errors in form.errors.items %}
                     <div>{{ field }}: {{ errors.0 }}</div>
                 {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if not distributor %}
+            <hr class="my-4">
+            <h6 class="fw-bold text-muted mb-3"><i class="fas fa-user-shield me-2"></i>Distributor Admin Account</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Admin Username</label>
+                    <input type="text" name="admin_username" value="{{ form.admin_username.value|default:'' }}" class="form-control" placeholder="e.g., admin_colombo">
+                    <small class="text-muted">Leave empty to skip admin creation</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Admin Password</label>
+                    <input type="password" name="admin_password" class="form-control" placeholder="Strong password">
+                </div>
             </div>
             {% endif %}
 

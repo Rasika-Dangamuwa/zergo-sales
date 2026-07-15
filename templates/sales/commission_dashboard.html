@@ -240,11 +240,9 @@
         }
         
         .stat-card h2 {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             margin-bottom: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            word-break: break-word;
             font-weight: 700;
         }
         
@@ -274,11 +272,9 @@
         }
         
         .stat-card.text-center h2 {
-            font-size: 0.88rem;
+            font-size: 0.82rem;
             margin-bottom: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            word-break: break-word;
         }
         
         .stat-card.text-center {
@@ -668,7 +664,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-card balance">
                 <h6><i class="fas fa-file-invoice-dollar"></i> <span class="d-none d-md-inline">Total Sales</span><span class="d-md-none">Total Sales</span></h6>
-                <h2><span class="rs-prefix">Rs. </span>{{ total_sales|floatformat:2|intcomma }}</h2>
+                <h2><span class="rs-prefix">Rs. </span><span class="d-none d-md-inline">{{ total_sales|floatformat:2|intcomma }}</span><span class="d-md-none">{{ total_sales|floatformat:0|intcomma }}</span></h2>
                 <small class="text-muted">{{ bills_count }} bill{{ bills_count|pluralize }}</small>
             </div>
         </div>
@@ -676,7 +672,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-card commission">
                 <h6><i class="fas fa-coins"></i> <span class="d-none d-md-inline">Commission Earned</span><span class="d-md-none">Commission</span></h6>
-                <h2><span class="rs-prefix">Rs. </span>{{ total_commission|floatformat:2|intcomma }}</h2>
+                <h2><span class="rs-prefix">Rs. </span><span class="d-none d-md-inline">{{ total_commission|floatformat:2|intcomma }}</span><span class="d-md-none">{{ total_commission|floatformat:0|intcomma }}</span></h2>
                 <div class="change {% if commission_change_pct >= 0 %}positive{% else %}negative{% endif %}">
                     <i class="fas fa-arrow-{% if commission_change_pct >= 0 %}up{% else %}down{% endif %}"></i>
                     {{ commission_change_pct|floatformat:1 }}% from last month
@@ -687,16 +683,16 @@
         <div class="col-6 col-md-3">
             <div class="stat-card collected">
                 <h6><i class="fas fa-hand-holding-usd"></i> <span class="d-none d-md-inline">Collections</span><span class="d-md-none">Collections</span></h6>
-                <h2><span class="rs-prefix">Rs. </span>{{ net_collected|floatformat:2|intcomma }}</h2>
-                <small class="text-muted">Commission: Rs. {{ net_collection_commission|floatformat:2|intcomma }}</small>
+                <h2><span class="rs-prefix">Rs. </span><span class="d-none d-md-inline">{{ net_collected|floatformat:2|intcomma }}</span><span class="d-md-none">{{ net_collected|floatformat:0|intcomma }}</span></h2>
+                <small class="text-muted">Commission: Rs. {{ net_collection_commission|floatformat:0|intcomma }}</small>
             </div>
         </div>
         
         <div class="col-6 col-md-3">
             <div class="stat-card returns">
                 <h6><i class="fas fa-undo"></i> <span class="d-none d-md-inline">Return Deductions</span><span class="d-md-none">Returns</span></h6>
-                <h2><span class="rs-prefix">Rs. </span>{{ total_returns|floatformat:2|intcomma }}</h2>
-                <small class="text-muted">Deducted: Rs. {{ return_commission|floatformat:2|intcomma }}</small>
+                <h2><span class="rs-prefix">Rs. </span><span class="d-none d-md-inline">{{ total_returns|floatformat:2|intcomma }}</span><span class="d-md-none">{{ total_returns|floatformat:0|intcomma }}</span></h2>
+                <small class="text-muted">Net commission: Rs. {{ net_return_commission|floatformat:0|intcomma }}</small>
             </div>
         </div>
     </div>

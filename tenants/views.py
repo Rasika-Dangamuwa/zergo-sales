@@ -13,9 +13,16 @@ from django.utils import timezone
 from django_tenants.utils import schema_context, tenant_context
 from decimal import Decimal
 
+from decouple import config
+
 from .models import Distributor, Domain, GlobalCaseValueSetting
 from .forms import DistributorForm
 from .utils import create_tenant_schema
+
+
+def _get_base_domain():
+    """Return the base domain for tenant subdomains (e.g., 'zergosales.com' or 'localhost')."""
+    return config('PRODUCTION_DOMAIN', default='localhost')
 
 
 def platform_admin_required(view_func):
@@ -84,6 +91,8 @@ def distributor_list(request):
 @platform_admin_required
 def distributor_create(request):
     """Create a new distributor (tenant)."""
+    base_domain = _get_base_domain()
+    
     if request.method == 'POST':
         form = DistributorForm(request.POST, request.FILES)
         if form.is_valid():
@@ -105,15 +114,42 @@ def distributor_create(request):
                 distributor.delete()
                 return redirect('tenants:distributor_list')
             
-            # Create the primary domain
-            subdomain = form.cleaned_data.get('subdomain', distributor.code.lower())
+            # Create the primary domain using production domain or localhost
+            subdomain = form.cleaned_data.get('subdomain', '') or distributor.code.lower()
+            domain_name = f"{subdomain}.{base_domain}"
             Domain.objects.create(
-                domain=f"{subdomain}.localhost",
+                domain=domain_name,
                 tenant=distributor,
                 is_primary=True,
             )
             
-            messages.success(request, f'Distributor "{distributor.name}" created successfully!')
+            # Create admin user for the new tenant
+            admin_username = form.cleaned_data.get('admin_username', '').strip()
+            admin_password = form.cleaned_data.get('admin_password', '').strip()
+            admin_user = None
+            if admin_username and admin_password:
+                from accounts.models import User
+                try:
+                    admin_user = User.objects.create_user(
+                        username=admin_username,
+                        password=admin_password,
+                        user_type='admin',
+                        tenant=distributor,
+                        first_name=distributor.owner_name or distributor.name,
+                    )
+                    messages.success(
+                        request,
+                        f'Distributor "{distributor.name}" created! '
+                        f'Domain: {domain_name} | Admin: {admin_username}'
+                    )
+                except Exception as e:
+                    messages.warning(request, f'Distributor created but admin user failed: {e}')
+            else:
+                messages.success(
+                    request,
+                    f'Distributor "{distributor.name}" created! Domain: {domain_name}'
+                )
+            
             return redirect('tenants:distributor_detail', pk=distributor.pk)
     else:
         form = DistributorForm()
@@ -121,6 +157,7 @@ def distributor_create(request):
     return render(request, 'tenants/distributor_form.html', {
         'form': form,
         'title': 'Create New Distributor',
+        'base_domain': base_domain,
     })
 
 

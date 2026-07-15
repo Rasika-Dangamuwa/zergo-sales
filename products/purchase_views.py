@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Case, When, Value, IntegerField
 from django.utils import timezone
 from django.http import HttpResponse
 from decimal import Decimal
@@ -164,8 +164,8 @@ def create_purchase(request):
                     loose = int(request.POST.get(f'loose_{product.id}', 0) or 0)
                     foc_qty = int(request.POST.get(f'foc_{product.id}', 0) or 0)
                     
-                    # Skip if no quantity entered
-                    if packs == 0 and loose == 0:
+                    # Skip if no quantity entered (including FOC)
+                    if packs == 0 and loose == 0 and foc_qty == 0:
                         continue
                     
                     # Get pricing from form
@@ -201,7 +201,10 @@ def create_purchase(request):
                     messages.warning(request, 'No items added to GRN. Please enter quantities for at least one product.')
                     purchase.delete()
                     companies = Company.objects.filter(is_active=True)
-                    products = Product.objects.filter(is_active=True).select_related('company', 'category').order_by('display_order', 'size', 'marked_price', 'product_name')
+                    from products.utils import get_size_ordering
+                    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+                        size_num=get_size_ordering()
+                    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
                     purchase_orders = PurchaseOrder.objects.filter(status__in=['ordered', 'draft']).select_related('company').order_by('-order_date')
                     context = {
                         'companies': companies,
@@ -229,7 +232,10 @@ def create_purchase(request):
             messages.warning(request, 'Purchase order not found.')
     
     companies = Company.objects.filter(is_active=True).order_by('company_name')
-    products = Product.objects.filter(is_active=True).select_related('company', 'category').order_by('display_order', 'size', 'marked_price', 'product_name')
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
     purchase_orders = PurchaseOrder.objects.filter(status__in=['ordered', 'draft']).select_related('company').order_by('-order_date')
     
     context = {
@@ -245,7 +251,10 @@ def create_purchase(request):
 def purchase_detail(request, pk):
     """GRN detail view"""
     purchase = get_object_or_404(Purchase.objects.select_related('company', 'created_by'), pk=pk)
-    items = purchase.items.select_related('product').order_by('product__display_order', 'product__size', 'product__marked_price', 'product__product_name')
+    from products.utils import get_size_ordering
+    items = purchase.items.select_related('product').annotate(
+        size_num=get_size_ordering('product__size')
+    ).order_by('size_num', 'product__marked_price', 'product__display_order', 'product__product_name')
     
     # Annotate each item with computed display values
     from decimal import Decimal
@@ -326,7 +335,7 @@ def edit_purchase(request, pk):
                     loose = int(request.POST.get(f'loose_{product.id}', 0) or 0)
                     foc_qty = int(request.POST.get(f'foc_{product.id}', 0) or 0)
 
-                    if packs == 0 and loose == 0:
+                    if packs == 0 and loose == 0 and foc_qty == 0:
                         continue
 
                     shop_price = request.POST.get(f'price_{product.id}', 0)
@@ -359,9 +368,10 @@ def edit_purchase(request, pk):
             messages.error(request, f'Error updating GRN: {str(e)}')
 
     companies = Company.objects.filter(is_active=True).order_by('company_name')
-    products = Product.objects.filter(is_active=True).select_related('company', 'category').order_by(
-        'display_order', 'size', 'marked_price', 'product_name'
-    )
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
     purchase_orders = PurchaseOrder.objects.filter(
         status__in=['ordered', 'draft']
     ).select_related('company').order_by('-order_date')
@@ -445,9 +455,9 @@ def update_purchase_stock(request, pk):
         messages.error(request, f'Cannot update stock: {purchase.grn_number} has no items.')
         return redirect('products:purchase_detail', pk=pk)
     
-    # VALIDATION: Check all items have valid quantities
+    # VALIDATION: Check all items have valid quantities (regular OR FOC)
     invalid_items = items.filter(
-        Q(quantity__lte=0) | Q(packs=0, loose_bottles=0)
+        Q(quantity__lte=0, foc_quantity__lte=0) | Q(packs=0, loose_bottles=0, foc_quantity__lte=0)
     )
     if invalid_items.exists():
         messages.error(
@@ -679,20 +689,44 @@ def create_purchase_return(request):
                         product = Product.objects.get(pk=product_id)
                         qty = int(value)
                         
-                        # Validate non-resaleable stock availability
-                        if qty > product.non_resaleable_stock:
-                            raise ValueError(
-                                f'Cannot return {qty} {product.product_name}: '
-                                f'Only {product.non_resaleable_stock} in non-resaleable stock'
+                        cost_per_unit = product.cost_after_foc if product.cost_after_foc else Decimal('0')
+
+                        # Auto-transfer from resaleable if qty exceeds non-resaleable
+                        excess = qty - product.non_resaleable_stock
+                        if excess > 0:
+                            total_available = product.non_resaleable_stock + product.quantity_in_stock
+                            if total_available < qty:
+                                raise ValueError(
+                                    f'Cannot return {qty} {product.product_name}: '
+                                    f'Only {total_available} total available '
+                                    f'({product.non_resaleable_stock} non-resaleable + {product.quantity_in_stock} resaleable)'
+                                )
+                            prev_res = product.quantity_in_stock
+                            prev_non_res = product.non_resaleable_stock
+                            product.quantity_in_stock -= excess
+                            product.non_resaleable_stock += excess
+                            product.save()
+                            StockMovement.objects.create(
+                                product=product, movement_type='non_resaleable_in', stock_type='resaleable',
+                                quantity=-excess, previous_quantity=prev_res, new_quantity=product.quantity_in_stock,
+                                reference_number=purchase_return.pr_number,
+                                notes=f'Auto-transferred to non-resaleable for Purchase Return: {purchase_return.pr_number}',
+                                created_by=request.user, unit_cost=cost_per_unit, total_cost=cost_per_unit * excess,
                             )
-                        
+                            StockMovement.objects.create(
+                                product=product, movement_type='non_resaleable_in', stock_type='non_resaleable',
+                                quantity=excess, previous_quantity=prev_non_res, new_quantity=product.non_resaleable_stock,
+                                reference_number=purchase_return.pr_number,
+                                notes=f'Auto-transferred from resaleable for Purchase Return: {purchase_return.pr_number}',
+                                created_by=request.user, unit_cost=cost_per_unit, total_cost=cost_per_unit * excess,
+                            )
+
                         # Reduce non-resaleable stock immediately
                         previous_stock = product.non_resaleable_stock
                         product.non_resaleable_stock -= qty
                         product.save()
-                        
+
                         # Create stock movement record
-                        cost_per_unit = product.cost_after_foc if product.cost_after_foc else Decimal('0')
                         StockMovement.objects.create(
                             product=product,
                             movement_type='return_to_company',
@@ -707,13 +741,17 @@ def create_purchase_return(request):
                         )
                         
                         # Create item with pricing fields - save() will auto-calculate unit_price and line_total
+                        submitted_marked_price = request.POST.get(f'marked_price_{product_id}')
+                        marked_price = Decimal(submitted_marked_price) if submitted_marked_price else product.marked_price
+                        shop_discount = product.discount_percentage
+                        invoice_price = marked_price - (marked_price * shop_discount / 100)
                         PurchaseReturnItem.objects.create(
                             purchase_return=purchase_return,
                             product=product,
                             quantity=qty,
-                            marked_price=product.marked_price,
-                            shop_discount_percentage=product.discount_percentage,  # Product.discount_percentage is shop discount
-                            invoice_price=product.shop_price,
+                            marked_price=marked_price,
+                            shop_discount_percentage=shop_discount,
+                            invoice_price=invoice_price,
                             company_discount_percentage=product.company_discount_percentage,
                             # unit_price and line_total will be auto-calculated in save()
                         )
@@ -734,7 +772,10 @@ def create_purchase_return(request):
             messages.error(request, f'Error creating purchase return: {str(e)}')
     
     companies = Company.objects.filter(is_active=True)
-    products = Product.objects.filter(is_active=True).order_by('display_order', 'size', 'marked_price', 'product_name')
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
     
     context = {
         'companies': companies,
@@ -750,12 +791,10 @@ def purchase_return_detail(request, pk):
         PurchaseReturn.objects.select_related('company', 'created_by', 'approved_by', 'purchase', 'replacement_grn'), 
         pk=pk
     )
-    items = purchase_return.items.select_related('product').order_by(
-        'product__display_order',
-        'product__size',
-        'product__marked_price',
-        'product__product_name'
-    )
+    from products.utils import get_size_ordering
+    items = purchase_return.items.select_related('product').annotate(
+        size_num=get_size_ordering('product__size')
+    ).order_by('size_num', 'product__marked_price', 'product__display_order', 'product__product_name')
     
     # Calculate summary
     summary = {
@@ -846,10 +885,36 @@ def edit_purchase_return(request, pk):
                         product = Product.objects.get(pk=product_id)
                         qty = int(value)
 
-                        if qty > product.non_resaleable_stock:
-                            raise ValueError(
-                                f'Cannot return {qty} {product.product_name}: '
-                                f'Only {product.non_resaleable_stock} in non-resaleable stock'
+                        cost_per_unit = product.cost_after_foc if product.cost_after_foc else Decimal('0')
+
+                        # Auto-transfer from resaleable if qty exceeds non-resaleable
+                        excess = qty - product.non_resaleable_stock
+                        if excess > 0:
+                            total_available = product.non_resaleable_stock + product.quantity_in_stock
+                            if total_available < qty:
+                                raise ValueError(
+                                    f'Cannot return {qty} {product.product_name}: '
+                                    f'Only {total_available} total available '
+                                    f'({product.non_resaleable_stock} non-resaleable + {product.quantity_in_stock} resaleable)'
+                                )
+                            prev_res = product.quantity_in_stock
+                            prev_non_res = product.non_resaleable_stock
+                            product.quantity_in_stock -= excess
+                            product.non_resaleable_stock += excess
+                            product.save()
+                            StockMovement.objects.create(
+                                product=product, movement_type='non_resaleable_in', stock_type='resaleable',
+                                quantity=-excess, previous_quantity=prev_res, new_quantity=product.quantity_in_stock,
+                                reference_number=purchase_return.pr_number,
+                                notes=f'Auto-transferred to non-resaleable for Purchase Return: {purchase_return.pr_number}',
+                                created_by=request.user, unit_cost=cost_per_unit, total_cost=cost_per_unit * excess,
+                            )
+                            StockMovement.objects.create(
+                                product=product, movement_type='non_resaleable_in', stock_type='non_resaleable',
+                                quantity=excess, previous_quantity=prev_non_res, new_quantity=product.non_resaleable_stock,
+                                reference_number=purchase_return.pr_number,
+                                notes=f'Auto-transferred from resaleable for Purchase Return: {purchase_return.pr_number}',
+                                created_by=request.user, unit_cost=cost_per_unit, total_cost=cost_per_unit * excess,
                             )
 
                         # Reduce non-resaleable stock
@@ -858,7 +923,6 @@ def edit_purchase_return(request, pk):
                         product.save()
 
                         # Stock movement
-                        cost_per_unit = product.cost_after_foc if product.cost_after_foc else Decimal('0')
                         StockMovement.objects.create(
                             product=product,
                             movement_type='return_to_company',
@@ -872,19 +936,22 @@ def edit_purchase_return(request, pk):
                             total_cost=cost_per_unit * qty,
                         )
 
-                        # Get discount overrides from form
+                        # Get price/discount overrides from form
+                        marked_price_input = request.POST.get(f'marked_price_{product_id}')
                         shop_disc_input = request.POST.get(f'shop_discount_{product_id}')
                         company_disc_input = request.POST.get(f'company_discount_{product_id}')
+                        marked_price = Decimal(marked_price_input) if marked_price_input else product.marked_price
                         shop_disc = Decimal(shop_disc_input) if shop_disc_input else product.discount_percentage
                         company_disc = Decimal(company_disc_input) if company_disc_input else product.company_discount_percentage
+                        invoice_price = marked_price * (1 - shop_disc / 100)
 
                         PurchaseReturnItem.objects.create(
                             purchase_return=purchase_return,
                             product=product,
                             quantity=qty,
-                            marked_price=product.marked_price,
+                            marked_price=marked_price,
                             shop_discount_percentage=shop_disc,
-                            invoice_price=product.shop_price,
+                            invoice_price=invoice_price,
                             company_discount_percentage=company_disc,
                         )
                         items_created += 1
@@ -900,15 +967,17 @@ def edit_purchase_return(request, pk):
             messages.error(request, f'Error updating purchase return: {str(e)}')
 
     companies = Company.objects.filter(is_active=True)
-    products = Product.objects.filter(is_active=True).order_by(
-        'display_order', 'size', 'marked_price', 'product_name'
-    )
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
 
     # Build JSON-safe dict from existing items for JS pre-fill
     import json
     existing_items_json = json.dumps({
         str(pid): {
             'quantity': item.quantity,
+            'marked_price': float(item.marked_price),
             'shop_discount': float(item.shop_discount_percentage),
             'company_discount': float(item.company_discount_percentage),
         }
@@ -943,29 +1012,19 @@ def approve_purchase_return(request, pk):
         with transaction.atomic():
             from products.models import FIFOCostLayer
             for item in purchase_return.items.all():
-                # Capture stock before update
-                previous_qty = item.product.quantity_in_stock
-                
-                # Reduce stock
-                item.product.quantity_in_stock -= item.quantity
-                item.product.save()
-                
-                # Consume FIFO layers (stock leaving inventory)
+                # non_resaleable_stock was already reduced when the return was created.
+                # Only compute cost for the status-change movement record.
                 cost_per_unit = item.product.cost_after_foc if item.product.cost_after_foc else Decimal('0')
-                if item.quantity > 0:
-                    avg_cost, _ = FIFOCostLayer.consume_fifo(item.product, item.quantity)
-                    if avg_cost > 0:
-                        cost_per_unit = avg_cost
-                
-                # Create stock movement
+
+                # Create stock movement to record the approval event (no stock change)
                 StockMovement.objects.create(
                     product=item.product,
                     movement_type='purchase_return',
-                    quantity=-item.quantity,
-                    previous_quantity=previous_qty,
-                    new_quantity=item.product.quantity_in_stock,
+                    quantity=0,
+                    previous_quantity=item.product.non_resaleable_stock,
+                    new_quantity=item.product.non_resaleable_stock,
                     reference_number=purchase_return.pr_number,
-                    notes=f'Purchase Return: {purchase_return.pr_number}',
+                    notes=f'Purchase Return Sent to Supplier: {purchase_return.pr_number}',
                     created_by=request.user,
                     unit_cost=cost_per_unit,
                     total_cost=cost_per_unit * item.quantity,

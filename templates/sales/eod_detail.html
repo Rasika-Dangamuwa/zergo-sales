@@ -11,185 +11,226 @@
         margin: 0 auto;
         padding: 15px;
     }
-    
-    .eod-report-card {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    
+
+    /* ── Report Header ── */
     .report-header {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
         color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        padding: 18px 20px;
+        border-radius: 12px;
+        margin-bottom: 16px;
     }
-    
+    .rep-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        border-radius: 20px;
+        padding: 3px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
     .header-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 0.95em;
+        margin-bottom: 6px;
+        font-size: 0.92em;
     }
-    
-    .header-label {
+    .header-label { font-weight: 600; opacity: 0.85; }
+
+    /* ── Section Cards ── */
+    .eod-report-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 18px;
+        margin-bottom: 14px;
+    }
+    .card-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #64748b;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* ── Collections Grid ── */
+    .collection-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .col-item {
+        border-radius: 10px;
+        padding: 14px;
+        position: relative;
+    }
+    .col-item.green  { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+    .col-item.purple { background: #f5f3ff; border: 1.5px solid #ddd6fe; }
+    .col-item.amber  { background: #fffbeb; border: 1.5px solid #fde68a; }
+    .col-item.blue   { background: #eff6ff; border: 1.5px solid #bfdbfe; }
+    .col-item.slate  { background: #f8fafc; border: 1.5px solid #e2e8f0; }
+    .col-item.rose   { background: #fff1f2; border: 1.5px solid #fecdd3; }
+    .col-item.full   { grid-column: 1 / -1; }
+
+    .col-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        opacity: 0.7;
+        margin-bottom: 4px;
+    }
+    .col-item.green .col-label  { color: #065f46; }
+    .col-item.purple .col-label { color: #5b21b6; }
+    .col-item.amber .col-label  { color: #92400e; }
+    .col-item.blue .col-label   { color: #1e40af; }
+    .col-item.slate .col-label  { color: #475569; }
+    .col-item.rose .col-label   { color: #9f1239; }
+
+    .col-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .col-item.green .col-value  { color: #059669; }
+    .col-item.purple .col-value { color: #7c3aed; }
+    .col-item.amber .col-value  { color: #d97706; }
+    .col-item.blue .col-value   { color: #2563eb; }
+    .col-item.slate .col-value  { color: #334155; }
+    .col-item.rose .col-value   { color: #e11d48; }
+
+    .col-sub {
+        font-size: 0.72rem;
+        margin-top: 3px;
+        opacity: 0.65;
+    }
+
+    .total-bar {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
+    .total-bar .t-label { font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
+    .total-bar .t-value { font-size: 1.5rem; font-weight: 800; }
+
+    /* ── Summary Grid ── */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+    .summary-item {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+    }
+    .summary-label {
+        font-size: 0.72em;
+        color: #6c757d;
         font-weight: 600;
-        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
     }
-    
-    .product-section {
-        margin-bottom: 20px;
+    .summary-value {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #212529;
     }
-    
+
+    /* ── Product Section ── */
     .size-header {
-        background: #f8f9fa;
-        padding: 10px 15px;
+        background: #f1f5f9;
+        padding: 8px 14px;
         border-radius: 6px;
-        font-weight: 600;
-        color: #495057;
-        margin-bottom: 10px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
     }
-    
-    .product-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
+    .product-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
     .product-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 15px;
-        border-bottom: 1px solid #e9ecef;
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9;
     }
-    
-    .product-item:last-child {
-        border-bottom: none;
-    }
-    
-    .product-name {
-        font-size: 0.95em;
-        color: #495057;
-        flex: 1;
-    }
-    
-    .product-qty {
-        font-weight: 600;
-        color: #0d6efd;
-        font-size: 1em;
-        min-width: 60px;
-        text-align: right;
-    }
-    
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-        margin-top: 15px;
-    }
-    
-    .summary-item {
-        background: #f8f9fa;
+    .product-item:last-child { border-bottom: none; }
+    .product-name { font-size: 0.9em; color: #374151; flex: 1; }
+    .product-qty  { font-weight: 700; color: #2563eb; min-width: 50px; text-align: right; }
+
+    /* ── Shop Lists ── */
+    .shop-list { display: flex; flex-direction: column; gap: 6px; }
+    .shop-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
         border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-    }
-    
-    .summary-label {
-        font-size: 0.8em;
-        color: #6c757d;
-        margin-bottom: 5px;
-    }
-    
-    .summary-value {
-        font-size: 1.3em;
-        font-weight: 700;
-        color: #212529;
-    }
-    
-    .action-buttons {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 10px;
-        margin-top: 20px;
     }
-    
-    @media (max-width: 767px) {
-        .eod-detail-container {
-            padding: 10px;
-        }
-        
-        .eod-report-card {
-            padding: 15px;
-        }
-        
-        .report-header {
-            padding: 15px;
-        }
-        
-        .header-row {
-            font-size: 0.85em;
-        }
-        
-        .product-item {
-            padding: 8px 12px;
-            font-size: 0.9em;
-        }
-        
-        .product-name {
-            font-size: 0.85em;
-        }
-        
-        .product-qty {
-            font-size: 0.95em;
-        }
-        
-        .summary-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-        
-        .summary-value {
-            font-size: 1.1em;
-        }
-        
-        .action-buttons {
-            grid-template-columns: 1fr;
-        }
+    .shop-row.green { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .shop-row.amber { background: #fffbeb; border: 1px solid #fde68a; }
+    .shop-name { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+    .bill-ref  { font-size: 0.75rem; color: #94a3b8; margin-left: 8px; }
+    .shop-amount { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+    .green-text { color: #059669; }
+    .amber-text { color: #d97706; }
+
+    /* ── Commission Banner ── */
+    .commission-banner {
+        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
     }
-    
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-        
-        body {
-            background: white;
-        }
-        
-        .eod-detail-container {
-            max-width: 100%;
-            padding: 0;
-        }
-        
-        .eod-report-card {
-            box-shadow: none;
-            break-inside: avoid;
-        }
+    .commission-banner .cb-label { font-size: 0.82rem; font-weight: 600; opacity: 0.9; }
+    .commission-banner .cb-value { font-size: 1.6rem; font-weight: 800; }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+        .eod-detail-container { padding: 10px; }
+        .eod-report-card { padding: 14px; }
+        .col-value { font-size: 1.15rem; }
+        .total-bar .t-value { font-size: 1.3rem; }
+        .commission-banner .cb-value { font-size: 1.35rem; }
+        .summary-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
+    @media print {
+        .no-print { display: none !important; }
+        body { background: white; }
+        .eod-detail-container { max-width: 100%; padding: 0; }
+        .eod-report-card { box-shadow: none; break-inside: avoid; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="eod-detail-container">
+
     <!-- Action Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <a href="{% url 'sales:eod_date_list' %}" class="btn btn-sm btn-secondary">
+        <a href="{% url 'sales:eod_date_list' %}{% if viewing_other %}?rep={{ viewed_rep.pk }}{% endif %}" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i>Back
         </a>
         <div class="dropdown">
@@ -212,57 +253,162 @@
                         <i class="fas fa-copy me-2"></i>Copy Text
                     </a>
                 </li>
+                {% if not viewing_other %}
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#routeModal">
                         <i class="fas fa-edit me-2"></i>Change Route
                     </a>
                 </li>
+                {% endif %}
             </ul>
         </div>
     </div>
-    
+
     <!-- Report Header -->
     <div class="report-header">
+        {% if viewing_other %}
+        <div class="rep-badge"><i class="fas fa-user me-1"></i>{{ viewed_rep.get_full_name }}</div>
+        {% endif %}
         <div class="header-row">
-            <span class="header-label">DATE:</span>
-            <span>{{ date|date:"Y/m/d" }}</span>
+            <span class="header-label">DATE</span>
+            <span>{{ date|date:"l, d M Y" }}</span>
         </div>
         <div class="header-row">
-            <span class="header-label">AREA:</span>
+            <span class="header-label">AREA</span>
             <span>{{ area }}</span>
         </div>
         <div class="header-row">
-            <span class="header-label">ROUTE:</span>
+            <span class="header-label">ROUTE</span>
             <span>{{ route }}</span>
         </div>
+        {% if not viewing_other %}
         <div class="header-row">
-            <span class="header-label">Sales Rep:</span>
+            <span class="header-label">SALES REP</span>
             <span>{{ user_name }}</span>
         </div>
+        {% endif %}
     </div>
-    
+
+    <!-- ══ Collections Card ══ -->
+    <div class="eod-report-card">
+        <div class="card-title">
+            <i class="fas fa-hand-holding-usd" style="color:#2563eb"></i>
+            Collections Summary
+        </div>
+
+        <div class="collection-grid">
+            <!-- Cash from today's new bills -->
+            <div class="col-item green">
+                <div class="col-label">Cash — New Bills</div>
+                <div class="col-value">Rs. {{ cash_today_bills|floatformat:2|intcomma }}</div>
+                <div class="col-sub">Today's bills paid in cash</div>
+            </div>
+
+            <!-- Cash from previous bills -->
+            <div class="col-item green">
+                <div class="col-label">Cash — Previous Bills</div>
+                <div class="col-value">Rs. {{ cash_previous_bills|floatformat:2|intcomma }}</div>
+                <div class="col-sub">Old outstanding collected</div>
+            </div>
+
+            <!-- Cheques -->
+            <div class="col-item purple">
+                <div class="col-label">Cheques</div>
+                <div class="col-value">Rs. {{ total_cheque|floatformat:2|intcomma }}</div>
+                <div class="col-sub">Received today</div>
+            </div>
+
+            <!-- Bank Transfers -->
+            <div class="col-item blue">
+                <div class="col-label">Bank Transfer</div>
+                <div class="col-value">Rs. {{ total_bank|floatformat:2|intcomma }}</div>
+                <div class="col-sub">Received today</div>
+            </div>
+
+            <!-- New Credits -->
+            <div class="col-item amber full">
+                <div class="col-label">New Credits (Unpaid Today)</div>
+                <div class="col-value">Rs. {{ new_credits|floatformat:2|intcomma }}</div>
+                <div class="col-sub">Today's bills still outstanding</div>
+            </div>
+        </div>
+
+        <!-- Total Collections Bar -->
+        <div class="total-bar">
+            <span class="t-label"><i class="fas fa-coins me-2"></i>Total Cash Collected</span>
+            <span class="t-value">Rs. {{ total_cash_collected|floatformat:2|intcomma }}</span>
+        </div>
+    </div>
+
+    <!-- Previous Credit Collected Shops -->
+    {% if prev_credit_shops %}
+    <div class="eod-report-card">
+        <div class="card-title">
+            <i class="fas fa-check-circle" style="color:#059669"></i>
+            Previous Credit Collected ({{ prev_credit_shops|length }} shop{{ prev_credit_shops|length|pluralize }})
+        </div>
+        <div class="shop-list">
+            {% for shop in prev_credit_shops %}
+            <div class="shop-row green">
+                <span class="shop-name">{{ shop.name }}</span>
+                <span class="shop-amount green-text">Rs. {{ shop.amount|floatformat:2|intcomma }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- New Credit Shops (unpaid today) -->
+    {% if new_credit_shops %}
+    <div class="eod-report-card">
+        <div class="card-title">
+            <i class="fas fa-exclamation-circle" style="color:#d97706"></i>
+            New Credits — Unpaid Today ({{ new_credit_shops|length }} shop{{ new_credit_shops|length|pluralize }})
+        </div>
+        <div class="shop-list">
+            {% for shop in new_credit_shops %}
+            <div class="shop-row amber">
+                <div>
+                    <span class="shop-name">{{ shop.name }}</span>
+                    <span class="bill-ref">{{ shop.bill_number }}</span>
+                </div>
+                <span class="shop-amount amber-text">Rs. {{ shop.amount|floatformat:2|intcomma }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Commission Banner (only if commission earned) -->
+    {% if commission_earned %}
+    <div class="commission-banner">
+        <div>
+            <div class="cb-label"><i class="fas fa-percentage me-1"></i>Commission Earned Today</div>
+            <div style="font-size:0.75rem;opacity:0.7;margin-top:2px;">Based on collections</div>
+        </div>
+        <div class="cb-value">Rs. {{ commission_earned|floatformat:2|intcomma }}</div>
+    </div>
+    {% endif %}
+
     <!-- Product Breakdown -->
     <div class="eod-report-card">
-        <h5 class="text-primary mb-3">
-            <i class="fas fa-box-open me-2"></i>Product Breakdown
-        </h5>
-        
+        <div class="card-title">
+            <i class="fas fa-box-open" style="color:#2563eb"></i>
+            Product Breakdown
+        </div>
+
         {% if product_breakdown %}
             {% for size, products in product_breakdown.items %}
-            <div class="product-section">
-                <div class="size-header">
-                    {{ size }}
-                </div>
-                <ul class="product-list">
-                    {% for product in products %}
-                    <li class="product-item">
-                        <span class="product-name">{{ product.name }}</span>
-                        <span class="product-qty">{{ product.quantity|floatformat:0 }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
+            <div class="size-header">{{ size }}</div>
+            <ul class="product-list">
+                {% for product in products %}
+                <li class="product-item">
+                    <span class="product-name">{{ product.name }}</span>
+                    <span class="product-qty">{{ product.quantity|floatformat:0 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
             {% endfor %}
         {% else %}
         <div class="text-center text-muted py-4">
@@ -271,58 +417,44 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Summary -->
     <div class="eod-report-card">
-        <h5 class="text-primary mb-3">
-            <i class="fas fa-chart-line me-2"></i>Summary
-        </h5>
-        
+        <div class="card-title">
+            <i class="fas fa-chart-line" style="color:#2563eb"></i>
+            Sales Summary
+        </div>
         <div class="summary-grid">
             <div class="summary-item">
-                <div class="summary-label">TOTAL SALE</div>
+                <div class="summary-label">Total Sale</div>
                 <div class="summary-value text-success">{{ total_sale|floatformat:2|intcomma }}</div>
             </div>
-            
             <div class="summary-item">
-                <div class="summary-label">TOTAL PACK</div>
+                <div class="summary-label">Total Pack</div>
                 <div class="summary-value text-primary">{{ total_pack|floatformat:2|intcomma }}</div>
-                <small class="text-muted d-block mt-1">@ Rs. {{ case_value|intcomma }}</small>
+                <small class="text-muted">@ Rs. {{ case_value|intcomma }}</small>
             </div>
-            
             <div class="summary-item">
                 <div class="summary-label">P/C (Bills)</div>
                 <div class="summary-value text-info">{{ bill_count }}</div>
             </div>
-            
             <div class="summary-item">
                 <div class="summary-label">N/O (New Outlets)</div>
                 <div class="summary-value text-warning">{{ new_outlets|stringformat:"02d" }}</div>
             </div>
-            
             <div class="summary-item">
-                <div class="summary-label">FOC GIVEN</div>
-                <div class="summary-value text-info">{{ total_foc_given|floatformat:2|intcomma }}</div>
+                <div class="summary-label">FOC Given</div>
+                <div class="summary-value" style="color:#0891b2;">{{ total_foc_given|floatformat:2|intcomma }}</div>
             </div>
-            
             <div class="summary-item">
-                <div class="summary-label">CREDIT</div>
-                <div class="summary-value text-primary">{{ total_credit|floatformat:2|intcomma }}</div>
-            </div>
-            
-            <div class="summary-item">
-                <div class="summary-label">CHEQUE</div>
-                <div class="summary-value text-success">{{ total_cheque|floatformat:2|intcomma }}</div>
-            </div>
-            
-            <div class="summary-item">
-                <div class="summary-label">RETURNS</div>
+                <div class="summary-label">Returns</div>
                 <div class="summary-value text-danger">{{ total_return_value|floatformat:2|intcomma }}</div>
-                <small class="text-muted d-block mt-1">{{ return_count }} return{{ return_count|pluralize }}</small>
+                <small class="text-muted">{{ return_count }} return{{ return_count|pluralize }}</small>
             </div>
         </div>
     </div>
-</div>
+
+</div><!-- end container -->
 
 <!-- Change Route Modal -->
 <div class="modal fade" id="routeModal" tabindex="-1">
@@ -394,7 +526,6 @@ document.getElementById('copyTextBtn').addEventListener('click', function(e) {
         var toast = new bootstrap.Toast(document.getElementById('copyToast'), {delay: 2000});
         toast.show();
     }).catch(function() {
-        // Fallback for older browsers
         var ta = document.createElement('textarea');
         ta.value = text;
         ta.style.position = 'fixed';

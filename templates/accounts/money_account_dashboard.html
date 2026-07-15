@@ -224,6 +224,7 @@
                                     <th>Approved Date</th>
                                     <th>Approved Amount</th>
                                     <th>Approved By</th>
+                                    {% if request.user.is_office_staff %}<th></th>{% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -233,6 +234,18 @@
                                     <td>{{ req.approved_at|date:"M d, Y" }}</td>
                                     <td>Rs. {{ req.approved_amount|floatformat:2|intcomma }}</td>
                                     <td>{{ req.approved_by.get_full_name }}</td>
+                                    {% if request.user.is_office_staff %}
+                                    <td>
+                                        <button type="button" class="btn btn-success btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#disburseModal"
+                                                data-pk="{{ req.pk }}"
+                                                data-number="{{ req.request_number }}"
+                                                data-amount="{{ req.approved_amount }}">
+                                            <i class="fas fa-money-bill-wave me-1"></i>Disburse
+                                        </button>
+                                    </td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -242,6 +255,67 @@
             </div>
         </div>
     </div>
+
+    <!-- Disburse Advance Modal -->
+    {% if request.user.is_office_staff %}
+    <div class="modal fade" id="disburseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave me-2"></i>Disburse Advance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" id="disburseForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="/accounts/money-account/?user_id={{ viewing_user.pk }}">
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            Disbursing <strong id="disburseNumber"></strong> —
+                            <strong class="text-success" id="disburseAmount"></strong>
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="">-- Select --</option>
+                                <option value="cash">Cash</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Reference / Cheque No. <span class="text-muted small">(optional)</span></label>
+                            <input type="text" name="payment_reference" class="form-control" placeholder="e.g. cheque number, bank ref">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="override_limit" id="overrideLimit">
+                            <label class="form-check-label text-danger fw-semibold" for="overrideLimit">
+                                Override Balance Limit
+                            </label>
+                            <div class="text-muted small">Check this to disburse even if the user's earned balance is insufficient.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Confirm Disbursement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.getElementById('disburseModal').addEventListener('show.bs.modal', function(e) {
+        const btn = e.relatedTarget;
+        const pk = btn.getAttribute('data-pk');
+        const number = btn.getAttribute('data-number');
+        const amount = parseFloat(btn.getAttribute('data-amount')).toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('disburseNumber').textContent = number;
+        document.getElementById('disburseAmount').textContent = 'Rs. ' + amount;
+        document.getElementById('disburseForm').action = '/accounts/advances/' + pk + '/pay/';
+    });
+    </script>
+    {% endif %}
     {% endif %}
 
     <!-- Recent Transactions -->

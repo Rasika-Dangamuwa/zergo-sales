@@ -110,8 +110,8 @@ def create_po(request):
                 unit_price = request.POST.get(f'price_{product.id}', 0)
                 discount_percentage = request.POST.get(f'discount_{product.id}', 0)
                 
-                # Skip if no quantity entered
-                if packs == 0 and loose == 0:
+                # Skip if no quantity entered (including FOC)
+                if packs == 0 and loose == 0 and foc_bottles == 0:
                     continue
                 
                 # Calculate total bottles
@@ -138,7 +138,10 @@ def create_po(request):
                 messages.warning(request, 'No items added to purchase order. Please enter quantities for at least one product.')
                 po.delete()
                 companies = Company.objects.filter(is_active=True).order_by('company_name')
-                products = Product.objects.filter(is_active=True).select_related('company').order_by('product_name')
+                from products.utils import get_size_ordering
+                products = Product.objects.filter(is_active=True).select_related('company').annotate(
+                    size_num=get_size_ordering()
+                ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
                 context = {
                     'companies': companies,
                     'products': products,
@@ -156,7 +159,11 @@ def create_po(request):
     
     # GET request - show form
     companies = Company.objects.filter(is_active=True).order_by('company_name')
-    products = Product.objects.filter(is_active=True).select_related('company', 'category').order_by('display_order', 'size', 'marked_price', 'product_name')
+    # Annotate numeric size for proper ordering (string sort puts 1000ML before 250ML)
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
     
     context = {
         'companies': companies,
@@ -176,7 +183,10 @@ def po_detail(request, pk):
         return redirect('dashboard:home')
     
     po = get_object_or_404(PurchaseOrder.objects.select_related('company', 'created_by'), pk=pk)
-    items = po.items.select_related('product').order_by('product__display_order', 'product__size', 'product__marked_price', 'product__product_name')
+    from products.utils import get_size_ordering
+    items = po.items.select_related('product').annotate(
+        size_num=get_size_ordering('product__size')
+    ).order_by('size_num', 'product__marked_price', 'product__display_order', 'product__product_name')
     grns = po.grns.all()  # All GRNs created from this PO
     
     # Calculate summary
@@ -315,8 +325,8 @@ def edit_po(request, pk):
                 unit_price = request.POST.get(f'price_{product.id}', 0)
                 discount_percentage = request.POST.get(f'discount_{product.id}', 0)
                 
-                # Skip if no quantity entered
-                if packs == 0 and loose == 0:
+                # Skip if no quantity entered (including FOC)
+                if packs == 0 and loose == 0 and foc_bottles == 0:
                     continue
                 
                 # Calculate total bottles
@@ -354,7 +364,11 @@ def edit_po(request, pk):
     
     # GET request - show form with existing data
     companies = Company.objects.filter(is_active=True).order_by('company_name')
-    products = Product.objects.filter(is_active=True).select_related('company', 'category').order_by('display_order', 'size', 'marked_price', 'product_name')
+    # Annotate numeric size for proper ordering
+    from products.utils import get_size_ordering
+    products = Product.objects.filter(is_active=True).select_related('company', 'category').annotate(
+        size_num=get_size_ordering()
+    ).order_by('size_num', 'marked_price', 'display_order', 'product_name')
     
     # Build existing items dictionary for pre-filling form
     existing_items = {}
@@ -388,7 +402,10 @@ def print_po_pdf(request, pk):
         return redirect('dashboard:home')
     
     po = get_object_or_404(PurchaseOrder.objects.select_related('company', 'created_by'), pk=pk)
-    items = po.items.select_related('product').order_by('product__display_order', 'product__size', 'product__marked_price', 'product__product_name')
+    from products.utils import get_size_ordering
+    items = po.items.select_related('product').annotate(
+        size_num=get_size_ordering('product__size')
+    ).order_by('size_num', 'product__marked_price', 'product__display_order', 'product__product_name')
     business = DistributorProfile.get_active()
     
     # Custom canvas for page numbers and watermark
@@ -859,57 +876,75 @@ def print_po_pdf(request, pk):
         elements.append(notes_table)
     
     # ========== TERMS & CONDITIONS ==========
-    elements.append(Spacer(1, 8*mm))
-    # Header table to match terms table width (180mm)
-    terms_header_table = Table([[Paragraph("TERMS & CONDITIONS", heading_style)]], colWidths=[180*mm])
-    terms_header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#8e44ad')),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
-    ]))
-    elements.append(terms_header_table)
-    elements.append(Spacer(1, 2*mm))
-    
-    terms = """
-    1. This Purchase Order is subject to our standard terms and conditions.<br/>
-    2. All goods must be delivered to the address specified above.<br/>
-    3. Delivery must be made on or before the expected delivery date.<br/>
-    4. All items must match the specifications outlined in this purchase order.<br/>
-    5. FOC (Free of Charge) items are separate from purchased quantities.<br/>
-    6. Payment terms as per existing agreement between parties.<br/>
-    7. Any discrepancies must be reported within 24 hours of delivery.<br/>
-    8. Damaged or expired goods will not be accepted.
-    """
-    
-    terms_para = Paragraph(terms, ParagraphStyle('Terms', parent=styles['Normal'], fontSize=7, leading=10, textColor=colors.HexColor('#7f8c8d')))
-    terms_table = Table([[terms_para]], colWidths=[180*mm])
-    terms_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
-        ('PADDING', (0, 0), (-1, -1), 8),
-    ]))
-    elements.append(terms_table)
+    if business.po_show_terms:
+        elements.append(Spacer(1, 8*mm))
+        # Header table to match terms table width (180mm)
+        terms_header_table = Table([[Paragraph("TERMS & CONDITIONS", heading_style)]], colWidths=[180*mm])
+        terms_header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#8e44ad')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+        ]))
+        elements.append(terms_header_table)
+        elements.append(Spacer(1, 2*mm))
+        
+        if business.po_terms_and_conditions:
+            terms = business.po_terms_and_conditions
+        else:
+            terms = """
+            1. This Purchase Order is subject to our standard terms and conditions.<br/>
+            2. All goods must be delivered to the address specified above.<br/>
+            3. Delivery must be made on or before the expected delivery date.<br/>
+            4. All items must match the specifications outlined in this purchase order.<br/>
+            5. FOC (Free of Charge) items are separate from purchased quantities.<br/>
+            6. Payment terms as per existing agreement between parties.<br/>
+            7. Any discrepancies must be reported within 24 hours of delivery.<br/>
+            8. Damaged or expired goods will not be accepted.
+            """
+        
+        terms_para = Paragraph(terms, ParagraphStyle('Terms', parent=styles['Normal'], fontSize=7, leading=10, textColor=colors.HexColor('#7f8c8d')))
+        terms_table = Table([[terms_para]], colWidths=[180*mm])
+        terms_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+            ('PADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(terms_table)
     
     # ========== SIGNATURES ==========
-    elements.append(Spacer(1, 15*mm))
-    
-    sig_style = ParagraphStyle('Signature', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER)
-    
-    footer_data = [
-        [
-            Paragraph(f"<b>AUTHORIZED BY</b><br/><br/><br/>_______________________<br/>{po.created_by.get_full_name() if po.created_by else 'N/A'}<br/><font size=8>{business.business_name}</font>", sig_style),
-            Paragraph(f"<b>ACCEPTED BY</b><br/><br/><br/>_______________________<br/>Authorized Signature<br/><font size=8>{po.company.company_name}</font>", sig_style)
+    if business.po_show_signatures:
+        elements.append(Spacer(1, 15*mm))
+        
+        sig_style = ParagraphStyle('Signature', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER)
+        
+        # Authorized By section - with optional digital signature image
+        auth_name = business.authorized_signatory_name or (po.created_by.get_full_name() if po.created_by else 'N/A')
+        auth_designation = f"<br/><font size=7><i>{business.authorized_signatory_designation}</i></font>" if business.authorized_signatory_designation else ''
+        
+        if business.authorized_signature:
+            try:
+                sig_path = business.authorized_signature.path
+                auth_sig_html = f'<b>AUTHORIZED BY</b><br/><br/><img src="{sig_path}" width="120" height="50"/><br/>_______________________<br/>{auth_name}{auth_designation}<br/><font size=8>{business.business_name}</font>'
+            except Exception:
+                auth_sig_html = f'<b>AUTHORIZED BY</b><br/><br/><br/>_______________________<br/>{auth_name}{auth_designation}<br/><font size=8>{business.business_name}</font>'
+        else:
+            auth_sig_html = f'<b>AUTHORIZED BY</b><br/><br/><br/>_______________________<br/>{auth_name}{auth_designation}<br/><font size=8>{business.business_name}</font>'
+        
+        footer_data = [
+            [
+                Paragraph(auth_sig_html, sig_style),
+                Paragraph(f"<b>ACCEPTED BY</b><br/><br/><br/>_______________________<br/>Authorized Signature<br/><font size=8>{po.company.company_name}</font>", sig_style)
+            ]
         ]
-    ]
-    
-    footer_table = Table(footer_data, colWidths=[90*mm, 90*mm])
-    footer_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('PADDING', (0, 0), (-1, -1), 8),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
-    ]))
-    elements.append(footer_table)
+        
+        footer_table = Table(footer_data, colWidths=[90*mm, 90*mm])
+        footer_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
+        ]))
+        elements.append(footer_table)
     
     # Build PDF with custom canvas
     doc.build(elements, canvasmaker=NumberedCanvas)

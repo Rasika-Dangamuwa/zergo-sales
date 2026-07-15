@@ -103,12 +103,12 @@ def commission_dashboard(request):
     bills_count = month_bills.count()
     total_sales = month_bills.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     
-    # Total Returns - from ACTUAL returns (more reliable than commission txns)
+    # Total Returns - exclude cancelled returns (their stock/commission was already reversed)
     month_returns = Return.objects.filter(
         created_by=selected_user,
         return_date__gte=month_start_dt,
         return_date__lt=month_end_dt
-    )
+    ).exclude(settlement_status='cancelled')
     returns_count = month_returns.count()
     total_returns = month_returns.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     
@@ -131,6 +131,13 @@ def commission_dashboard(request):
     # Return commission deductions (from commission transactions)
     returns_processed = month_transactions.filter(transaction_type='return_processed')
     return_commission = returns_processed.aggregate(total=Sum('commission_earned'))['total'] or Decimal('0.00')
+    
+    # Return cancellations: when a return is cancelled, previously-deducted commission is credited back
+    returns_cancelled_txns = month_transactions.filter(transaction_type='return_cancelled')
+    return_cancelled_commission = returns_cancelled_txns.aggregate(total=Sum('commission_earned'))['total'] or Decimal('0.00')
+    
+    # Net return commission impact = deductions + credits back (deduction is negative, credit is positive)
+    net_return_commission = return_commission + return_cancelled_commission
     
     writeoffs = month_transactions.filter(transaction_type='writeoff_executed')
     writeoffs_count = writeoffs.count()
@@ -182,9 +189,10 @@ def commission_dashboard(request):
         commission_change_pct = 100 if total_commission > 0 else 0
     
     # Prepare chart data - daily commission for the month (exclude payout adjustments)
+    # Use local date (not UTC) so transactions near midnight land on the correct day
     transactions_by_date = defaultdict(lambda: Decimal('0.00'))
     for txn in month_transactions.exclude(transaction_type='adjustment', commission_earned__lt=0):
-        txn_date = txn.transaction_date.date()
+        txn_date = timezone.localtime(txn.transaction_date).date()
         transactions_by_date[txn_date] += txn.commission_earned
     
     chart_dates = []
@@ -241,6 +249,7 @@ def commission_dashboard(request):
         'net_collection_commission': net_collection_commission,
         'total_returns': total_returns,
         'return_commission': return_commission,
+        'net_return_commission': net_return_commission,
         'cancelled_count': cancelled_count,
         'total_payouts': total_payouts,
         'payouts_count': payouts_count,

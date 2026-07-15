@@ -245,6 +245,7 @@
     .badge-completed { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
     .badge-cancelled { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
     .badge-bounced { background: linear-gradient(135deg, #6c757d, #495057); color: white; }
+    .badge-unregistered { display: inline-block; background: #6c757d; color: #fff; font-size: 0.7em; font-weight: 600; padding: 1px 7px; border-radius: 4px; margin-top: 2px; }
     
     /* Action Buttons */
     .action-buttons {
@@ -819,9 +820,16 @@
                             <small class="text-muted">{{ settlement.settlement_date|date:"h:i A" }}</small>
                         </td>
                         <td>
-                            <strong>{{ settlement.shop.shop_name|default:"N/A" }}</strong>
+                            {% if settlement.shop %}
+                            <strong>{{ settlement.shop.shop_name }}</strong>
                             {% if settlement.shop.shop_code %}
                             <br><small class="text-muted">{{ settlement.shop.shop_code }}</small>
+                            {% endif %}
+                            {% elif settlement.bill_customer_name %}
+                            <strong>{{ settlement.bill_customer_name }}</strong>
+                            <br><span class="badge-unregistered">Unregistered</span>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
                             {% endif %}
                         </td>
                         <td>
@@ -900,7 +908,16 @@
                 
                 <div class="mobile-card-row">
                     <span class="mobile-card-label"><i class="fas fa-store me-1"></i>Shop</span>
-                    <span class="mobile-card-value"><strong>{{ settlement.shop.shop_name|default:"N/A" }}</strong></span>
+                    <span class="mobile-card-value">
+                        {% if settlement.shop %}
+                        <strong>{{ settlement.shop.shop_name }}</strong>
+                        {% elif settlement.bill_customer_name %}
+                        <strong>{{ settlement.bill_customer_name }}</strong>
+                        <span class="badge-unregistered">Unregistered</span>
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </span>
                 </div>
                 
                 {% if settlement.bill %}
@@ -980,12 +997,12 @@
                 <ul class="pagination mb-0">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        <a class="page-link" href="?page=1{% if query_string %}&{{ query_string }}{% endif %}">
                             <i class="fas fa-angle-double-left"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">
                             <i class="fas fa-angle-left"></i>
                         </a>
                     </li>
@@ -995,18 +1012,18 @@
                         {% if page_obj.number == num %}
                         <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a></li>
                         {% endif %}
                     {% endfor %}
                     
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">
                             <i class="fas fa-angle-right"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        <a class="page-link" href="?page={{ paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}">
                             <i class="fas fa-angle-double-right"></i>
                         </a>
                     </li>

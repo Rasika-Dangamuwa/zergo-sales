@@ -752,7 +752,7 @@
                             <h6 class="mb-0 fw-bold">
                                 <i class="fas fa-wallet me-2"></i>Payment Settlement
                             </h6>
-                            {% if purchase.calculated_payment_status == 'settled' %}
+                            {% if purchase.calculated_payment_status == 'paid' %}
                                 <span class="badge bg-light text-success">PAID</span>
                             {% elif purchase.calculated_payment_status == 'partially_paid' %}
                                 <span class="badge bg-light text-warning">{{ purchase.payment_percentage|floatformat:0 }}%</span>

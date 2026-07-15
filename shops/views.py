@@ -82,67 +82,109 @@ def shop_list(request):
     new_shops_7d = Shop.objects.filter(is_active=True, created_at__gte=seven_days_ago).count()
     new_shops_today = Shop.objects.filter(is_active=True, created_at__date=today).count()
     
+    shops = list(base_qs.select_related('created_by'))
+    shop_ids = [s.id for s in shops]
+
+    # ── Bulk: access levels for sales reps ──
     if request.user.is_sales_rep:
-        shops = base_qs
-        
-        # Add access level to each shop
+        access_map = {
+            a['shop_id']: a['access_level']
+            for a in ShopAccess.objects.filter(
+                shop_id__in=shop_ids, sales_rep=request.user, is_active=True
+            ).values('shop_id', 'access_level')
+        }
         for shop in shops:
-            shop.user_access_level = ShopAccess.get_rep_access_level(shop, request.user)
+            shop.user_access_level = access_map.get(shop.id, 1)
     else:
-        shops = base_qs
         for shop in shops:
-            shop.user_access_level = 3  # Admin/office have full access
-    
-    # Enrich each shop with pending data
+            shop.user_access_level = 3
+
+    # ── Bulk: outstanding bills ──
+    bills_filter = Q(shop_id__in=shop_ids, bill_status__in=['draft', 'confirmed'], balance_amount__gt=0)
+    if request.user.is_sales_rep:
+        bills_filter &= Q(sales_rep=request.user)
+    bills_map = {
+        b['shop_id']: b
+        for b in Bill.objects.filter(bills_filter).values('shop_id').annotate(
+            count=Count('id'), total=Sum('balance_amount')
+        )
+    }
+
+    # ── Bulk: pending payments ──
+    pay_filter = Q(shop_id__in=shop_ids, settlement_status='pending')
+    if request.user.is_sales_rep:
+        pay_filter &= Q(received_by=request.user)
+    pay_map = {
+        p['shop_id']: p
+        for p in SalesAccountSettlement.objects.filter(pay_filter).values('shop_id').annotate(
+            count=Count('id'), total=Sum('amount')
+        )
+    }
+
+    # ── Bulk: pending returns ──
+    ret_filter = Q(shop_id__in=shop_ids, is_verified=False)
+    if request.user.is_sales_rep:
+        ret_filter &= Q(created_by=request.user)
+    ret_map = {
+        r['shop_id']: r['count']
+        for r in Return.objects.filter(ret_filter).exclude(
+            settlement_status='cancelled'
+        ).values('shop_id').annotate(count=Count('id'))
+    }
+
+    # ── Bulk: last visit per shop ──
+    from django.db.models import Max
+    visit_map = {
+        v['shop_id']: v['last_visit']
+        for v in ShopVisit.objects.filter(shop_id__in=shop_ids).values('shop_id').annotate(
+            last_visit=Max('visit_date')
+        )
+    }
+
+    # ── Bulk: latest photo upload date per shop ──
+    one_year_ago = now - timedelta(days=365)
+    photo_map = {
+        p['shop_id']: p['latest']
+        for p in ShopPhotoHistory.objects.filter(shop_id__in=shop_ids).values('shop_id').annotate(
+            latest=Max('uploaded_at')
+        )
+    }
+
+    # ── Assign all enrichment in one pass ──
     for shop in shops:
-        # Pending bills (unpaid)
-        bills_qs = Bill.objects.filter(shop=shop, bill_status__in=['draft', 'confirmed'])
-        if request.user.is_sales_rep and shop.user_access_level < 3:
-            bills_qs = bills_qs.filter(sales_rep=request.user)
-        
-        shop.pending_bills_count = bills_qs.filter(balance_amount__gt=0).count()
-        shop.total_outstanding = bills_qs.filter(balance_amount__gt=0).aggregate(
-            total=Sum('balance_amount'))['total'] or Decimal('0')
-        
-        # Pending payments (unverified)
-        payments_qs = SalesAccountSettlement.objects.filter(shop=shop)
-        if request.user.is_sales_rep and shop.user_access_level < 3:
-            payments_qs = payments_qs.filter(received_by=request.user)
-        
-        shop.pending_payments_count = payments_qs.filter(settlement_status='pending').count()
-        shop.pending_payment_amount = payments_qs.filter(
-            settlement_status='pending').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        
-        # Pending returns (unverified)
-        returns_qs = Return.objects.filter(shop=shop)
-        if request.user.is_sales_rep and shop.user_access_level < 3:
-            returns_qs = returns_qs.filter(created_by=request.user)
-        
-        shop.pending_returns_count = returns_qs.filter(is_verified=False).count()
-        
-        # Total pending items
+        sid = shop.id
+
+        b = bills_map.get(sid, {})
+        shop.pending_bills_count = b.get('count', 0)
+        shop.total_outstanding   = b.get('total') or Decimal('0')
+
+        p = pay_map.get(sid, {})
+        shop.pending_payments_count = p.get('count', 0)
+        shop.pending_payment_amount = p.get('total') or Decimal('0')
+
+        shop.pending_returns_count = ret_map.get(sid, 0)
         shop.total_pending = shop.pending_bills_count + shop.pending_payments_count + shop.pending_returns_count
-        
-        # Last visit
-        last_visit = ShopVisit.objects.filter(shop=shop).order_by('-visit_date').first()
-        shop.last_visit_date = last_visit.visit_date if last_visit else None
-        if shop.last_visit_date:
-            shop.days_since_visit = (today - timezone.localtime(shop.last_visit_date).date()).days
+
+        last_visit_dt = visit_map.get(sid)
+        shop.last_visit_date = last_visit_dt
+        if last_visit_dt:
+            shop.days_since_visit = (today - timezone.localtime(last_visit_dt).date()).days
         else:
             shop.days_since_visit = None
-        
-        # Photo status
-        needs_photo, photo_msg = ShopPhotoHistory.needs_new_photo(shop)
-        shop.needs_photo = needs_photo
-        shop.photo_message = photo_msg
-        
-        # Credit utilization (use freshly-calculated total_outstanding, not stale current_balance)
+
+        latest_photo = photo_map.get(sid)
+        shop.needs_photo   = (latest_photo is None) or (latest_photo < one_year_ago)
+        shop.photo_message = '' if not shop.needs_photo else (
+            'No photo uploaded yet' if latest_photo is None
+            else f'Last photo {(now - latest_photo).days} days ago'
+        )
+
         if shop.credit_limit and shop.credit_limit > 0:
             shop.credit_usage_pct = int((shop.total_outstanding / shop.credit_limit) * 100)
-            shop.credit_bar_pct = min(100, shop.credit_usage_pct)
+            shop.credit_bar_pct   = min(100, shop.credit_usage_pct)
         else:
             shop.credit_usage_pct = 0
-            shop.credit_bar_pct = 0
+            shop.credit_bar_pct   = 0
     
     # Summary stats
     shops_list = list(shops)
@@ -304,7 +346,7 @@ def shop_detail(request, pk):
     )
     
     pending_payments = payments_qs.filter(settlement_status='pending').order_by('-settlement_date')
-    pending_returns = returns_qs.filter(is_verified=False).order_by('-return_date')
+    pending_returns = returns_qs.filter(is_verified=False).exclude(settlement_status='cancelled').order_by('-return_date')
     uncollected_cheques = payments_qs.filter(
         settlement_method='cheque', settlement_status='completed', cheque_collected=False
     ).order_by('-settlement_date')

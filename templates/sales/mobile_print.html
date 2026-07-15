@@ -327,30 +327,34 @@ function formatForThermalPrint() {
     t += 'Customer: {{ sale.customer_name|default:"Walk-in Customer"|escapejs }}' + '\n';
     {% endif %}
     t += 'Rep: {{ sale.sales_rep.get_full_name|default:sale.sales_rep.username|escapejs }}' + '\n';
+    {% if sale.sales_rep.phone_number %}
+    t += 'Tel: {{ sale.sales_rep.phone_number|escapejs }}' + '\n';
+    {% endif %}
 
     t += dash() + '\n';
     t += 'Item                      Qty  Total\n';
     t += dash() + '\n';
 
-    {% for item in items %}
-    var n{{ forloop.counter }} = '{{ item.product.product_name|escapejs }}'.substring(0, 40);
-    t += n{{ forloop.counter }} + '\n';
-        {% if item.quantity > 0 %}
-    var q{{ forloop.counter }} = '{{ item.quantity|floatformat:0 }}';
-    var p{{ forloop.counter }} = '{{ item.unit_price|floatformat:2 }}';
-    var tt{{ forloop.counter }} = '{{ item.line_total|floatformat:2 }}';
-    t += lr(q{{ forloop.counter }} + ' x ' + p{{ forloop.counter }}, tt{{ forloop.counter }}) + '\n';
-        {% endif %}
-        {% if item.foc_quantity > 0 %}
-            {% if item.quantity > 0 %}
-    t += '  FOC: {{ item.foc_quantity|floatformat:0 }}' + '\n';
-            {% else %}
-    t += lr('FOC: {{ item.foc_quantity|floatformat:0 }}', 'FREE') + '\n';
-            {% endif %}
-        {% endif %}
+    {% for group in item_size_groups %}
+    // --- {{ group.size }} ---
+    {% for item in group.regular_items %}
+    var n_{{ group.size }}_r{{ forloop.counter }} = '{{ item.product.product_name|escapejs }}'.substring(0, 40);
+    t += n_{{ group.size }}_r{{ forloop.counter }} + '\n';
+    var q_{{ group.size }}_r{{ forloop.counter }} = '{{ item.quantity|floatformat:0 }}';
+    var p_{{ group.size }}_r{{ forloop.counter }} = '{{ item.unit_price|floatformat:2 }}';
+    var tt_{{ group.size }}_r{{ forloop.counter }} = '{{ item.line_total|floatformat:2 }}';
+    t += lr(q_{{ group.size }}_r{{ forloop.counter }} + ' x ' + p_{{ group.size }}_r{{ forloop.counter }}, tt_{{ group.size }}_r{{ forloop.counter }}) + '\n';
+    {% endfor %}
+    {% if group.has_foc %}
+    t += '  ~~~~~~ FOC ~~~~~~\n';
+    {% for foc in group.foc_items %}
+    t += '  {{ foc.product.product_name|escapejs }}\n';
+    t += lr('  FOC: {{ foc.foc_quantity|floatformat:0 }}', 'FREE') + '\n';
+    {% endfor %}
+    {% endif %}
+    t += dash() + '\n';
     {% endfor %}
 
-    t += dash() + '\n';
     t += lr('Subtotal:', 'Rs. {{ sale.subtotal|floatformat:2 }}') + '\n';
 
     {% if sale.discount_amount > 0 %}
@@ -838,32 +842,38 @@ async function generateESCPOS() {
     {% endif %}
 
     cmd.push(...enc.encode('Rep: {{ sale.sales_rep.get_full_name|default:sale.sales_rep.username|escapejs }}\n'));
+    {% if sale.sales_rep.phone_number %}
+    cmd.push(...enc.encode('Tel: {{ sale.sales_rep.phone_number|escapejs }}\n'));
+    {% endif %}
     cmd.push(...enc.encode('\n' + DSEP));
 
-    // Items
-    {% for item in items %}
+    // Items - grouped by size with FOC after each group
+    {% for group in item_size_groups %}
+    // --- {{ group.size }} ---
+    {% for item in group.regular_items %}
     cmd.push(ESC, 0x45, 0x01);
     cmd.push(...enc.encode('{{ item.product.product_name|escapejs }}\n'));
     cmd.push(ESC, 0x45, 0x00);
-        {% if item.quantity > 0 %}
     cmd.push(...enc.encode('{{ item.quantity|floatformat:0 }} x Rs.{{ item.unit_price|floatformat:2 }}'));
     cmd.push(ESC, 0x61, 0x02);
     cmd.push(...enc.encode('Rs.{{ item.line_total|floatformat:2 }}\n'));
     cmd.push(ESC, 0x61, 0x00);
-        {% endif %}
-        {% if item.foc_quantity > 0 %}
-            {% if item.quantity > 0 %}
-    cmd.push(...enc.encode('FOC: {{ item.foc_quantity|floatformat:0 }}         FREE\n'));
-            {% else %}
-    cmd.push(...enc.encode('FOC: {{ item.foc_quantity|floatformat:0 }}'));
+    {% endfor %}
+    {% if group.has_foc %}
+    // FOC separator
+    cmd.push(ESC, 0x45, 0x01);
+    cmd.push(...enc.encode('  ~~~~~~ FOC ~~~~~~\n'));
+    cmd.push(ESC, 0x45, 0x00);
+    {% for foc in group.foc_items %}
+    cmd.push(...enc.encode('  {{ foc.product.product_name|escapejs }}\n'));
+    cmd.push(...enc.encode('  FOC: {{ foc.foc_quantity|floatformat:0 }}'));
     cmd.push(ESC, 0x61, 0x02);
     cmd.push(...enc.encode('FREE\n'));
     cmd.push(ESC, 0x61, 0x00);
-            {% endif %}
-        {% endif %}
     {% endfor %}
-
+    {% endif %}
     cmd.push(...enc.encode(DSEP));
+    {% endfor %}
 
     // Totals
     cmd.push(...enc.encode('Subtotal:'));

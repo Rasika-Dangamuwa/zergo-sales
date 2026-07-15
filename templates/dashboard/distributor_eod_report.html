@@ -552,37 +552,264 @@
     </div>
     {% endif %}
 
-    <!-- ═══════ PRODUCT BREAKDOWN (Combined) ═══════ -->
+    <!-- ═══════ CHEQUE & BANK TRANSFER PAYMENTS ═══════ -->
+    {% if cheque_bank_payments %}
     <div class="section-card mb-4">
-        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#productBreakdown" aria-expanded="false">
-            <h5><i class="fas fa-box-open me-2 text-primary"></i>Product Breakdown (All Reps)</h5>
-            <i class="fas fa-chevron-down text-muted"></i>
+        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#chequeBankPayments" aria-expanded="true">
+            <h5><i class="fas fa-university me-2" style="color:#14b8a6;"></i>Cheque &amp; Bank Transfer Payments</h5>
+            <span class="count-badge badge-green">Rs. {{ cheque_bank_total|floatformat:0|intcomma }}</span>
         </div>
-        <div class="collapse" id="productBreakdown">
-            <div class="p-3">
-                {% if product_breakdown %}
-                    {% for size, products in product_breakdown.items %}
-                    <div class="product-section">
-                        <div class="size-header">{{ size }}</div>
-                        <ul class="product-list">
-                            {% for product in products %}
-                            <li class="product-item">
-                                <span class="product-name">{{ product.name }}</span>
-                                <span class="product-qty {% if product.quantity == 0 %}zero{% endif %}">{{ product.quantity|floatformat:0 }}</span>
-                            </li>
+        <div class="collapse show" id="chequeBankPayments">
+            <div class="card-body">
+                <div class="table-wrapper">
+                    <table class="table table-sm table-bordered mb-0" style="font-size:0.85rem;">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Settlement #</th>
+                                <th>Bill #</th>
+                                <th>Shop</th>
+                                <th>Rep</th>
+                                <th>Method</th>
+                                <th>Ref / Cheque #</th>
+                                <th>Status</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in cheque_bank_payments %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'sales:settlement_detail' pk=s.pk %}" class="text-decoration-none">
+                                        {{ s.settlement_number }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if s.bill %}
+                                    <a href="{% url 'sales:detail' pk=s.bill.pk %}" class="text-decoration-none">
+                                        {{ s.bill.bill_number }}
+                                    </a>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td>{{ s.bill.shop.shop_name|default:"—" }}</td>
+                                <td>{{ s.received_by.get_full_name|default:"—" }}</td>
+                                <td>
+                                    {% if s.settlement_method == 'cheque' %}<span class="badge" style="background:#7c3aed;">Cheque</span>
+                                    {% else %}<span class="badge" style="background:#14b8a6;">Bank Transfer</span>{% endif %}
+                                </td>
+                                <td>{{ s.reference_number|default:"—" }}</td>
+                                <td>
+                                    {% if s.settlement_status == 'completed' %}<span class="badge bg-success">Completed</span>
+                                    {% elif s.settlement_status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif s.settlement_status == 'bounced' %}<span class="badge bg-danger">Bounced</span>
+                                    {% else %}<span class="badge bg-secondary">{{ s.get_settlement_status_display }}</span>{% endif %}
+                                </td>
+                                <td class="text-end amt fw-bold">Rs. {{ s.amount|floatformat:2|intcomma }}</td>
+                            </tr>
                             {% endfor %}
-                        </ul>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="text-center text-muted py-3">
-                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                    <p>No products sold on this date</p>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-bold">
+                                <td colspan="7">
+                                    Cheques: Rs. {{ cheque_payments_total|floatformat:2|intcomma }}
+                                    &nbsp;|&nbsp;
+                                    Bank Transfers: Rs. {{ bank_payments_total|floatformat:2|intcomma }}
+                                </td>
+                                <td class="text-end amt">Rs. {{ cheque_bank_total|floatformat:2|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
+    {% endif %}
+
+    <!-- ═══════ PREVIOUS BILL COLLECTIONS ═══════ -->
+    {% if prev_bill_collections %}
+    <div class="section-card mb-4">
+        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#prevCollections" aria-expanded="true">
+            <h5><i class="fas fa-hand-holding-usd me-2 text-success"></i>Previous Bill Collections</h5>
+            <span class="count-badge badge-green">Rs. {{ prev_collections_total|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="collapse show" id="prevCollections">
+            <div class="card-body">
+                <div class="table-wrapper">
+                    <table class="table table-sm table-bordered mb-0" style="font-size:0.85rem;">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Settlement #</th>
+                                <th>Bill #</th>
+                                <th>Bill Date</th>
+                                <th>Shop</th>
+                                <th>Rep</th>
+                                <th>Method</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in prev_bill_collections %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'sales:settlement_detail' pk=s.pk %}" class="text-decoration-none">
+                                        {{ s.settlement_number }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'sales:detail' pk=s.bill.pk %}" class="text-decoration-none">
+                                        {{ s.bill.bill_number }}
+                                    </a>
+                                </td>
+                                <td>{{ s.bill.bill_date|date:"d M" }}</td>
+                                <td>{{ s.bill.shop.shop_name|default:"—" }}</td>
+                                <td>{{ s.received_by.get_full_name|default:s.received_by.username }}</td>
+                                <td>
+                                    {% if s.settlement_method == 'cash' %}<span class="badge bg-success">Cash</span>
+                                    {% elif s.settlement_method == 'cheque' %}<span class="badge" style="background:#7c3aed;">Cheque</span>
+                                    {% elif s.settlement_method == 'bank_transfer' %}<span class="badge" style="background:#14b8a6;">Bank</span>
+                                    {% else %}<span class="badge bg-secondary">{{ s.get_settlement_method_display }}</span>{% endif %}
+                                </td>
+                                <td class="text-end amt fw-bold">{{ s.amount|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-bold">
+                                <td colspan="6">Total Collections</td>
+                                <td class="text-end amt">{{ prev_collections_total|floatformat:2|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════ NEW CREDIT BILLS TODAY ═══════ -->
+    {% if credit_bills_today %}
+    <div class="section-card mb-4">
+        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#creditBills" aria-expanded="true">
+            <h5><i class="fas fa-file-invoice-dollar me-2 text-warning"></i>New Credit Bills</h5>
+            <span class="count-badge badge-amber">{{ credit_bills_today|length }}</span>
+        </div>
+        <div class="collapse show" id="creditBills">
+            <div class="card-body">
+                <div class="table-wrapper">
+                    <table class="table table-sm table-bordered mb-0" style="font-size:0.85rem;">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Bill #</th>
+                                <th>Shop</th>
+                                <th>Rep</th>
+                                <th class="text-end">Bill Total</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in credit_bills_today %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'sales:detail' pk=b.pk %}" class="text-decoration-none">
+                                        {{ b.bill_number }}
+                                    </a>
+                                </td>
+                                <td>{{ b.shop.shop_name|default:"—" }}</td>
+                                <td>{{ b.sales_rep.get_full_name|default:b.sales_rep.username }}</td>
+                                <td class="text-end amt">{{ b.total_amount|floatformat:2|intcomma }}</td>
+                                <td class="text-end amt text-success">{{ b.paid_amount|floatformat:2|intcomma }}</td>
+                                <td class="text-end amt fw-bold text-danger">{{ b.balance_amount|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-bold">
+                                <td colspan="5">Total Credit Balance</td>
+                                <td class="text-end amt text-danger">{{ credit_bills_total|floatformat:2|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════ REP-WISE SALES BREAKDOWN ═══════ -->
+    {% if price_variations %}
+    {% for rep in price_variations %}
+    <div class="section-card mb-4">
+        <div class="card-header-custom collapse-toggle" data-bs-toggle="collapse" data-bs-target="#repBreakdown{{ forloop.counter }}" aria-expanded="true">
+            <h5><i class="fas fa-user-tag me-2 text-primary"></i>{{ rep.rep_name }}</h5>
+            <span class="count-badge badge-blue">{{ rep.grand_bottles }} bottles</span>
+        </div>
+        <div class="collapse show" id="repBreakdown{{ forloop.counter }}">
+            <div class="p-2">
+                {% for size, sdata in rep.sizes.items %}
+                <div class="mb-3">
+                    <div class="size-header">{{ size }}</div>
+                    <div class="table-wrapper">
+                        <table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;table-layout:fixed;">
+                            <colgroup>
+                                <col style="width:auto;">
+                                <col style="width:90px;">
+                                <col style="width:70px;">
+                                <col style="width:60px;">
+                                <col style="width:70px;">
+                                <col style="width:110px;">
+                            </colgroup>
+                            <thead>
+                                <tr class="table-light">
+                                    <th>Product</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-center">FOC</th>
+                                    <th class="text-center">Bottles</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in sdata.rows %}
+                                <tr{% if row.has_variation %} class="table-warning"{% endif %}>
+                                    <td>
+                                        {{ row.product }}
+                                        {% if row.has_variation %}<i class="fas fa-exclamation-circle text-warning ms-1" title="Price variation"></i>{% endif %}
+                                    </td>
+                                    <td class="text-end">{{ row.unit_price|floatformat:2|intcomma }}</td>
+                                    <td class="text-center">{{ row.qty }}</td>
+                                    <td class="text-center">{{ row.foc }}</td>
+                                    <td class="text-center fw-semibold">{{ row.bottles }}</td>
+                                    <td class="text-end amt">{{ row.line_total|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <td colspan="2">{{ size }} Total</td>
+                                    <td class="text-center">{{ sdata.sub_qty }}</td>
+                                    <td class="text-center">{{ sdata.sub_foc }}</td>
+                                    <td class="text-center">{{ sdata.sub_bottles }}</td>
+                                    <td class="text-end amt">{{ sdata.sub_value|floatformat:2|intcomma }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="p-2 bg-light rounded fw-bold d-flex justify-content-between" style="font-size:0.9rem;">
+                    <span>{{ rep.rep_name }} Grand Total</span>
+                    <span>
+                        Qty: {{ rep.grand_qty }} &middot;
+                        FOC: {{ rep.grand_foc }} &middot;
+                        Bottles: {{ rep.grand_bottles }} &middot;
+                        Value: Rs. {{ rep.grand_value|floatformat:2|intcomma }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
     {% endif %} {# end of rep_count > 0 check #}
 

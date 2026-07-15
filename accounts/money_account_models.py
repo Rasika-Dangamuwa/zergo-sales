@@ -108,7 +108,7 @@ class UserMoneyAccount(models.Model):
         Balance = opening_balance + credits - debits + advances_given - advances_recovered
         """
         from django.db.models import Sum
-        
+
         txns = self.transactions.all()
         
         # Sum by transaction type
@@ -123,7 +123,7 @@ class UserMoneyAccount(models.Model):
         advances_given = txns.filter(
             transaction_type='advance_given'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
+
         advances_recovered = txns.filter(
             transaction_type='advance_recovery'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')

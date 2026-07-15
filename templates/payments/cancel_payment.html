@@ -408,14 +408,53 @@
             </div>
             {% endif %}
 
+            <!-- Return Impact Section (for return adjustment settlements) -->
+            {% if return_ref %}
+            <div class="impact-section" style="background: #e8f4fd; border-color: #3498db;">
+                <h6 style="color: #1a5276;">
+                    <i class="fas fa-undo"></i> What will happen to the return?
+                </h6>
+                <div class="impact-item" style="border-color: rgba(26,82,118,0.1);">
+                    <span class="impact-label" style="color: #1a5276;">Return Number:</span>
+                    <span class="impact-value" style="font-size: 1rem;">{{ return_ref.return_number }}</span>
+                </div>
+                <div class="impact-item" style="border-color: rgba(26,82,118,0.1);">
+                    <span class="impact-label" style="color: #1a5276;">Return Total:</span>
+                    <span class="impact-value" style="font-size: 1rem;">Rs. {{ return_ref.total_amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item" style="border-color: rgba(26,82,118,0.1);">
+                    <span class="impact-label" style="color: #1a5276;">Currently Applied:</span>
+                    <span class="impact-value" style="font-size: 1rem;">Rs. {{ return_ref.applied_amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item" style="border-top: 2px solid #3498db; margin-top: 10px; padding-top: 15px; border-color: #3498db;">
+                    <span class="impact-label" style="color: #1a5276;">Applied After Cancel:</span>
+                    <span class="impact-value" style="color: #27ae60; font-size: 1rem;">Rs. {{ return_new_applied|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="impact-item" style="border-color: rgba(26,82,118,0.1);">
+                    <span class="impact-label" style="color: #1a5276;">New Return Status:</span>
+                    <span class="impact-value" style="color: #27ae60; font-size: 1rem;">
+                        <i class="fas fa-check-circle"></i> {{ return_new_status }}
+                    </span>
+                </div>
+                <p style="margin: 12px 0 0; font-size: 0.88rem; color: #1a5276;">
+                    <i class="fas fa-info-circle"></i>
+                    The return will <strong>not</strong> be cancelled — it will become available to apply to another bill.
+                </p>
+            </div>
+            {% endif %}
+
             <!-- Warning List -->
             <div class="warning-list">
                 <strong><i class="fas fa-exclamation-circle"></i> Important Notice:</strong>
                 <ul>
-                    <li>Payment will be marked as CANCELLED</li>
+                    <li>Settlement will be marked as CANCELLED</li>
                     {% if settlement.bill %}
                     <li>Bill balance will increase by Rs. {{ settlement.amount|floatformat:2|intcomma }}</li>
                     <li>Bill payment status may change to Unpaid or Partial</li>
+                    {% endif %}
+                    {% if return_ref %}
+                    <li>Return {{ return_ref.return_number }} will be released back as "{{ return_new_status }}"</li>
+                    <li>The return itself is NOT cancelled — it can be re-applied to another bill</li>
                     {% endif %}
                     <li>Cancellation will be recorded with date and user</li>
                     <li>This action CANNOT be undone</li>
@@ -444,7 +483,7 @@
                     <a href="{% url 'sales:settlement_detail' settlement.pk %}" class="btn btn-go-back">
                         <i class="fas fa-arrow-left"></i> Go Back
                     </a>
-                    <button type="submit" class="btn btn-cancel-payment" onclick="return confirmCancellation()">
+                    <button type="submit" class="btn btn-cancel-payment">
                         <i class="fas fa-times-circle"></i> Confirm Cancellation
                     </button>
                 </div>
@@ -454,21 +493,7 @@
 </div>
 
 <script>
-function confirmCancellation() {
-    const reason = document.getElementById('cancellation_reason').value.trim();
-    
-    if (!reason) {
-        alert('Please provide a cancellation reason.');
-        return false;
-    }
-    
-    const confirmMessage = `Are you absolutely sure you want to cancel this payment?\n\n` +
-                          `Payment: {{ settlement.payment_number }}\n` +
-                          `Amount: Rs. {{ settlement.amount|floatformat:2|intcomma }}\n\n` +
-                          `This action CANNOT be undone!`;
-    
-    return confirm(confirmMessage);
-}
+// No confirm/alert dialogs needed - HTML5 'required' on the textarea handles validation
 </script>
 {% endblock %}
 

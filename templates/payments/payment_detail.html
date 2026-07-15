@@ -595,6 +595,13 @@
             <span class="info-label">Bank Name</span>
             <span class="info-value">{% if settlement.bank_name %}{{ settlement.bank_name }}{% else %}<span class="text-muted">Not Provided</span>{% endif %}</span>
         </div>
+        {% if settlement.settlement_status != 'cancelled' and request.user.user_type != 'sales_rep' %}
+        <div class="text-end mt-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editChequeModal">
+                <i class="fas fa-pen me-1"></i>Edit Cheque Details
+            </button>
+        </div>
+        {% endif %}
         {% elif settlement.settlement_method == 'bank_transfer' %}
         <div class="info-row">
             <span class="info-label">Reference Number</span>
@@ -665,7 +672,7 @@
         {% if settlement.settlement_status in 'pending,unsettled' and request.user.user_type != 'sales_rep' %}
             {% if settlement.settlement_method == 'cheque' %}
                 {% if not settlement.cheque_collected %}
-                    <!-- Mark Cheque as Collected (first step for cheque processing) -->
+                    <!-- Mark Cheque as Collected -->
                     <form method="post" action="{% url 'sales:mark_cheque_collected' settlement.pk %}" style="display:inline;" onsubmit="return confirm('Confirm that you have physically received this cheque from the sales rep?');">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-primary">
@@ -698,12 +705,17 @@
         <!-- Cancel Button - Sales rep can cancel same-day payments, Office/Admin can cancel any -->
         {% if settlement.settlement_status != 'cancelled' %}
             {% if settlement.settlement_method == 'return_adjustment' %}
-                {# Return adjustment settlements cannot be cancelled directly #}
+                {% if request.user.user_type == 'sales_rep' %}
                 <div class="alert alert-info mb-0">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>Return Adjustment Settlement</strong><br>
-                    <small>This settlement is linked to a sales return and cannot be cancelled directly. To reverse this settlement, please cancel the associated return transaction.</small>
+                    <small>This settlement is linked to a sales return and cannot be cancelled directly. Please contact office staff to cancel it.</small>
                 </div>
+                {% else %}
+                <a href="{% url 'sales:cancel_settlement' settlement.pk %}" class="btn btn-danger">
+                    <i class="fas fa-times me-1"></i> Cancel Settlement
+                </a>
+                {% endif %}
             {% else %}
                 {% if request.user.user_type == 'sales_rep' %}
                     {% if settlement.received_by == request.user %}
@@ -772,6 +784,42 @@ document.addEventListener('keydown', function(event) {
     }
 });
 </script>
+
+{% if settlement.settlement_method == 'cheque' and settlement.settlement_status != 'cancelled' and request.user.user_type != 'sales_rep' %}
+<!-- Edit Cheque Details Modal -->
+<div class="modal fade" id="editChequeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px;border:none;overflow:hidden;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff;border:none;padding:14px 18px;">
+                <h6 class="modal-title fw-bold mb-0"><i class="fas fa-pen me-2"></i>Edit Cheque Details</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'sales:edit_cheque_details' settlement.pk %}">
+                {% csrf_token %}
+                <div class="modal-body" style="padding:18px;">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:0.85rem;">Cheque Number</label>
+                        <input type="text" name="reference_number" class="form-control" value="{{ settlement.reference_number|default:'' }}" placeholder="Cheque number">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:0.85rem;">Cheque Date</label>
+                        <input type="date" name="cheque_date" class="form-control" value="{% if settlement.cheque_date %}{{ settlement.cheque_date|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:0.85rem;">Bank Name</label>
+                        <input type="text" name="bank_name" class="form-control" value="{{ settlement.bank_name|default:'' }}" placeholder="Bank name">
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #eee;padding:12px 18px;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 

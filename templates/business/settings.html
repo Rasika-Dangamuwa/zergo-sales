@@ -238,6 +238,11 @@
                     Appearance
                     <span class="nav-pct">{{ section_stats.appearance.pct }}%</span>
                 </a>
+                <a class="nav-link" data-bs-toggle="pill" href="#tab-documents" role="tab">
+                    <span class="nav-icon"><i class="fas fa-file-contract"></i></span>
+                    Documents
+                    <span class="nav-pct">{{ section_stats.documents.pct }}%</span>
+                </a>
                 <a class="nav-link" data-bs-toggle="pill" href="#tab-banking" role="tab">
                     <span class="nav-icon"><i class="fas fa-university"></i></span>
                     Banking
@@ -956,6 +961,76 @@
                             <div class="text-end">
                                 <button type="submit" class="btn btn-save-section" style="background:#8b5cf6;border-color:#8b5cf6">
                                     <i class="fas fa-save me-1"></i>Save Appearance
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB: Documents (PO Terms, Signatures) -->
+                <!-- ============================================================ -->
+                <div class="tab-pane fade" id="tab-documents" role="tabpanel">
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h5><i class="fas fa-file-contract me-2" style="color:#6366f1"></i>Document Settings</h5>
+                            <span class="badge" style="background:#6366f1;color:#fff">{{ section_stats.documents.filled }}/{{ section_stats.documents.total }} filled</span>
+                        </div>
+                        <form class="settings-form" data-section="documents" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- PO Terms & Conditions -->
+                            <h6 class="text-muted mb-3"><i class="fas fa-clipboard-list me-1"></i>Purchase Order Terms & Conditions</h6>
+                            <div class="mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="po_show_terms" id="sw_po_terms"
+                                           {% if profile.po_show_terms %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="sw_po_terms">Show Terms & Conditions on PO PDFs</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">PO Terms & Conditions</label>
+                                <textarea class="form-control" name="po_terms_and_conditions" rows="6" placeholder="Enter your purchase order terms and conditions...&#10;&#10;Each line will be displayed as a separate term.">{{ profile.po_terms_and_conditions|default:'' }}</textarea>
+                                <div class="form-text">Leave blank to use default terms. Use HTML tags like &lt;br/&gt; for line breaks if needed.</div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Signature Settings -->
+                            <h6 class="text-muted mb-3"><i class="fas fa-signature me-1"></i>Signature Settings</h6>
+                            <div class="mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="po_show_signatures" id="sw_po_sigs"
+                                           {% if profile.po_show_signatures %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="sw_po_sigs">Show Signature Section on PO PDFs</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Authorized Signatory Name</label>
+                                    <input type="text" class="form-control" name="authorized_signatory_name" value="{{ profile.authorized_signatory_name|default:'' }}" placeholder="e.g., John Smith">
+                                    <div class="form-text">Leave blank to use the document creator's name</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Designation / Title</label>
+                                    <input type="text" class="form-control" name="authorized_signatory_designation" value="{{ profile.authorized_signatory_designation|default:'' }}" placeholder="e.g., Managing Director">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Digital Signature Image</label>
+                                <input type="file" class="form-control" name="authorized_signature" accept="image/*">
+                                <div class="form-text">Upload a transparent PNG of the authorized signature. Recommended size: 200x80px.</div>
+                                {% if profile.authorized_signature %}
+                                <div class="mt-2 p-3 bg-light border rounded text-center">
+                                    <p class="text-muted small mb-1">Current signature:</p>
+                                    <img src="{{ profile.authorized_signature.url }}" alt="Authorized Signature" style="max-height:80px; max-width:200px;">
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-save-section" style="background:#6366f1;border-color:#6366f1">
+                                    <i class="fas fa-save me-1"></i>Save Documents
                                 </button>
                             </div>
                         </form>

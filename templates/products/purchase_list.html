@@ -725,7 +725,7 @@
                                     {{ purchase.get_status_display }}
                                 </span>
                                 <span class="badge badge-payment-{{ purchase.calculated_payment_status }}">
-                                    {% if purchase.calculated_payment_status == 'settled' %}Paid
+                                    {% if purchase.calculated_payment_status == 'paid' %}Paid
                                     {% elif purchase.calculated_payment_status == 'partially_paid' %}Partially Paid
                                     {% else %}Unpaid{% endif %}
                                 </span>
