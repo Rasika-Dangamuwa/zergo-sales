@@ -10,3 +10,7 @@ staticfiles/
 media/
 *.sqlite3
 .DS_Store
+_dev_files/
+*.docx
+*.pptx
+*.xlsx
