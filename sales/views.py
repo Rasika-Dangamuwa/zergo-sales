@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 import uuid
-from .models import Bill, BillItem, Return, Sale, SaleItem, PrintManager
+from .models import Bill, BillItem, Return, Sale, SaleItem, PrintManager, BillingPreference, UserProductPrice
 from shops.models import Shop, ShopAccess
 from products.models import Product
 import json
@@ -455,7 +455,7 @@ def create_bill(request):
                 # Tier 1: Total Debt (freshly calculated from actual bill balances)
                 tier1_total_debt = Bill.objects.filter(
                     shop=shop, balance_amount__gt=0
-                ).aggregate(total=Sum('balance_amount'))['total'] or Decimal('0.00')
+                ).exclude(bill_status='cancelled').aggregate(total=Sum('balance_amount'))['total'] or Decimal('0.00')
                 
                 # Tier 2: Pending Verification (settlements awaiting approval)
                 pending_settlements = SalesAccountSettlement.objects.filter(
@@ -490,7 +490,7 @@ def create_bill(request):
             # Tier 1: Total Debt (freshly calculated from actual bill balances)
             tier1_total_debt = Bill.objects.filter(
                 shop=shop, balance_amount__gt=0
-            ).aggregate(total=Sum('balance_amount'))['total'] or Decimal('0.00')
+            ).exclude(bill_status='cancelled').aggregate(total=Sum('balance_amount'))['total'] or Decimal('0.00')
             
             # Tier 2: Pending Verification (settlements awaiting approval)
             pending_settlements = SalesAccountSettlement.objects.filter(
@@ -546,11 +546,30 @@ def create_bill(request):
     submission_token = str(uuid.uuid4())
     request.session['bill_submission_token'] = submission_token
 
+    billing_pref, _ = BillingPreference.objects.get_or_create(user=request.user)
+    user_custom_prices = {
+        ucp.product_id: float(ucp.price)
+        for ucp in UserProductPrice.objects.filter(user=request.user)
+    }
+
+    # Annotate each product with its display_price based on the user's preference.
+    # This renders the correct price directly into the HTML (no JS needed for initial load).
+    for cat_products in sorted_categories.values():
+        for product in cat_products:
+            if billing_pref.default_price == 'my_prices' and product.id in user_custom_prices:
+                product.display_price = user_custom_prices[product.id]
+            else:
+                product.display_price = float(product.final_price)
+
+    from .models import AISettings
     context = {
         'shops': shops,
         'products_by_category': sorted_categories,
         'preselected_shop_id': preselected_shop_id,
         'submission_token': submission_token,
+        'billing_pref': billing_pref,
+        'user_custom_prices': user_custom_prices,
+        'ai_settings': AISettings.get_settings(),
     }
     return render(request, 'sales/create_bill.html', context)
 
@@ -578,7 +597,7 @@ def bill_detail(request, pk):
                 messages.error(request, 'You do not have permission to view this bill.')
                 return redirect('sales:list')
     
-    items = bill.items.all().select_related('product', 'product__category', 'product__company')
+    items = bill.items.all().select_related('product', 'product__category', 'product__company').order_by('product__display_order', 'product__product_name')
     
     # Get payment history from old payment system
     settlements = bill.settlements.all().select_related('received_by').order_by('-settlement_date')
@@ -592,7 +611,8 @@ def bill_detail(request, pk):
         'bottles_per_pack': 24,
         'total_bottles': 0,
         'foc_bottles': 0,
-        'total_value': Decimal('0')
+        'total_value': Decimal('0'),
+        'min_display_order': 9999,
     })
     
     for item in items:
@@ -604,6 +624,10 @@ def bill_detail(request, pk):
         if not category_data['category_display']:
             category_data['category_display'] = category_key
             category_data['bottles_per_pack'] = item.product.bottles_per_pack or 24
+        
+        # Track minimum display_order to sort categories correctly
+        if item.product.display_order < category_data['min_display_order']:
+            category_data['min_display_order'] = item.product.display_order
         
         # Add to appropriate list based on whether it's FOC or regular sale
         if item.quantity > 0:
@@ -644,8 +668,10 @@ def bill_detail(request, pk):
         category_data['total_packs'] = total_all_bottles // bottles_per_pack
         category_data['total_loose'] = total_all_bottles % bottles_per_pack
     
-    # Convert to ordered dict for template
-    items_by_category = OrderedDict(sorted(items_by_category.items()))
+    # Convert to ordered dict sorted by product display_order (not alphabetical)
+    items_by_category = OrderedDict(
+        sorted(items_by_category.items(), key=lambda x: x[1]['min_display_order'])
+    )
     
     # Get user's print profile
     print_profile = PrintManager.get_user_default(request.user, 'bill')
@@ -775,6 +801,10 @@ def bill_detail(request, pk):
             back_url = reverse('sales:list')
             back_label = 'Back to Bills'
     
+    # Cancel button only shown when every settlement is cancelled (or none exist).
+    # all() on an empty queryset returns True, so no-settlement bills can be cancelled.
+    can_cancel = all(s.settlement_status == 'cancelled' for s in settlements)
+
     context = {
         'sale': bill,  # Use 'sale' to match bill_summary.html template
         'items': items,
@@ -787,6 +817,7 @@ def bill_detail(request, pk):
         'page_title': f'Bill {bill.bill_number}',
         'back_url': back_url,
         'back_label': back_label,
+        'can_cancel': can_cancel,
     }
     return render(request, 'sales/bill_summary.html', context)
 
@@ -858,25 +889,63 @@ def cancel_bill(request, pk):
         messages.error(request, 'You do not have permission to cancel this bill.')
         return redirect('sales:detail', pk=pk)
     
+    # Only process on POST
+    if request.method != 'POST':
+        return redirect('sales:detail', pk=pk)
+    
     # Check if bill can be cancelled
     if bill.bill_status == 'cancelled':
         messages.warning(request, 'This bill is already cancelled.')
         return redirect('sales:detail', pk=pk)
     
-    if bill.paid_amount > 0:
-        messages.error(request, 'Cannot cancel bill with payments. Please refund payments first.')
-        return redirect('sales:detail', pk=pk)
-    
+    from django.db import transaction as db_transaction
+    from products.models import FIFOCostLayer, StockMovement
+    from payments.models import SalesAccountSettlement
+
     try:
-        # Reverse inventory - Add products back to stock
-        from products.models import FIFOCostLayer, StockMovement
-        affected_products = []
-        for item in bill.items.all():
-            product = item.product
-            total_qty = item.quantity + item.foc_quantity
-            previous_qty = product.quantity_in_stock
-            product.quantity_in_stock += total_qty
-            product.save()
+        with db_transaction.atomic():
+            bill = Bill.objects.select_for_update().get(pk=pk)
+            if bill.bill_status == 'cancelled':
+                messages.warning(request, 'This bill is already cancelled.')
+                return redirect('sales:detail', pk=pk)
+
+            # Auto-cancel all active settlements on this bill
+            cancel_note = f"[CANCELLED] {timezone.now().strftime('%Y-%m-%d %H:%M')} by {request.user.get_full_name()}: Bill {bill.bill_number} cancelled"
+            active_settlements = SalesAccountSettlement.objects.filter(
+                bill=bill
+            ).exclude(settlement_status='cancelled')
+
+            for s in active_settlements:
+                s.settlement_status = 'cancelled'
+                s.notes = (s.notes + '\n\n' + cancel_note) if s.notes else cancel_note
+                s.save()
+                # Reverse return credit if applicable
+                if s.settlement_method == 'return_adjustment' and s.return_ref:
+                    ret = s.return_ref
+                    ret.applied_amount = max(Decimal('0'), ret.applied_amount - s.amount)
+                    if ret.applied_amount <= 0:
+                        ret.is_applied = False
+                        ret.settlement_status = 'available'
+                    elif ret.applied_amount < ret.total_amount:
+                        ret.settlement_status = 'partially_applied'
+                    ret.save()
+
+            # Zero out paid amount now that all settlements are cancelled
+            bill.paid_amount = Decimal('0')
+            bill.save(update_fields=['paid_amount'])
+
+            # Mark cancelled FIRST to prevent duplicate processing
+            bill.bill_status = 'cancelled'
+            bill.save(update_fields=['bill_status'])
+
+            # Reverse inventory - Add products back to stock
+            affected_products = []
+            for item in bill.items.all():
+                product = item.product
+                total_qty = item.quantity + item.foc_quantity
+                previous_qty = product.quantity_in_stock
+                product.quantity_in_stock += total_qty
+                product.save()
             
             # Restore FIFO layers that were consumed by this sale
             # Re-create a layer with the cost that was recorded on the BillItem
@@ -919,13 +988,14 @@ def cancel_bill(request, pk):
             if hasattr(foc_txn, 'foc_account') and foc_txn.foc_account:
                 foc_txn.foc_account.update_balance()
         
-        # Reverse shop balance
-        bill.shop.current_balance -= bill.balance_amount
-        bill.shop.save()
+        # Reverse shop balance (only if shop exists)
+        if bill.shop:
+            bill.shop.current_balance -= bill.balance_amount
+            bill.shop.save()
         
-        # Mark bill as cancelled
-        bill.bill_status = 'cancelled'
-        bill.save()
+        # Zero out balance on cancelled bill
+        bill.balance_amount = Decimal('0')
+        bill.save(update_fields=['balance_amount'])
         
         # Re-replay FIFO for affected products to reassign cost layers
         for product in affected_products:
@@ -988,9 +1058,10 @@ def delete_bill(request, pk):
             movement_type='sale',
         ).delete()
         
-        # Reverse shop balance
-        bill.shop.current_balance -= bill.balance_amount
-        bill.shop.save()
+        # Reverse shop balance (only if shop exists)
+        if bill.shop:
+            bill.shop.current_balance -= bill.balance_amount
+            bill.shop.save()
         
         bill_number = bill.bill_number
         bill.delete()
@@ -1022,17 +1093,41 @@ def mobile_print(request, pk):
     
     items = bill.items.all().select_related('product', 'product__category', 'product__company').order_by('product__display_order', 'product__product_name')
     
-    # Separate regular items and FOC-only items for display order matching bill detail
-    regular_items = []
-    foc_items = []
+    # Group items by size category, FOC items placed after their size group
+    from collections import OrderedDict
+    SIZE_ORDER = ['220ML', '250ML', '500ML', '750ML', '1000ML', '1500ML', '2200ML']
+    size_groups = OrderedDict()
+    for s in SIZE_ORDER:
+        size_groups[s] = {'regular': [], 'foc_only': []}
+    
     for item in items:
+        size = item.product.size if item.product.size else '500ML'
+        if size not in size_groups:
+            size_groups[size] = {'regular': [], 'foc_only': []}
         if item.quantity > 0:
-            regular_items.append(item)
-        if item.foc_quantity > 0:
-            foc_items.append(item)
-    # Combined: regular items first, then FOC-only (items that ONLY have FOC, no sales qty)
-    # Items with both qty and foc_quantity show in regular list with FOC inline
-    ordered_items = regular_items + [i for i in foc_items if i.quantity == 0]
+            size_groups[size]['regular'].append(item)
+        elif item.foc_quantity > 0:
+            size_groups[size]['foc_only'].append(item)
+    
+    # Build ordered_items: for each size group, regular items first, then FOC-only items
+    ordered_items = []
+    for size, group in size_groups.items():
+        ordered_items.extend(group['regular'])
+        ordered_items.extend(group['foc_only'])
+    
+    # Build size_groups list for template (grouped rendering with separators)
+    item_size_groups = []
+    for size, group in size_groups.items():
+        all_items = group['regular'] + group['foc_only']
+        if all_items:
+            # Collect FOC items (both inline on regular items and FOC-only items)
+            foc_in_group = [i for i in group['regular'] if i.foc_quantity > 0] + group['foc_only']
+            item_size_groups.append({
+                'size': size,
+                'regular_items': group['regular'],
+                'foc_items': foc_in_group,
+                'has_foc': len(foc_in_group) > 0,
+            })
     
     # Get payment/settlement breakdown for the bill
     from payments.models import SalesAccountSettlement
@@ -1064,6 +1159,9 @@ def mobile_print(request, pk):
         'sale': bill,
         'items': ordered_items,
     })
+    
+    # Add size groups for grouped bill rendering
+    context['item_size_groups'] = item_size_groups
     
     # Add payment breakdown to context
     context['cash_paid'] = cash_paid
@@ -1218,10 +1316,16 @@ def bill_summary(request, pk):
     
     # Check if there are any payments
     has_payments = len(all_payments) > 0
-    
+
+    # Cancel button is only shown when every settlement is cancelled.
+    # User must cancel all linked settlements before they can cancel the bill.
+    all_settlements_cancelled = all(s.settlement_status == 'cancelled' for s in settlements)
+    all_payments_cancelled = all(p.collection_status != 'collected' for p in payments)
+    can_cancel = all_settlements_cancelled and all_payments_cancelled
+
     # Get user's print profile
     print_profile = PrintManager.get_user_default(request.user, 'bill')
-    
+
     context = {
         'sale': sale,
         'items': items,
@@ -1235,6 +1339,7 @@ def bill_summary(request, pk):
         'bank_paid': bank_paid,
         'credit_balance': credit_balance,
         'has_payments': has_payments,
+        'can_cancel': can_cancel,
     }
     return render(request, 'sales/bill_summary.html', context)
 
@@ -2061,3 +2166,148 @@ def mark_cheque_collected(request, pk):
         return redirect('sales:settlement_detail', pk=pk)
     
     return redirect('sales:settlement_detail', pk=pk)
+
+
+@login_required
+def edit_cheque_details(request, pk):
+    """Edit cheque number, date, and bank name on a settlement"""
+    from payments.models import SalesAccountSettlement
+    
+    settlement = get_object_or_404(SalesAccountSettlement, pk=pk)
+    
+    if request.user.user_type == 'sales_rep':
+        messages.error(request, 'Only office staff can edit cheque details.')
+        return redirect('sales:settlement_detail', pk=pk)
+    
+    if settlement.settlement_method != 'cheque':
+        messages.error(request, 'Only cheque settlements can be edited.')
+        return redirect('sales:settlement_detail', pk=pk)
+    
+    if settlement.settlement_status == 'cancelled':
+        messages.error(request, 'Cannot edit a cancelled settlement.')
+        return redirect('sales:settlement_detail', pk=pk)
+    
+    if request.method == 'POST':
+        new_ref = request.POST.get('reference_number', '').strip()
+        new_date = request.POST.get('cheque_date', '').strip()
+        new_bank = request.POST.get('bank_name', '').strip()
+        
+        if new_ref:
+            settlement.reference_number = new_ref
+        if new_date:
+            from datetime import datetime
+            try:
+                settlement.cheque_date = datetime.strptime(new_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        settlement.bank_name = new_bank  # Allow clearing bank name
+        settlement.save()
+        
+        messages.success(request, 'Cheque details updated successfully.')
+    
+    return redirect('sales:settlement_detail', pk=pk)
+
+
+@login_required
+def prep_receipt(request, pk):
+    """Mobile Bluetooth print preparation receipt with Sinhala product names for drivers"""
+    import time
+    bill = get_object_or_404(Bill, pk=pk)
+    
+    items = bill.items.all().select_related('product').order_by('product__display_order', 'product__product_name')
+    
+    # Build consolidated item list (merge same product into one row)
+    product_map = {}  # product_id -> consolidated data
+    product_order = []  # maintain display order
+    total_bottles = 0
+    total_foc = 0
+    for item in items:
+        qty = int(item.quantity)
+        foc = int(item.foc_quantity)
+        pid = item.product.pk
+        if pid in product_map:
+            product_map[pid]['quantity'] += qty
+            product_map[pid]['foc_quantity'] += foc
+            product_map[pid]['total_qty'] += qty + foc
+        else:
+            product_map[pid] = {
+                'product_name': item.product.product_name,
+                'sinhala_name': item.product.sinhala_name or item.product.product_name,
+                'has_sinhala': bool(item.product.sinhala_name),
+                'size': item.product.size,
+                'quantity': qty,
+                'foc_quantity': foc,
+                'total_qty': qty + foc,
+                'bottles_per_pack': item.product.bottles_per_pack or 24,
+            }
+            product_order.append(pid)
+        total_bottles += qty
+        total_foc += foc
+    
+    prep_items = [product_map[pid] for pid in product_order]
+    
+    context = {
+        'bill': bill,
+        'prep_items': prep_items,
+        'total_bottles': total_bottles,
+        'total_foc': total_foc,
+        'total_all': total_bottles + total_foc,
+        'cache_buster': str(int(time.time())),
+    }
+    response = render(request, 'sales/prep_receipt.html', context)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+
+@login_required
+def save_billing_preference(request):
+    """AJAX endpoint: save a user's billing experience preferences."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    pref, _ = BillingPreference.objects.get_or_create(user=request.user)
+
+    if 'default_price' in data and data['default_price'] in ('shop_price', 'my_prices'):
+        pref.default_price = data['default_price']
+
+    if 'show_foc_summary' in data:
+        pref.show_foc_summary = bool(data['show_foc_summary'])
+
+    pref.save()
+    return JsonResponse({'status': 'ok'})
+
+
+@login_required
+def save_user_product_price(request):
+    """AJAX endpoint: save a user's custom price for a single product."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        product_id = int(data['product_id'])
+        price = Decimal(str(data['price']))
+    except (KeyError, ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    if price < 0:
+        return JsonResponse({'error': 'Price cannot be negative'}, status=400)
+
+    try:
+        product = Product.objects.get(pk=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'Product not found'}, status=404)
+
+    UserProductPrice.objects.update_or_create(
+        user=request.user,
+        product=product,
+        defaults={'price': price}
+    )
+    return JsonResponse({'status': 'ok'})

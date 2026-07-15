@@ -1472,6 +1472,10 @@
             <i class="fas fa-print me-2"></i>Print Bill (PDF){% if sale.bill_status == 'cancelled' or sale.sale_status == 'cancelled' %} - CANCELLED{% elif sale.bill_status == 'draft' or sale.sale_status == 'draft' %} - DRAFT{% endif %}
         </a>
         
+        <a href="{% url 'sales:prep_receipt' sale.pk %}" class="btn print-button" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); margin-top: 10px;">
+            <i class="fas fa-clipboard-list me-2"></i>සූදානම් පත්‍රය / Prep Sheet
+        </a>
+        
         <div class="action-buttons mt-3">
             {% if sale.bill_status == 'cancelled' or sale.sale_status == 'cancelled' %}
                 <div class="alert alert-secondary text-center">
@@ -1487,18 +1491,38 @@
                     </button>
                 {% endif %}
                 
-                {% if sale.bill_status == 'confirmed' and sale.paid_amount == 0 %}
-                    <button onclick="confirmCancel({{ sale.pk }})" class="btn btn-danger w-100 mb-2">
+                {% if sale.bill_status == 'confirmed' or sale.sale_status == 'confirmed' %}
+                    {% if can_cancel %}
+                    <button onclick="document.getElementById('cancelConfirmPanel').style.display='block';this.style.display='none';" class="btn btn-danger w-100 mb-2" id="cancelBtnTop" style="grid-column:1/-1;">
                         <i class="fas fa-ban me-2"></i>Cancel Bill
                     </button>
-                {% elif sale.sale_status == 'confirmed' and sale.paid_amount == 0 %}
-                    <button onclick="confirmCancel({{ sale.pk }})" class="btn btn-danger w-100 mb-2">
-                        <i class="fas fa-ban me-2"></i>Cancel Bill
-                    </button>
+                    {% else %}
+                    <div class="w-100 mb-2 p-3 text-center" style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:8px;grid-column:1/-1;">
+                        <div style="font-size:0.85em;font-weight:700;color:#721c24;margin-bottom:4px;">
+                            <i class="fas fa-lock me-1"></i>Cannot Cancel Bill
+                        </div>
+                        <div style="font-size:0.78em;color:#842029;">
+                            This bill has active settlements. Cancel all settlements first, then you can cancel the bill.
+                        </div>
+                    </div>
+                    {% endif %}
                 {% endif %}
             {% endif %}
+
+            <!-- Inline cancel confirmation panel — pure HTML form, no JS dialog -->
+            <div id="cancelConfirmPanel" style="display:none;background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:14px;margin-bottom:8px;grid-column:1/-1;">
+                <p style="margin:0 0 6px;font-size:0.9em;font-weight:700;color:#856404;"><i class="fas fa-exclamation-triangle me-1"></i>Cancel this bill?</p>
+                <p style="margin:0 0 10px;font-size:0.8em;color:#856404;">Inventory and shop balance will be reversed. This cannot be undone.</p>
+                <form method="post" action="{% url 'sales:cancel' sale.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm w-100 mb-1">
+                        <i class="fas fa-ban me-1"></i>Yes, Cancel Bill
+                    </button>
+                </form>
+                <button type="button" onclick="document.getElementById('cancelConfirmPanel').style.display='none';document.getElementById('cancelBtnTop').style.display='block';" class="btn btn-secondary btn-sm w-100">No, Go Back</button>
+            </div>
             
-            <a href="{% url 'sales:create' %}" class="btn btn-outline-primary w-100 mb-2">
+            <a href="{% url 'sales:create' %}" class="btn w-100 mb-2" style="background:#1565c0;color:#fff;font-weight:600;">
                 <i class="fas fa-plus me-2"></i>New Bill
             </a>
             <a href="{% url 'sales:list' %}" class="btn btn-outline-secondary w-100">
@@ -1526,12 +1550,6 @@ function calculateDiscountPercentage() {
     const amount = parseFloat(document.getElementById('discountAmount').value) || 0;
     const percentage = subtotal > 0 ? (amount / subtotal) * 100 : 0;
     document.getElementById('discountPercentage').value = percentage.toFixed(2);
-}
-
-function confirmCancel(billId) {
-    if (confirm('Are you sure you want to CANCEL this bill?\n\nThis will:\n- Mark bill as cancelled\n- Restore inventory\n- Reverse shop balance\n\nThis action cannot be undone.')) {
-        window.location.href = `/sales/${billId}/cancel/`;
-    }
 }
 
 function confirmDelete(billId) {
